@@ -1,0 +1,80 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project
+
+Recipe Vault: a self-hosted, single-user recipe manager (no auth — trusted local network only). Two independent npm packages, `backend/` and `frontend/`, both TypeScript, built together into one Docker image and deployed with `docker compose up` (`app` + `db` services).
+
+## Commands
+
+Run from `backend/` or `frontend/` respectively (not the repo root — there is no root `package.json`).
+
+```sh
+npm install          # each package manages its own node_modules
+npm run dev          # backend: tsx watch src/index.ts (port 3000, runs TS directly, no build step)
+                      # frontend: vite dev server (port 5173, proxies /api and /uploads to :3000)
+npm run typecheck    # tsc --noEmit, both packages
+npm run lint         # eslint . (flat config, typescript-eslint), both packages
+npm run format       # prettier --write .   /   format:check for CI-style verification
+npm test             # vitest run, in both packages
+npx vitest run tests/ingredient-parser.test.ts   # run a single backend test file
+npx vitest run -t "parses fractional quantities" # run tests matching a name
+npm run build        # backend: tsc -> dist/. frontend: tsc --noEmit && vite build (type errors fail the build)
+```
+
+Backend integration tests (`backend/tests/recipes.api.test.ts`) hit a **real** Postgres and drop/recreate the `public` schema on every run — point them at a scratch database via `TEST_DATABASE_URL`, never a real one:
+
+```sh
+TEST_DATABASE_URL=postgres://chef:changeme@localhost:5432/recipe_vault_test npm test
+```
+
+Without `TEST_DATABASE_URL` (or `DATABASE_URL`) set, that suite is skipped automatically (`describe.skipIf`) and the rest of the tests still run — this is expected in most sandboxes.
+
+Full stack via Docker:
+
+```sh
+cp .env.example .env
+docker compose up --build
+```
+
+## Architecture
+
+**Single deployable image, two runtime services, three build stages.** The root `Dockerfile` has `frontend-build` (`tsc --noEmit && vite build` → `frontend/dist`), `backend-build` (`tsc -p tsconfig.json` → `backend/dist`, needs devDependencies for the `typescript` compiler), and a slim `runtime` stage that installs only production deps and copies both build outputs in (`dist/` as the server, `frontend/dist` as `public/`). The Express server serves `/api/*`, static files from `public/`, uploaded images from `/uploads` (backed by the `UPLOADS_DIR` env var / `uploads_data` volume), and falls back to `index.html` for any other route (client-side routing). There is no separate frontend container — `docker-compose.yml` only defines `app` and `db`.
+
+**Frontend is an installable PWA via `vite-plugin-pwa`** (`frontend/vite.config.ts`). The manifest, service worker (`sw.js`), and Workbox runtime (`workbox-*.js`) are generated at build time and land at the root of `frontend/dist`, so they're served as plain static files by `express.static(PUBLIC_DIR)` — no backend or Dockerfile changes were needed to support this. Caching is deliberately split: the app shell (JS/CSS/HTML) is precached (safe — filenames are content-hashed and Workbox diffs the precache manifest per deploy), `/api/*` is `NetworkOnly` (never cached — this is a personal Postgres-backed dataset, so staleness after an edit is worse than an occasional failed request), and `/uploads/*` is `StaleWhileRevalidate` with a 30-day/300-entry cap (recipe photos rarely change post-upload, so serving cached instantly while revalidating is a safe latency win, and the cap lets deleted/replaced images fall out eventually). `registerType: 'autoUpdate'` is used instead of prompting — single-user app, no need for an "update available" UI. `devOptions.enabled: true` is set so the manifest/SW pipeline also runs under `npm run dev`, not just the production build — otherwise Chrome DevTools reports "no manifest detected" while iterating locally, since the plugin skips injection in dev mode by default. The service worker is registered manually in `frontend/src/main.tsx` via `virtual:pwa-register` (`injectRegister: false` in the Vite config) rather than the plugin's auto-inject, and `frontend/src/vite-env.d.ts` carries the `vite-plugin-pwa/client` triple-slash reference that import needs to typecheck (it's a build-time-only virtual module, not a real file). App icons at `frontend/public/icons/` and `frontend/public/{favicon,apple-touch-icon}.png` are a placeholder "RV" monogram generated once via `frontend/scripts/generate-icons.mjs` (a one-off script, not part of the build or typecheck, using an ephemeral `sharp` install — `npm install --no-save sharp && node scripts/generate-icons.mjs` — so `sharp` never becomes a persisted dependency); swap the PNGs directly if real branding shows up later. Full install + offline behavior (service workers, therefore installability) requires a secure context — this only works as intended served over HTTPS (e.g. via the user's reverse proxy), not plain HTTP on the LAN.
+
+**Backend layering** (`backend/src/`): `routes/` → `controllers/` → `services/` → `db/pool.ts`. `app.ts` builds the Express app (routes, static serving, error handler) with no `listen()` call; `index.ts` is the only file that calls `app.listen()`. Tests import `app.ts` directly via `supertest` so the app can be exercised without binding a port — **keep new server-level wiring in `app.ts`, not `index.ts`, or it won't be reachable from tests.**
+
+**Backend TS uses `NodeNext` module resolution**, so relative imports keep explicit `.js` extensions even in `.ts` source files (e.g. `import { pool } from '../db/pool.js'` inside `recipe.service.ts`) — this isn't a leftover from the JS version, it's required: Node's ESM loader resolves against the *emitted* file, which is genuinely `.js` after `tsc` compiles `src/` → `dist/`. **Frontend TS uses `Bundler` resolution** (Vite/esbuild), so it's the opposite convention: relative imports have no extension at all (e.g. `from '../api/client'`, not `.ts` or `.js`). Don't mix these conventions up between packages.
+
+**Zod validates at trust boundaries, not everywhere.** `backend/src/schemas/recipe.schema.ts` defines `RecipeBodySchema`, parsed in `postRecipe`/`putRecipe` — a `ZodError` there means a malformed API request body, returned as a 400. Separately, `jsonld-import.service.ts` uses a much looser zod check (`JsonLdDocumentSchema`, just "is this an object or array") only to confirm `JSON.parse()` produced something indexable before searching for a Recipe node — it deliberately does **not** model schema.org's `Recipe` shape field-by-field in zod. The hand-written extraction functions there (`extractImageUrl`, `extractServings`, `extractAuthor`, `extractTagNames`, `extractInstructionTexts`) stay as procedural `unknown`-narrowing guards, because real-world recipe JSON-LD is too heterogeneous (string vs. array vs. object for the same field, missing fields, extra fields) for a strict schema without breaking real imports. If you're tempted to replace those functions with a stricter zod schema, don't — that's a deliberate design choice, not unfinished work.
+
+**Ingredient parsing is centralized, not import-only.** `services/ingredient-parser.ts` wraps the `parse-ingredient` npm package and is the single source of truth for turning a raw ingredient line into `{ amount, unit, name, is_scalable }`. It's called from two places: `jsonld-import.service.ts` (recipes imported from JSON-LD) and `controllers/recipes.controller.ts`'s `normalizeIngredients()` (manual create/edit via the form, where the frontend only ever sends raw text lines). This is why `IngredientListEditor.tsx` on the frontend just edits plain strings — the backend re-derives amount/unit/name from `raw_text` on every save, so scaling behaves identically regardless of entry path. Never bypass this by having the frontend send pre-parsed `amount`/`unit` fields for manual entries — they'll be ignored.
+
+**JSON-LD import** has to handle real-world schema.org variance: `findRecipeNode()` unwraps `@graph`; `extractInstructionTexts()` recursively flattens `HowToSection.itemListElement` down to a flat ordered list of `HowToStep` texts; `image`/`author`/`recipeYield`/`keywords` all accept either a bare value or an array/object per the schema.org spec. `recipeCategory` and `keywords` both feed into the same `tags` table — there's no separate category column, so tag filtering and category browsing are the same mechanism.
+
+**Postgres `NUMERIC` columns come back as strings from `pg`**, not numbers — `recipes.servings` and `ingredients.amount` are typed `string | null` in `RecipeRow`/`IngredientRow` (backend) and `Recipe`/`Ingredient` (frontend `src/types.ts`) for exactly this reason. Code that does math on them (`useScaledIngredients.ts`, servings inputs) explicitly `Number(...)`-converts first. Don't "fix" these types to `number` — it'll be wrong the moment a real DB is involved.
+
+**Scaling is a frontend concern.** The DB stores each recipe's base `servings` and each ingredient's parsed `amount` (nullable). `frontend/src/hooks/useScaledIngredients.ts` computes `amount * (desiredServings / baseServings)` per ingredient and `utils/format-fraction.ts` renders the result back to a rounded-to-nearest-eighth unicode fraction (e.g. `1.5 → "1 ½"`). Ingredients with `is_scalable: false` (parse failures, "to taste" lines, group headers) always render their original `raw_text` untouched, regardless of the servings multiplier — this is intentional per the import spec, not a bug.
+
+**Frontend state synced from async data is adjusted during render, not via `useEffect` + `setState`.** `RecipeDetailPage.tsx` (the servings stepper) and `RecipeFormPage.tsx` (the whole edit form) both need to initialize local editable state from a React Query result once it loads, then let the user diverge from it. Both use the pattern `if (data && trackedId !== data.id) { setTrackedId(data.id); setState(...) }` directly in the component body — this is React's documented pattern for this exact case (see react.dev "you might not need an effect: adjusting state when a prop changes") and is what `eslint-plugin-react-hooks`'s `set-state-in-effect` rule is pushing toward. Don't revert this to a `useEffect` to "simplify" it; the effect version re-triggers the anti-pattern lint error and causes an extra render pass.
+
+**DB schema is a single `schema.sql`, no migration framework.** `backend/src/db/schema.sql` is mounted read-only into the `db` container at `/docker-entrypoint-initdb.d/init.sql`, so Postgres auto-applies it only on first init of an empty `db_data` volume. If you change the schema, existing dev volumes won't pick it up automatically — `docker compose down -v` (drops data) or manually re-run the SQL. The same file is reused by the test suite to build a scratch schema.
+
+**Manual create/update replace child rows wholesale.** `services/recipe.service.ts`'s `updateRecipe()` deletes and re-inserts all `ingredients`/`instructions`/`recipe_tags` rows inside one transaction rather than diffing — this is deliberate for a single-user app with small recipes, not an oversight. `createRecipe`/`updateRecipe` are also the only two places recipes get persisted; both `POST /api/recipes` and `POST /api/recipes/import` funnel through `createRecipe`.
+
+## Type-package gotchas already resolved once — don't redo this research
+
+- `typescript-eslint@8.x` currently pins its `typescript` peer range to `>=4.8.4 <6.1.0`. TypeScript's own "latest" dist-tag can be ahead of that (it was mid-7.x when this repo was set up). Both packages pin `typescript` to the newest version still inside typescript-eslint's supported range — check that range again before bumping `typescript`, or ESLint will silently mismatch the compiler it lints against.
+- `uuid`'s own bundled types only exist from v10+; earlier majors need `@types/uuid`, but the current `@types/uuid` publish is an empty stub ("uuid provides its own types now") with no actual declarations — installing it errors with `TS2688: Cannot find type definition file for 'uuid'`. The fix used here was bumping the `uuid` runtime dependency itself to `^11.x` (own types, no `@types/uuid` needed) rather than fighting the stub.
+- `eslint-plugin-react-hooks`'s `configs['recommended-latest']` export is still in legacy eslint-plugin config shape (`{ plugins: ['react-hooks'], rules: {...} }`), not a flat-config object, despite ESLint 10 requiring flat config — spread only `.rules` into a flat config block and register the plugin object yourself under `plugins: { 'react-hooks': reactHooks }` (see `frontend/eslint.config.js`).
+- Tailwind's `content` glob in `tailwind.config.js` must list the actual source extensions (`**/*.{ts,tsx}`) — leaving a stale `**/*.{js,jsx}` glob after the TS conversion doesn't error, it just silently purges almost every utility class from the production CSS bundle (looks fine in dev, breaks in the `vite build` output). If a Tailwind-based UI change looks unstyled only in the built/Docker version, check this glob first.
+
+## Quality bar before calling a change done
+
+- Run `npm run typecheck && npm run lint && npm test` in every package you touched (not just the one with the obviously-changed file) — the ingredient parser, JSON-LD importer, and scaling hook each have call sites in the other package (see Architecture above), so a change on one side often needs the other side's tests re-run too. If you touched frontend code, also run `npm run build` (which itself runs `tsc --noEmit` before `vite build`) and check the emitted CSS/JS bundle sizes look sane, not just that it exits 0.
+- Treat console/lint/test output as part of the spec, not noise to skim past: a passing suite or a clean build that still prints a warning (react-hooks rule violations, React Router future-flag notices, etc.) isn't done — fix it or it becomes the next person's mystery.
+- When adding a dependency, check `npm audit` before and after so you know whether you introduced a new finding versus inheriting an existing one. The moderate/high findings already present in the vite/vitest/esbuild dev-tooling chain are dev-server-only (never shipped in the production Docker image) and accepted; a new finding against a runtime dependency (express, pg, multer, zod, etc.) is not — fix or avoid it.
+- Match what's already there rather than introducing a second convention: ESM everywhere (`type: module`, no CommonJS `require`), TypeScript with `strict: true` in both packages, Tailwind's v3-style `tailwind.config.js` + `autoprefixer` (not v4's CSS-first config), functional React components with hooks (no classes), zod only at the boundaries described above (not sprinkled through internal function signatures).
+- Dependency versions in this repo are deliberately pinned as a compatible set, not merely outdated — e.g. Tailwind v3/Vite v5/vitest v2/typescript-eslint's supported TS range were chosen together. Don't bump one in isolation without checking the others still resolve and `typecheck`/`lint`/`test`/`build` all still pass.

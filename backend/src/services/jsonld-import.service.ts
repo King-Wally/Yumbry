@@ -1,0 +1,202 @@
+import { z } from 'zod';
+import { isoDurationToMinutes } from '../utils/iso-duration.js';
+import { parseIngredientLine, type ParsedIngredient } from './ingredient-parser.js';
+
+type JsonLdNode = Record<string, unknown>;
+
+/**
+ * Validates only that JSON.parse() produced an object or array (not a bare
+ * scalar) — schema.org's Recipe shape itself is deliberately NOT modeled here;
+ * see the field-extraction functions below for why.
+ */
+const JsonLdDocumentSchema: z.ZodType<JsonLdNode | unknown[]> = z.union([
+  z.record(z.string(), z.unknown()),
+  z.array(z.unknown()),
+]);
+
+export interface ParsedRecipeImport {
+  title: string;
+  description: string | null;
+  image_path: string | null;
+  prep_time_minutes: number | null;
+  cook_time_minutes: number | null;
+  total_time_minutes: number | null;
+  servings: number;
+  source_url: string | null;
+  author: string | null;
+  ingredients: (ParsedIngredient & { sort_order: number })[];
+  instructions: { step_number: number; text: string }[];
+  tags: string[];
+}
+
+function hasRecipeType(node: unknown): node is JsonLdNode {
+  if (!node || typeof node !== 'object') return false;
+  const type = (node as JsonLdNode)['@type'];
+  if (Array.isArray(type)) return type.includes('Recipe');
+  return type === 'Recipe';
+}
+
+/** Finds the Recipe node in a parsed JSON-LD document, handling @graph wrappers. */
+export function findRecipeNode(jsonLd: unknown): JsonLdNode | null {
+  if (Array.isArray(jsonLd)) {
+    for (const node of jsonLd) {
+      const found = findRecipeNode(node);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  if (hasRecipeType(jsonLd)) return jsonLd;
+
+  if (jsonLd && typeof jsonLd === 'object' && Array.isArray((jsonLd as JsonLdNode)['@graph'])) {
+    return findRecipeNode((jsonLd as JsonLdNode)['@graph']);
+  }
+
+  return null;
+}
+
+function extractImageUrl(image: unknown): string | null {
+  if (!image) return null;
+  if (typeof image === 'string') return image;
+  if (Array.isArray(image)) {
+    for (const entry of image) {
+      const url = extractImageUrl(entry);
+      if (url) return url;
+    }
+    return null;
+  }
+  if (typeof image === 'object' && typeof (image as JsonLdNode).url === 'string') {
+    return (image as JsonLdNode).url as string;
+  }
+  return null;
+}
+
+function extractServings(recipeYield: unknown): number {
+  const value = Array.isArray(recipeYield) ? recipeYield[0] : recipeYield;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const match = /\d+(\.\d+)?/.exec(value);
+    if (match) return Number(match[0]);
+  }
+  return 1;
+}
+
+function extractAuthor(author: unknown): string | null {
+  const value = Array.isArray(author) ? author[0] : author;
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && typeof (value as JsonLdNode).name === 'string') {
+    return (value as JsonLdNode).name as string;
+  }
+  return null;
+}
+
+function extractSourceUrl(node: JsonLdNode): string | null {
+  if (typeof node.url === 'string') return node.url;
+  const mainEntity = node.mainEntityOfPage;
+  if (typeof mainEntity === 'string') return mainEntity;
+  if (
+    mainEntity &&
+    typeof mainEntity === 'object' &&
+    typeof (mainEntity as JsonLdNode)['@id'] === 'string'
+  ) {
+    return (mainEntity as JsonLdNode)['@id'] as string;
+  }
+  return null;
+}
+
+function extractTagNames(node: JsonLdNode): string[] {
+  const names: string[] = [];
+
+  const category = node.recipeCategory;
+  if (Array.isArray(category)) names.push(...(category as string[]));
+  else if (typeof category === 'string') names.push(category);
+
+  const keywords = node.keywords;
+  if (Array.isArray(keywords)) names.push(...(keywords as string[]));
+  else if (typeof keywords === 'string') names.push(...keywords.split(','));
+
+  return [...new Set(names.map((name) => name.trim()).filter(Boolean))];
+}
+
+/** Flattens recipeInstructions (string | HowToStep[] | HowToSection[]) into ordered step strings. */
+function extractInstructionTexts(recipeInstructions: unknown): string[] {
+  if (!recipeInstructions) return [];
+
+  if (typeof recipeInstructions === 'string') {
+    return recipeInstructions
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+  }
+
+  if (Array.isArray(recipeInstructions)) {
+    return recipeInstructions.flatMap((item): string[] => {
+      if (typeof item === 'string') return [item];
+      if (!item || typeof item !== 'object') return [];
+
+      const node = item as JsonLdNode;
+
+      if (node['@type'] === 'HowToSection' && Array.isArray(node.itemListElement)) {
+        return extractInstructionTexts(node.itemListElement);
+      }
+
+      if (typeof node.text === 'string') return [node.text];
+      if (typeof node.name === 'string') return [node.name];
+      return [];
+    });
+  }
+
+  return [];
+}
+
+/**
+ * Parses a raw JSON-LD string into a normalized recipe object ready for insertion.
+ * Throws only when the input isn't valid JSON, isn't an object/array, or contains
+ * no Recipe node.
+ */
+export function parseRecipeFromJsonLd(rawJsonLdText: string): ParsedRecipeImport {
+  const rawParsed: unknown = JSON.parse(rawJsonLdText);
+  const parsed = JsonLdDocumentSchema.parse(rawParsed);
+  const node = findRecipeNode(parsed);
+
+  if (!node) {
+    throw new Error('No schema.org Recipe found in the provided JSON-LD.');
+  }
+
+  const prepTimeMinutes = isoDurationToMinutes(node.prepTime);
+  const cookTimeMinutes = isoDurationToMinutes(node.cookTime);
+  const totalTimeMinutes =
+    isoDurationToMinutes(node.totalTime) ??
+    (prepTimeMinutes !== null && cookTimeMinutes !== null
+      ? prepTimeMinutes + cookTimeMinutes
+      : null);
+
+  const ingredientLines: string[] = Array.isArray(node.recipeIngredient)
+    ? (node.recipeIngredient as string[])
+    : [];
+  const ingredients = ingredientLines.map((line, index) => ({
+    ...parseIngredientLine(line),
+    sort_order: index,
+  }));
+
+  const instructions = extractInstructionTexts(node.recipeInstructions).map((text, index) => ({
+    step_number: index + 1,
+    text,
+  }));
+
+  return {
+    title: typeof node.name === 'string' ? node.name : 'Untitled recipe',
+    description: typeof node.description === 'string' ? node.description : null,
+    image_path: extractImageUrl(node.image),
+    prep_time_minutes: prepTimeMinutes,
+    cook_time_minutes: cookTimeMinutes,
+    total_time_minutes: totalTimeMinutes,
+    servings: extractServings(node.recipeYield),
+    source_url: extractSourceUrl(node),
+    author: extractAuthor(node.author),
+    ingredients,
+    instructions,
+    tags: extractTagNames(node),
+  };
+}
