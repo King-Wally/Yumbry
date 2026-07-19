@@ -3,10 +3,11 @@ import RecipeListPage from './pages/RecipeListPage';
 import RecipeDetailPage from './pages/RecipeDetailPage';
 import RecipeFormPage from './pages/RecipeFormPage';
 import ImportPage from './pages/ImportPage';
+import { version } from '../package.json';
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-cream">
+    <div className="flex min-h-screen flex-col bg-cream">
       <header className="sticky top-0 z-10 border-b border-stone-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <a
@@ -29,7 +30,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-6 py-8">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8">
         <Routes>
           <Route path="/" element={<RecipeListPage />} />
           <Route path="/recipes/new" element={<RecipeFormPage />} />
@@ -38,6 +39,10 @@ export default function App() {
           <Route path="/import" element={<ImportPage />} />
         </Routes>
       </main>
+
+      <footer className="mx-auto max-w-5xl px-6 py-4 text-center text-xs text-stone-400">
+        v{version}
+      </footer>
     </div>
   );
 }
