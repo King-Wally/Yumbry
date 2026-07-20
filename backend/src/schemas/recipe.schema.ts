@@ -7,7 +7,6 @@ const IngredientInputSchema = z.union([z.string(), z.object({ raw_text: z.string
 const InstructionInputSchema = z.object({
   step_number: z.number().int().positive().optional(),
   text: z.string(),
-  image_path: z.string().nullable().optional(),
 });
 
 export const RecipeBodySchema = z.object({

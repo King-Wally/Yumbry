@@ -1,21 +1,16 @@
-import ImageUpload from './ImageUpload';
-
 export interface InstructionDraft {
   id?: number;
   text: string;
-  image_path?: string | null;
 }
 
 interface InstructionListEditorProps {
   instructions: InstructionDraft[];
   onChange: (instructions: InstructionDraft[]) => void;
-  onUploadStepPhoto?: (stepId: number, file: File) => void;
 }
 
 export default function InstructionListEditor({
   instructions,
   onChange,
-  onUploadStepPhoto,
 }: InstructionListEditorProps) {
   function updateText(index: number, text: string) {
     const next = [...instructions];
@@ -53,13 +48,6 @@ export default function InstructionListEditor({
               placeholder="Describe this step"
               className="w-full rounded-md border border-stone-300 px-3 py-1.5 focus:border-clay focus:outline-none"
             />
-            {step.id && onUploadStepPhoto && (
-              <ImageUpload
-                currentUrl={step.image_path}
-                label="Step photo"
-                onUpload={(file) => onUploadStepPhoto(step.id!, file)}
-              />
-            )}
           </div>
           <div className="mt-2 flex flex-col gap-1">
             <button

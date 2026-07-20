@@ -8,7 +8,6 @@ import {
   deleteRecipe,
   getRecipeById,
   listRecipes,
-  setInstructionPhoto,
   setRecipePhoto,
   updateRecipe,
   type IngredientInput,
@@ -143,19 +142,6 @@ export async function uploadRecipePhoto(req: Request, res: Response, next: NextF
     const imagePath = publicUploadPath(req.file.path);
     const updated = await setRecipePhoto(req.params.id, imagePath);
     if (!updated) return res.status(404).json({ error: 'Recipe not found' });
-    res.json({ image_path: imagePath });
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function uploadInstructionPhoto(req: Request, res: Response, next: NextFunction) {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'No image file provided.' });
-
-    const imagePath = publicUploadPath(req.file.path);
-    const updated = await setInstructionPhoto(req.params.id, req.params.stepId, imagePath);
-    if (!updated) return res.status(404).json({ error: 'Recipe or step not found' });
     res.json({ image_path: imagePath });
   } catch (err) {
     next(err);

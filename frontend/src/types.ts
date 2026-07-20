@@ -19,7 +19,6 @@ export interface Instruction {
   recipe_id: number;
   step_number: number;
   text: string;
-  image_path: string | null;
 }
 
 interface RecipeBase {

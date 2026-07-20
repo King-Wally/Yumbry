@@ -27,8 +27,7 @@ CREATE TABLE instructions (
   id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   recipe_id   INTEGER NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
   step_number INTEGER NOT NULL,
-  text        TEXT NOT NULL,
-  image_path  TEXT
+  text        TEXT NOT NULL
 );
 CREATE INDEX idx_instructions_recipe_id ON instructions(recipe_id);
 

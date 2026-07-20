@@ -41,7 +41,6 @@ export interface InstructionRow {
   recipe_id: number;
   step_number: number;
   text: string;
-  image_path: string | null;
 }
 
 export interface RecipeWithRelations extends RecipeRow {
@@ -57,7 +56,6 @@ export interface IngredientInput extends ParsedIngredient {
 export interface InstructionInput {
   step_number?: number;
   text: string;
-  image_path?: string | null;
 }
 
 export interface RecipeInput {
@@ -204,14 +202,9 @@ async function insertInstructions(
   let stepNumber = 1;
   for (const instruction of instructions) {
     await client.query(
-      `INSERT INTO instructions (recipe_id, step_number, text, image_path)
-       VALUES ($1, $2, $3, $4)`,
-      [
-        recipeId,
-        instruction.step_number ?? stepNumber,
-        instruction.text,
-        instruction.image_path ?? null,
-      ]
+      `INSERT INTO instructions (recipe_id, step_number, text)
+       VALUES ($1, $2, $3)`,
+      [recipeId, instruction.step_number ?? stepNumber, instruction.text]
     );
     stepNumber += 1;
   }
@@ -315,18 +308,6 @@ export async function setRecipePhoto(
   const { rows } = await pool.query<{ id: number }>(
     'UPDATE recipes SET image_path = $1, updated_at = now() WHERE id = $2 RETURNING id',
     [imagePath, id]
-  );
-  return rows[0] ?? null;
-}
-
-export async function setInstructionPhoto(
-  recipeId: string,
-  stepId: string,
-  imagePath: string
-): Promise<{ id: number } | null> {
-  const { rows } = await pool.query<{ id: number }>(
-    'UPDATE instructions SET image_path = $1 WHERE id = $2 AND recipe_id = $3 RETURNING id',
-    [imagePath, stepId, recipeId]
   );
   return rows[0] ?? null;
 }

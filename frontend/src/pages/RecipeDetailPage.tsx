@@ -125,13 +125,6 @@ export default function RecipeDetailPage() {
                 </span>
                 <div className="flex-1">
                   <p className="text-stone-700">{step.text}</p>
-                  {step.image_path && (
-                    <img
-                      src={step.image_path}
-                      alt={`Step ${step.step_number}`}
-                      className="mt-2 max-h-48 rounded-md object-cover"
-                    />
-                  )}
                 </div>
               </li>
             ))}

@@ -61,15 +61,6 @@ export function uploadRecipePhoto(id: string | number, file: File) {
   });
 }
 
-export function uploadInstructionPhoto(recipeId: string | number, stepId: number, file: File) {
-  const formData = new FormData();
-  formData.append('photo', file);
-  return request<{ image_path: string }>(`/recipes/${recipeId}/instructions/${stepId}/photo`, {
-    method: 'POST',
-    body: formData,
-  });
-}
-
 export function getTags() {
   return request<Tag[]>('/tags');
 }

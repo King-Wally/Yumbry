@@ -36,8 +36,8 @@ const fullRecipe: RecipeWithRelations = {
     },
   ],
   instructions: [
-    { id: 1, recipe_id: 1, step_number: 1, text: 'Mix dry ingredients.', image_path: null },
-    { id: 2, recipe_id: 1, step_number: 2, text: 'Cook on a griddle.', image_path: null },
+    { id: 1, recipe_id: 1, step_number: 1, text: 'Mix dry ingredients.' },
+    { id: 2, recipe_id: 1, step_number: 2, text: 'Cook on a griddle.' },
   ],
   tags: [
     { id: 1, name: 'breakfast' },

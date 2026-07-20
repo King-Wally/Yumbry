@@ -1,13 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  createRecipe,
-  getRecipe,
-  updateRecipe,
-  uploadInstructionPhoto,
-  uploadRecipePhoto,
-} from '../api/client';
+import { createRecipe, getRecipe, updateRecipe, uploadRecipePhoto } from '../api/client';
 import ImageUpload from '../components/ImageUpload';
 import IngredientListEditor from '../components/IngredientListEditor';
 import InstructionListEditor, { type InstructionDraft } from '../components/InstructionListEditor';
@@ -73,11 +67,7 @@ export default function RecipeFormPage() {
       image_path: existingRecipe.image_path ?? null,
       ingredients: existingRecipe.ingredients?.map((i) => i.raw_text) ?? [''],
       instructions: existingRecipe.instructions?.length
-        ? existingRecipe.instructions.map((i) => ({
-            id: i.id,
-            text: i.text,
-            image_path: i.image_path,
-          }))
+        ? existingRecipe.instructions.map((i) => ({ id: i.id, text: i.text }))
         : [{ text: '' }],
       tags: existingRecipe.tags?.map((t) => t.name) ?? [],
     });
@@ -97,19 +87,6 @@ export default function RecipeFormPage() {
   const photoMutation = useMutation({
     mutationFn: (file: File) => uploadRecipePhoto(id!, file),
     onSuccess: ({ image_path }) => setForm((f) => ({ ...f, image_path })),
-  });
-
-  const stepPhotoMutation = useMutation({
-    mutationFn: ({ stepId, file }: { stepId: number; file: File }) =>
-      uploadInstructionPhoto(id!, stepId, file),
-    onSuccess: ({ image_path }, { stepId }) => {
-      setForm((f) => ({
-        ...f,
-        instructions: f.instructions.map((step) =>
-          step.id === stepId ? { ...step, image_path } : step
-        ),
-      }));
-    },
   });
 
   function updateField<K extends keyof FormState>(field: K, value: FormState[K]) {
@@ -273,7 +250,6 @@ export default function RecipeFormPage() {
       <InstructionListEditor
         instructions={form.instructions}
         onChange={(instructions) => updateField('instructions', instructions)}
-        onUploadStepPhoto={(stepId, file) => stepPhotoMutation.mutate({ stepId, file })}
       />
 
       {saveMutation.isError && <p className="text-red-600">{saveMutation.error?.message}</p>}
