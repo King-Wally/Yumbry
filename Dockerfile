@@ -21,9 +21,12 @@ COPY backend/package*.json ./
 RUN npm ci --omit=dev
 COPY --from=backend-build /app/dist ./dist
 COPY --from=frontend-build /frontend/dist ./public
+COPY backend/migrations ./migrations
+COPY backend/.node-pg-migrate.json ./
+COPY --chmod=755 backend/docker-entrypoint.sh ./
 
 ENV NODE_ENV=production
 ENV UPLOADS_DIR=/app/uploads
 EXPOSE 3000
 
-CMD ["node", "dist/index.js"]
+ENTRYPOINT ["./docker-entrypoint.sh"]

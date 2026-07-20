@@ -1,4 +1,11 @@
-CREATE TABLE recipes (
+-- Up Migration
+
+-- This migration must stay IF NOT EXISTS-idempotent forever: it's the migration
+-- that reconciles pre-existing production volumes (which already have these
+-- tables from the old schema.sql bind-mount, but no pgmigrations bookkeeping)
+-- as well as brand-new empty volumes. Later migrations don't need this guard.
+
+CREATE TABLE IF NOT EXISTS recipes (
   id                 INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   title              TEXT NOT NULL,
   description        TEXT,
@@ -11,7 +18,7 @@ CREATE TABLE recipes (
   updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE ingredients (
+CREATE TABLE IF NOT EXISTS ingredients (
   id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   recipe_id   INTEGER NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
   raw_text    TEXT NOT NULL,
@@ -21,24 +28,28 @@ CREATE TABLE ingredients (
   is_scalable BOOLEAN NOT NULL DEFAULT true,
   sort_order  INTEGER NOT NULL
 );
-CREATE INDEX idx_ingredients_recipe_id ON ingredients(recipe_id);
+CREATE INDEX IF NOT EXISTS idx_ingredients_recipe_id ON ingredients(recipe_id);
 
-CREATE TABLE instructions (
+CREATE TABLE IF NOT EXISTS instructions (
   id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   recipe_id   INTEGER NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
   step_number INTEGER NOT NULL,
   text        TEXT NOT NULL
 );
-CREATE INDEX idx_instructions_recipe_id ON instructions(recipe_id);
+CREATE INDEX IF NOT EXISTS idx_instructions_recipe_id ON instructions(recipe_id);
 
-CREATE TABLE tags (
+CREATE TABLE IF NOT EXISTS tags (
   id   INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   name TEXT NOT NULL UNIQUE
 );
 
-CREATE TABLE recipe_tags (
+CREATE TABLE IF NOT EXISTS recipe_tags (
   recipe_id INTEGER NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
   tag_id    INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
   PRIMARY KEY (recipe_id, tag_id)
 );
-CREATE INDEX idx_recipe_tags_tag_id ON recipe_tags(tag_id);
+CREATE INDEX IF NOT EXISTS idx_recipe_tags_tag_id ON recipe_tags(tag_id);
+
+-- Down Migration
+
+DROP TABLE IF EXISTS recipe_tags, tags, instructions, ingredients, recipes CASCADE;

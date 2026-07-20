@@ -51,8 +51,8 @@ Requires Node 20+ and a local Postgres instance.
 # Backend
 cd backend
 npm install
-psql "$DATABASE_URL" -f src/db/schema.sql   # apply the schema once
-npm run dev                                  # http://localhost:3000
+npm run db:migrate   # apply pending migrations (re-run after pulling new ones)
+npm run dev           # http://localhost:3000
 
 # Frontend (separate terminal)
 cd frontend
@@ -69,7 +69,9 @@ cd frontend && npm test
 
 The backend's `recipes.api.test.ts` integration suite talks to a real,
 disposable Postgres database — it drops and recreates the `public` schema on
-each run. Point it at a scratch database, never your real one:
+each run, then applies all migrations from `backend/migrations/` itself
+(no manual migration step needed for tests). Point it at a scratch database,
+never your real one:
 
 ```sh
 TEST_DATABASE_URL=postgres://chef:changeme@localhost:5432/recipe_vault_test npm test
@@ -77,6 +79,29 @@ TEST_DATABASE_URL=postgres://chef:changeme@localhost:5432/recipe_vault_test npm 
 
 Without `TEST_DATABASE_URL` (or `DATABASE_URL`) set, those tests are skipped
 automatically and the rest of the suite still runs.
+
+## Database migrations
+
+Schema changes live as timestamped SQL files in `backend/migrations/`,
+applied via [node-pg-migrate](https://github.com/salsita/node-pg-migrate) and
+tracked in a `pgmigrations` table — there's no more single `schema.sql`.
+
+```sh
+npm run db:migrate               # apply all pending migrations
+npm run db:migrate:create <name> # scaffold a new migration (fill in Up/Down)
+npm run db:migrate:down          # roll back the most recent migration
+npm run db:migrate:status        # dry-run: show what would be applied
+```
+
+- **Docker**: migrations run automatically — the `app` container's entrypoint
+  applies pending migrations before starting the server, on every start. No
+  manual step needed; `docker compose exec app npm run db:migrate` also works
+  as a manual escape hatch (e.g. to check status without restarting).
+- **Local dev / CI**: run `npm run db:migrate` yourself, once initially and
+  again after pulling commits with new migrations.
+- **Conventions**: one migration per logical schema change; never edit a
+  migration that's already been committed — write a new one to fix it
+  forward instead; always fill in both the Up and Down sections.
 
 ## Type checking, linting, and formatting
 

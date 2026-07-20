@@ -1,9 +1,9 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import pg from 'pg';
+import { runner } from 'node-pg-migrate';
 import type { Express } from 'express';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -21,8 +21,14 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
 
     pool = new pg.Pool({ connectionString: TEST_DATABASE_URL });
     await pool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
-    const schemaSql = fs.readFileSync(path.join(__dirname, '../src/db/schema.sql'), 'utf-8');
-    await pool.query(schemaSql);
+
+    await runner({
+      databaseUrl: TEST_DATABASE_URL,
+      dir: path.join(__dirname, '../migrations'),
+      direction: 'up',
+      migrationsTable: 'pgmigrations',
+      log: () => {},
+    });
 
     ({ app } = await import('../src/app.js'));
   });
