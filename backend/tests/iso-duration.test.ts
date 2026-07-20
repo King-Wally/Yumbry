@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isoDurationToMinutes } from '../src/utils/iso-duration.js';
+import { isoDurationToMinutes, minutesToIsoDuration } from '../src/utils/iso-duration.js';
 
 describe('isoDurationToMinutes', () => {
   it('parses minutes only', () => {
@@ -30,5 +30,32 @@ describe('isoDurationToMinutes', () => {
   it('returns null for malformed durations', () => {
     expect(isoDurationToMinutes('not-a-duration')).toBeNull();
     expect(isoDurationToMinutes('P')).toBeNull();
+  });
+});
+
+describe('minutesToIsoDuration', () => {
+  it('formats minutes only', () => {
+    expect(minutesToIsoDuration(30)).toBe('PT30M');
+  });
+
+  it('formats hours and minutes', () => {
+    expect(minutesToIsoDuration(90)).toBe('PT1H30M');
+  });
+
+  it('formats whole hours', () => {
+    expect(minutesToIsoDuration(120)).toBe('PT2H');
+  });
+
+  it('returns undefined for null, undefined, or non-positive input', () => {
+    expect(minutesToIsoDuration(null)).toBeUndefined();
+    expect(minutesToIsoDuration(undefined)).toBeUndefined();
+    expect(minutesToIsoDuration(0)).toBeUndefined();
+    expect(minutesToIsoDuration(-5)).toBeUndefined();
+  });
+
+  it('round-trips with isoDurationToMinutes', () => {
+    for (const minutes of [1, 15, 30, 45, 60, 90, 120, 150]) {
+      expect(isoDurationToMinutes(minutesToIsoDuration(minutes))).toBe(minutes);
+    }
   });
 });

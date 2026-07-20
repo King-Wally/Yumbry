@@ -132,6 +132,37 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
     expect(res.status).toBe(400);
   });
 
+  it('exports a recipe as schema.org Recipe JSON-LD', async () => {
+    const created = await request(app)
+      .post('/api/recipes')
+      .send({
+        title: 'Export Me',
+        servings: 4,
+        prep_time_minutes: 10,
+        ingredients: [{ raw_text: '1 cup rice' }],
+        instructions: [{ step_number: 1, text: 'Boil rice.' }],
+        tags: ['grain'],
+      });
+
+    const res = await request(app).get(`/api/recipes/${created.body.id}/export`);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      '@context': 'https://schema.org',
+      '@type': 'Recipe',
+      name: 'Export Me',
+      recipeYield: '4',
+      prepTime: 'PT10M',
+      recipeIngredient: ['1 cup rice'],
+      keywords: 'grain',
+    });
+    expect(res.body.recipeInstructions).toEqual([{ '@type': 'HowToStep', text: 'Boil rice.' }]);
+  });
+
+  it('returns 404 exporting a missing recipe', async () => {
+    const res = await request(app).get('/api/recipes/999999/export');
+    expect(res.status).toBe(404);
+  });
+
   it('lists tags', async () => {
     await request(app)
       .post('/api/recipes')

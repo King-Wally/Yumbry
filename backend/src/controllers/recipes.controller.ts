@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { ZodError } from 'zod';
 import { parseRecipeFromJsonLd } from '../services/jsonld-import.service.js';
+import { recipeToJsonLd } from '../services/jsonld-export.service.js';
 import { parseIngredientLine } from '../services/ingredient-parser.js';
 import {
   createRecipe,
@@ -54,6 +55,23 @@ export async function importRecipe(req: Request, res: Response, next: NextFuncti
         .status(400)
         .json({ error: isErrorWithMessage(err) ? err.message : 'Invalid JSON-LD.' });
     }
+    next(err);
+  }
+}
+
+function slugify(title: string): string {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'recipe';
+}
+
+export async function exportRecipe(req: Request, res: Response, next: NextFunction) {
+  try {
+    const recipe = await getRecipeById(req.params.id);
+    if (!recipe) return res.status(404).json({ error: 'Recipe not found' });
+
+    const jsonLd = recipeToJsonLd(recipe);
+    res.setHeader('Content-Disposition', `attachment; filename="${slugify(recipe.title)}.json"`);
+    res.json(jsonLd);
+  } catch (err) {
     next(err);
   }
 }

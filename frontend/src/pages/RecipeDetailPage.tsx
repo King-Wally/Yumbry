@@ -48,6 +48,13 @@ export default function RecipeDetailPage() {
   return (
     <article className="space-y-8">
       <div className="flex justify-end gap-2">
+        <a
+          href={`/api/recipes/${id}/export`}
+          download
+          className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
+        >
+          Export
+        </a>
         <Link
           to={`/recipes/${id}/edit`}
           className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"

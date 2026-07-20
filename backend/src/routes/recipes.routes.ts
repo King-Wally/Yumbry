@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  exportRecipe,
   getRecipe,
   getRecipes,
   importRecipe,
@@ -16,6 +17,7 @@ export const recipesRouter = Router();
 recipesRouter.post('/import', uploadJsonFile.single('file'), importRecipe);
 recipesRouter.get('/', getRecipes);
 recipesRouter.get('/:id', getRecipe);
+recipesRouter.get('/:id/export', exportRecipe);
 recipesRouter.post('/', postRecipe);
 recipesRouter.put('/:id', putRecipe);
 recipesRouter.delete('/:id', removeRecipe);

@@ -21,3 +21,17 @@ export function isoDurationToMinutes(duration: unknown): number | null {
 
   return Math.round(totalMinutes);
 }
+
+/**
+ * Converts whole minutes to an ISO 8601 duration string (e.g. 90 -> "PT1H30M").
+ * Returns undefined for null/missing/non-positive input.
+ */
+export function minutesToIsoDuration(minutes: number | null | undefined): string | undefined {
+  if (minutes == null || minutes <= 0) return undefined;
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (hours === 0 && remainingMinutes === 0) return undefined;
+
+  return `PT${hours > 0 ? `${hours}H` : ''}${remainingMinutes > 0 ? `${remainingMinutes}M` : ''}`;
+}
