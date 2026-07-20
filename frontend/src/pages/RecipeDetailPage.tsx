@@ -91,17 +91,6 @@ export default function RecipeDetailPage() {
         {recipe.prep_time_minutes != null && <span>Prep: {recipe.prep_time_minutes} min</span>}
         {recipe.cook_time_minutes != null && <span>Cook: {recipe.cook_time_minutes} min</span>}
         {recipe.total_time_minutes != null && <span>Total: {recipe.total_time_minutes} min</span>}
-        {recipe.author && <span>By {recipe.author}</span>}
-        {recipe.source_url && (
-          <a
-            href={recipe.source_url}
-            target="_blank"
-            rel="noreferrer"
-            className="text-clay underline"
-          >
-            Source
-          </a>
-        )}
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">

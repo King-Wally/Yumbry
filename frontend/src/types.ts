@@ -31,8 +31,6 @@ interface RecipeBase {
   cook_time_minutes: number | null;
   total_time_minutes: number | null;
   servings: string;
-  source_url: string | null;
-  author: string | null;
   created_at: string;
   updated_at: string;
   tags: Tag[];
@@ -56,8 +54,6 @@ export interface RecipeInput {
   cook_time_minutes?: number | null;
   total_time_minutes?: number | null;
   servings: number;
-  source_url?: string | null;
-  author?: string | null;
   ingredients: string[];
   instructions: { step_number: number; text: string }[];
   tags: string[];

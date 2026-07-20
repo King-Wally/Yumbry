@@ -22,8 +22,6 @@ export interface ParsedRecipeImport {
   cook_time_minutes: number | null;
   total_time_minutes: number | null;
   servings: number;
-  source_url: string | null;
-  author: string | null;
   ingredients: (ParsedIngredient & { sort_order: number })[];
   instructions: { step_number: number; text: string }[];
   tags: string[];
@@ -79,30 +77,6 @@ function extractServings(recipeYield: unknown): number {
     if (match) return Number(match[0]);
   }
   return 1;
-}
-
-function extractAuthor(author: unknown): string | null {
-  const value = Array.isArray(author) ? author[0] : author;
-  if (!value) return null;
-  if (typeof value === 'string') return value;
-  if (typeof value === 'object' && typeof (value as JsonLdNode).name === 'string') {
-    return (value as JsonLdNode).name as string;
-  }
-  return null;
-}
-
-function extractSourceUrl(node: JsonLdNode): string | null {
-  if (typeof node.url === 'string') return node.url;
-  const mainEntity = node.mainEntityOfPage;
-  if (typeof mainEntity === 'string') return mainEntity;
-  if (
-    mainEntity &&
-    typeof mainEntity === 'object' &&
-    typeof (mainEntity as JsonLdNode)['@id'] === 'string'
-  ) {
-    return (mainEntity as JsonLdNode)['@id'] as string;
-  }
-  return null;
 }
 
 function extractTagNames(node: JsonLdNode): string[] {
@@ -193,8 +167,6 @@ export function parseRecipeFromJsonLd(rawJsonLdText: string): ParsedRecipeImport
     cook_time_minutes: cookTimeMinutes,
     total_time_minutes: totalTimeMinutes,
     servings: extractServings(node.recipeYield),
-    source_url: extractSourceUrl(node),
-    author: extractAuthor(node.author),
     ingredients,
     instructions,
     tags: extractTagNames(node),

@@ -18,8 +18,6 @@ export const RecipeBodySchema = z.object({
   cook_time_minutes: z.number().nullable().optional(),
   total_time_minutes: z.number().nullable().optional(),
   servings: z.number().positive().optional(),
-  source_url: z.string().nullable().optional(),
-  author: z.string().nullable().optional(),
   ingredients: z.array(IngredientInputSchema).optional(),
   instructions: z.array(InstructionInputSchema).optional(),
   tags: z.array(z.string()).optional(),

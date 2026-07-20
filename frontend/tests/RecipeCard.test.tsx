@@ -13,8 +13,6 @@ const recipe: RecipeSummary = {
   cook_time_minutes: null,
   total_time_minutes: null,
   servings: '8',
-  source_url: null,
-  author: null,
   created_at: '2026-01-01T00:00:00.000Z',
   updated_at: '2026-01-01T00:00:00.000Z',
   tags: [{ id: 1, name: 'dessert' }],

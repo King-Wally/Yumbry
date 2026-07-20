@@ -20,8 +20,6 @@ interface FormState {
   cook_time_minutes: string;
   total_time_minutes: string;
   servings: number;
-  source_url: string;
-  author: string;
   image_path: string | null;
   ingredients: string[];
   instructions: InstructionDraft[];
@@ -35,8 +33,6 @@ const emptyForm: FormState = {
   cook_time_minutes: '',
   total_time_minutes: '',
   servings: 4,
-  source_url: '',
-  author: '',
   image_path: null,
   ingredients: [''],
   instructions: [{ text: '' }],
@@ -74,8 +70,6 @@ export default function RecipeFormPage() {
       total_time_minutes:
         existingRecipe.total_time_minutes != null ? String(existingRecipe.total_time_minutes) : '',
       servings: Number(existingRecipe.servings),
-      source_url: existingRecipe.source_url ?? '',
-      author: existingRecipe.author ?? '',
       image_path: existingRecipe.image_path ?? null,
       ingredients: existingRecipe.ingredients?.map((i) => i.raw_text) ?? [''],
       instructions: existingRecipe.instructions?.length
@@ -143,8 +137,6 @@ export default function RecipeFormPage() {
       cook_time_minutes: form.cook_time_minutes === '' ? null : Number(form.cook_time_minutes),
       total_time_minutes: form.total_time_minutes === '' ? null : Number(form.total_time_minutes),
       servings: Number(form.servings),
-      source_url: form.source_url || null,
-      author: form.author || null,
       image_path: form.image_path,
       ingredients: form.ingredients.filter((line) => line.trim() !== ''),
       instructions: form.instructions
@@ -227,23 +219,6 @@ export default function RecipeFormPage() {
               className="mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5"
             />
           </label>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <input
-            type="text"
-            value={form.author}
-            onChange={(e) => updateField('author', e.target.value)}
-            placeholder="Author"
-            className="rounded-md border border-stone-300 px-3 py-2"
-          />
-          <input
-            type="url"
-            value={form.source_url}
-            onChange={(e) => updateField('source_url', e.target.value)}
-            placeholder="Source URL"
-            className="rounded-md border border-stone-300 px-3 py-2"
-          />
         </div>
 
         <div>

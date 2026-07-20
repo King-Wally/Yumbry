@@ -21,8 +21,6 @@ export interface RecipeRow {
   cook_time_minutes: number | null;
   total_time_minutes: number | null;
   servings: string;
-  source_url: string | null;
-  author: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -70,8 +68,6 @@ export interface RecipeInput {
   cook_time_minutes?: number | null;
   total_time_minutes?: number | null;
   servings?: number;
-  source_url?: string | null;
-  author?: string | null;
   ingredients?: IngredientInput[];
   instructions?: InstructionInput[];
   tags?: string[];
@@ -229,8 +225,8 @@ export async function createRecipe(data: RecipeInput): Promise<RecipeWithRelatio
     const { rows } = await client.query<{ id: number }>(
       `INSERT INTO recipes
         (title, description, image_path, prep_time_minutes, cook_time_minutes,
-         total_time_minutes, servings, source_url, author)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         total_time_minutes, servings)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id`,
       [
         data.title,
@@ -240,8 +236,6 @@ export async function createRecipe(data: RecipeInput): Promise<RecipeWithRelatio
         data.cook_time_minutes ?? null,
         data.total_time_minutes ?? null,
         data.servings ?? 1,
-        data.source_url ?? null,
-        data.author ?? null,
       ]
     );
     const recipeId = rows[0].id;
@@ -272,8 +266,8 @@ export async function updateRecipe(
       `UPDATE recipes SET
         title = $1, description = $2, image_path = $3, prep_time_minutes = $4,
         cook_time_minutes = $5, total_time_minutes = $6, servings = $7,
-        source_url = $8, author = $9, updated_at = now()
-       WHERE id = $10`,
+        updated_at = now()
+       WHERE id = $8`,
       [
         data.title,
         data.description ?? null,
@@ -282,8 +276,6 @@ export async function updateRecipe(
         data.cook_time_minutes ?? null,
         data.total_time_minutes ?? null,
         data.servings ?? 1,
-        data.source_url ?? null,
-        data.author ?? null,
         id,
       ]
     );

@@ -7,7 +7,6 @@ const bareRecipe = {
   name: 'Simple Pancakes',
   description: 'Fluffy weekend pancakes.',
   image: 'https://example.com/pancakes.jpg',
-  author: { '@type': 'Person', name: 'Jane Doe' },
   prepTime: 'PT10M',
   cookTime: 'PT15M',
   recipeYield: '4 servings',
@@ -51,7 +50,6 @@ describe('parseRecipeFromJsonLd', () => {
 
     expect(recipe.title).toBe('Simple Pancakes');
     expect(recipe.image_path).toBe('https://example.com/pancakes.jpg');
-    expect(recipe.author).toBe('Jane Doe');
     expect(recipe.prep_time_minutes).toBe(10);
     expect(recipe.cook_time_minutes).toBe(15);
     expect(recipe.total_time_minutes).toBe(25); // derived from prep + cook

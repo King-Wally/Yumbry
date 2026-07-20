@@ -7,8 +7,6 @@ CREATE TABLE recipes (
   cook_time_minutes  INTEGER,
   total_time_minutes INTEGER,
   servings           NUMERIC NOT NULL DEFAULT 1,
-  source_url         TEXT,
-  author             TEXT,
   created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
