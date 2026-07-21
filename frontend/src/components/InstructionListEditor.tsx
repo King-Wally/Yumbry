@@ -49,7 +49,7 @@ export default function InstructionListEditor({
               className="w-full rounded-md border border-stone-300 px-3 py-1.5 focus:border-clay focus:outline-none"
             />
           </div>
-          <div className="mt-2 flex flex-col gap-1">
+          <div className="mt-2 flex items-center gap-2">
             <button
               type="button"
               onClick={() => moveStep(index, -1)}

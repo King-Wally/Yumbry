@@ -38,27 +38,29 @@ export default function IngredientListEditor({ ingredients, onChange }: Ingredie
             placeholder="e.g. 1 1/2 cups flour"
             className="flex-1 rounded-md border border-stone-300 px-3 py-1.5 focus:border-clay focus:outline-none"
           />
-          <button
-            type="button"
-            onClick={() => moveLine(index, -1)}
-            className="text-stone-400 hover:text-stone-700"
-          >
-            ↑
-          </button>
-          <button
-            type="button"
-            onClick={() => moveLine(index, 1)}
-            className="text-stone-400 hover:text-stone-700"
-          >
-            ↓
-          </button>
-          <button
-            type="button"
-            onClick={() => removeLine(index)}
-            className="text-stone-400 hover:text-red-600"
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => moveLine(index, -1)}
+              className="text-stone-400 hover:text-stone-700"
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              onClick={() => moveLine(index, 1)}
+              className="text-stone-400 hover:text-stone-700"
+            >
+              ↓
+            </button>
+            <button
+              type="button"
+              onClick={() => removeLine(index)}
+              className="text-stone-400 hover:text-red-600"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       ))}
       <button

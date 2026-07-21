@@ -72,31 +72,42 @@ export default function RecipeDetailPage() {
         </button>
       </div>
 
-      <RecipeHero title={recipe.title} description={recipe.description} imagePath={recipe.image_path} />
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="flex flex-col gap-4 rounded-xl border border-stone-200 bg-white p-5 shadow-sm md:col-span-1">
+          <div>
+            <h1 className="font-serif text-3xl text-stone-900">{recipe.title}</h1>
+            {recipe.description && <p className="mt-2 text-stone-600">{recipe.description}</p>}
+          </div>
 
-      {recipe.tags && recipe.tags.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {recipe.tags.map((tag) => (
-            <span
-              key={tag.id}
-              className="rounded-full border border-clay/25 bg-clay/10 px-3 py-1 text-xs font-medium tracking-wide text-clay"
-            >
-              {tag.name}
-            </span>
-          ))}
+          {recipe.tags && recipe.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {recipe.tags.map((tag) => (
+                <span
+                  key={tag.id}
+                  className="rounded-full border border-clay/25 bg-clay/10 px-3 py-1 text-xs font-medium tracking-wide text-clay"
+                >
+                  {tag.name}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-3 md:flex-col">
+            {recipe.prep_time_minutes != null && (
+              <TimeStat icon="clock" label="Prep" minutes={recipe.prep_time_minutes} />
+            )}
+            {recipe.cook_time_minutes != null && (
+              <TimeStat icon="flame" label="Cook" minutes={recipe.cook_time_minutes} />
+            )}
+            {recipe.total_time_minutes != null && (
+              <TimeStat icon="timer" label="Total" minutes={recipe.total_time_minutes} />
+            )}
+          </div>
         </div>
-      )}
 
-      <div className="flex flex-wrap gap-6">
-        {recipe.prep_time_minutes != null && (
-          <TimeStat icon="clock" label="Prep" minutes={recipe.prep_time_minutes} />
-        )}
-        {recipe.cook_time_minutes != null && (
-          <TimeStat icon="flame" label="Cook" minutes={recipe.cook_time_minutes} />
-        )}
-        {recipe.total_time_minutes != null && (
-          <TimeStat icon="timer" label="Total" minutes={recipe.total_time_minutes} />
-        )}
+        <div className="md:col-span-2">
+          <RecipeHero title={recipe.title} imagePath={recipe.image_path} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
