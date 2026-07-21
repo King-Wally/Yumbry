@@ -170,6 +170,12 @@ async function upsertTags(client: Queryable, recipeId: number, tagNames: string[
   }
 }
 
+async function deleteOrphanedTags(client: Queryable): Promise<void> {
+  await client.query(
+    'DELETE FROM tags WHERE id NOT IN (SELECT DISTINCT tag_id FROM recipe_tags)'
+  );
+}
+
 async function insertIngredients(
   client: Queryable,
   recipeId: number,
@@ -285,6 +291,7 @@ export async function updateRecipe(
     await insertIngredients(client, Number(id), data.ingredients ?? []);
     await insertInstructions(client, Number(id), data.instructions ?? []);
     await upsertTags(client, Number(id), data.tags ?? []);
+    await deleteOrphanedTags(client);
 
     await client.query('COMMIT');
     return getRecipeById(id);
@@ -297,8 +304,19 @@ export async function updateRecipe(
 }
 
 export async function deleteRecipe(id: string): Promise<boolean> {
-  const { rowCount } = await pool.query('DELETE FROM recipes WHERE id = $1', [id]);
-  return (rowCount ?? 0) > 0;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rowCount } = await client.query('DELETE FROM recipes WHERE id = $1', [id]);
+    await deleteOrphanedTags(client);
+    await client.query('COMMIT');
+    return (rowCount ?? 0) > 0;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 export async function setRecipePhoto(

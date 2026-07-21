@@ -176,4 +176,22 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
     const res = await request(app).get('/api/tags');
     expect(res.body.map((t) => t.name).sort()).toEqual(['x', 'y']);
   });
+
+  it('deletes a tag once no recipe references it anymore', async () => {
+    const created = await request(app)
+      .post('/api/recipes')
+      .send({ title: 'Tagged', servings: 1, tags: ['keep-me', 'drop-me'] });
+
+    await request(app)
+      .put(`/api/recipes/${created.body.id}`)
+      .send({ title: 'Tagged', servings: 1, tags: ['keep-me'] });
+
+    const afterUpdate = await request(app).get('/api/tags');
+    expect(afterUpdate.body.map((t) => t.name).sort()).toEqual(['keep-me']);
+
+    await request(app).delete(`/api/recipes/${created.body.id}`);
+
+    const afterDelete = await request(app).get('/api/tags');
+    expect(afterDelete.body).toEqual([]);
+  });
 });
