@@ -1,114 +1,23 @@
-import type { PoolClient } from 'pg';
 import { pool } from '../db/pool.js';
-import type { ParsedIngredient } from './ingredient-parser.js';
-
-export interface TagRef {
-  id: number;
-  name: string;
-}
-
-export interface TagRow {
-  id: number;
-  name: string;
-}
-
-export interface CategoryRef {
-  id: number;
-  name: string;
-}
-
-export interface CategoryRow {
-  id: number;
-  name: string;
-}
-
-export interface RecipeRow {
-  id: number;
-  title: string;
-  description: string | null;
-  image_path: string | null;
-  prep_time_minutes: number | null;
-  cook_time_minutes: number | null;
-  total_time_minutes: number | null;
-  servings: string;
-  category_id: number | null;
-  created_at: Date;
-  updated_at: Date;
-}
-
-export interface IngredientRow {
-  id: number;
-  recipe_id: number;
-  raw_text: string;
-  amount: string | null;
-  unit: string | null;
-  name: string;
-  is_scalable: boolean;
-  sort_order: number;
-}
-
-export interface InstructionRow {
-  id: number;
-  recipe_id: number;
-  step_number: number;
-  text: string;
-}
-
-export interface RecipeWithRelations extends RecipeRow {
-  ingredients: IngredientRow[];
-  instructions: InstructionRow[];
-  tags: TagRef[];
-  category: CategoryRef | null;
-}
-
-export interface IngredientInput extends ParsedIngredient {
-  sort_order?: number;
-}
-
-export interface InstructionInput {
-  step_number?: number;
-  text: string;
-}
-
-export interface RecipeInput {
-  title: string;
-  description?: string | null;
-  image_path?: string | null;
-  prep_time_minutes?: number | null;
-  cook_time_minutes?: number | null;
-  total_time_minutes?: number | null;
-  servings?: number;
-  ingredients?: IngredientInput[];
-  instructions?: InstructionInput[];
-  tags?: string[];
-  category?: string | null;
-}
-
-type Queryable = Pick<PoolClient, 'query'>;
-
-async function fetchTagsForRecipeIds(
-  client: Queryable,
-  recipeIds: number[]
-): Promise<Map<number, TagRef[]>> {
-  const byRecipe = new Map<number, TagRef[]>();
-  if (recipeIds.length === 0) return byRecipe;
-
-  const { rows } = await client.query<{ recipe_id: number; id: number; name: string }>(
-    `SELECT rt.recipe_id, t.id, t.name
-     FROM recipe_tags rt
-     JOIN tags t ON t.id = rt.tag_id
-     WHERE rt.recipe_id = ANY($1::int[])
-     ORDER BY t.name`,
-    [recipeIds]
-  );
-
-  for (const row of rows) {
-    const list = byRecipe.get(row.recipe_id) ?? [];
-    list.push({ id: row.id, name: row.name });
-    byRecipe.set(row.recipe_id, list);
-  }
-  return byRecipe;
-}
+import { withTransaction, type Queryable } from '../db/transaction.js';
+import { insertValuesClause } from '../utils/sql.js';
+import {
+  deleteOrphaned,
+  fetchTagsForRecipeIds,
+  upsertCategory,
+  upsertTags,
+} from './tag-category.service.js';
+import type {
+  CategoryRef,
+  IngredientInput,
+  IngredientRow,
+  InstructionInput,
+  InstructionRow,
+  RecipeInput,
+  RecipeRow,
+  RecipeWithRelations,
+  TagRef,
+} from './recipe.types.js';
 
 type RecipeRowWithCategoryName = RecipeRow & { category_name: string | null };
 
@@ -196,71 +105,28 @@ export async function getRecipeById(id: string | number): Promise<RecipeWithRela
   };
 }
 
-async function upsertTags(client: Queryable, recipeId: number, tagNames: string[]): Promise<void> {
-  for (const name of tagNames) {
-    const normalized = name.trim().toLowerCase();
-    const { rows } = await client.query<{ id: number }>(
-      `INSERT INTO tags (name) VALUES ($1)
-       ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
-       RETURNING id`,
-      [normalized]
-    );
-    await client.query(
-      'INSERT INTO recipe_tags (recipe_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-      [recipeId, rows[0].id]
-    );
-  }
-}
-
-async function deleteOrphanedTags(client: Queryable): Promise<void> {
-  await client.query(
-    'DELETE FROM tags WHERE id NOT IN (SELECT DISTINCT tag_id FROM recipe_tags)'
-  );
-}
-
-async function upsertCategory(
-  client: Queryable,
-  name: string | null | undefined
-): Promise<number | null> {
-  if (!name) return null;
-  const normalized = name.trim().toLowerCase();
-  const { rows } = await client.query<{ id: number }>(
-    `INSERT INTO categories (name) VALUES ($1)
-     ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
-     RETURNING id`,
-    [normalized]
-  );
-  return rows[0].id;
-}
-
-async function deleteOrphanedCategories(client: Queryable): Promise<void> {
-  await client.query(
-    'DELETE FROM categories WHERE id NOT IN (SELECT DISTINCT category_id FROM recipes WHERE category_id IS NOT NULL)'
-  );
-}
-
 async function insertIngredients(
   client: Queryable,
   recipeId: number,
   ingredients: IngredientInput[]
 ): Promise<void> {
-  let sortOrder = 0;
-  for (const ingredient of ingredients) {
-    await client.query(
-      `INSERT INTO ingredients (recipe_id, raw_text, amount, unit, name, is_scalable, sort_order)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [
-        recipeId,
-        ingredient.raw_text,
-        ingredient.amount,
-        ingredient.unit,
-        ingredient.name,
-        ingredient.is_scalable ?? true,
-        ingredient.sort_order ?? sortOrder,
-      ]
-    );
-    sortOrder += 1;
-  }
+  if (ingredients.length === 0) return;
+
+  const params = ingredients.flatMap((ingredient, index) => [
+    recipeId,
+    ingredient.raw_text,
+    ingredient.amount,
+    ingredient.unit,
+    ingredient.name,
+    ingredient.is_scalable ?? true,
+    ingredient.sort_order ?? index,
+  ]);
+
+  await client.query(
+    `INSERT INTO ingredients (recipe_id, raw_text, amount, unit, name, is_scalable, sort_order)
+     VALUES ${insertValuesClause(ingredients.length, 7)}`,
+    params
+  );
 }
 
 async function insertInstructions(
@@ -268,22 +134,23 @@ async function insertInstructions(
   recipeId: number,
   instructions: InstructionInput[]
 ): Promise<void> {
-  let stepNumber = 1;
-  for (const instruction of instructions) {
-    await client.query(
-      `INSERT INTO instructions (recipe_id, step_number, text)
-       VALUES ($1, $2, $3)`,
-      [recipeId, instruction.step_number ?? stepNumber, instruction.text]
-    );
-    stepNumber += 1;
-  }
+  if (instructions.length === 0) return;
+
+  const params = instructions.flatMap((instruction, index) => [
+    recipeId,
+    instruction.step_number ?? index + 1,
+    instruction.text,
+  ]);
+
+  await client.query(
+    `INSERT INTO instructions (recipe_id, step_number, text)
+     VALUES ${insertValuesClause(instructions.length, 3)}`,
+    params
+  );
 }
 
 export async function createRecipe(data: RecipeInput): Promise<RecipeWithRelations | null> {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
+  const recipeId = await withTransaction(async (client) => {
     const categoryId = await upsertCategory(client, data.category);
 
     const { rows } = await client.query<{ id: number }>(
@@ -309,24 +176,17 @@ export async function createRecipe(data: RecipeInput): Promise<RecipeWithRelatio
     await insertInstructions(client, recipeId, data.instructions ?? []);
     await upsertTags(client, recipeId, data.tags ?? []);
 
-    await client.query('COMMIT');
-    return getRecipeById(recipeId);
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
-  }
+    return recipeId;
+  });
+
+  return getRecipeById(recipeId);
 }
 
 export async function updateRecipe(
   id: string,
   data: RecipeInput
 ): Promise<RecipeWithRelations | null> {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
+  const updated = await withTransaction(async (client) => {
     const categoryId = await upsertCategory(client, data.category);
 
     const { rowCount } = await client.query(
@@ -348,10 +208,7 @@ export async function updateRecipe(
       ]
     );
 
-    if (rowCount === 0) {
-      await client.query('ROLLBACK');
-      return null;
-    }
+    if (rowCount === 0) return false;
 
     await client.query('DELETE FROM ingredients WHERE recipe_id = $1', [id]);
     await client.query('DELETE FROM instructions WHERE recipe_id = $1', [id]);
@@ -360,34 +217,31 @@ export async function updateRecipe(
     await insertIngredients(client, Number(id), data.ingredients ?? []);
     await insertInstructions(client, Number(id), data.instructions ?? []);
     await upsertTags(client, Number(id), data.tags ?? []);
-    await deleteOrphanedTags(client);
-    await deleteOrphanedCategories(client);
+    await deleteOrphaned(client, 'tags', 'SELECT DISTINCT tag_id FROM recipe_tags');
+    await deleteOrphaned(
+      client,
+      'categories',
+      'SELECT DISTINCT category_id FROM recipes WHERE category_id IS NOT NULL'
+    );
 
-    await client.query('COMMIT');
-    return getRecipeById(id);
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
-  }
+    return true;
+  });
+
+  if (!updated) return null;
+  return getRecipeById(id);
 }
 
 export async function deleteRecipe(id: string): Promise<boolean> {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
+  return withTransaction(async (client) => {
     const { rowCount } = await client.query('DELETE FROM recipes WHERE id = $1', [id]);
-    await deleteOrphanedTags(client);
-    await deleteOrphanedCategories(client);
-    await client.query('COMMIT');
+    await deleteOrphaned(client, 'tags', 'SELECT DISTINCT tag_id FROM recipe_tags');
+    await deleteOrphaned(
+      client,
+      'categories',
+      'SELECT DISTINCT category_id FROM recipes WHERE category_id IS NOT NULL'
+    );
     return (rowCount ?? 0) > 0;
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
-  }
+  });
 }
 
 export async function setRecipePhoto(
@@ -399,14 +253,4 @@ export async function setRecipePhoto(
     [imagePath, id]
   );
   return rows[0] ?? null;
-}
-
-export async function listTags(): Promise<TagRow[]> {
-  const { rows } = await pool.query<TagRow>('SELECT * FROM tags ORDER BY name');
-  return rows;
-}
-
-export async function listCategories(): Promise<CategoryRow[]> {
-  const { rows } = await pool.query<CategoryRow>('SELECT * FROM categories ORDER BY name');
-  return rows;
 }

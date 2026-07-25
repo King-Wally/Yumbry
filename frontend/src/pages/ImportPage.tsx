@@ -2,6 +2,7 @@ import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { importRecipe } from '../api/client';
+import { queryKeys } from '../api/queryKeys';
 
 export default function ImportPage() {
   const [jsonLd, setJsonLd] = useState('');
@@ -11,8 +12,8 @@ export default function ImportPage() {
   const mutation = useMutation({
     mutationFn: importRecipe,
     onSuccess: (recipe) => {
-      queryClient.invalidateQueries({ queryKey: ['recipes'] });
-      queryClient.invalidateQueries({ queryKey: ['tags'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.recipes() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tags });
       navigate(`/recipes/${recipe.id}`);
     },
   });

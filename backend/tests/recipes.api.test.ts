@@ -220,9 +220,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
 
   it('lists categories', async () => {
     await request(app).post('/api/recipes').send({ title: 'A', servings: 1, category: 'Snack' });
-    await request(app)
-      .post('/api/recipes')
-      .send({ title: 'B', servings: 1, category: 'Dessert' });
+    await request(app).post('/api/recipes').send({ title: 'B', servings: 1, category: 'Dessert' });
     const res = await request(app).get('/api/categories');
     expect(res.body.map((c) => c.name).sort()).toEqual(['dessert', 'snack']);
   });

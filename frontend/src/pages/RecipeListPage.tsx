@@ -1,24 +1,26 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getCategories, getRecipes, getTags } from '../api/client';
-import CategoryChips from '../components/CategoryChips';
+import { getRecipes } from '../api/client';
+import { queryKeys } from '../api/queryKeys';
+import { useCategories } from '../hooks/useCategories';
+import { useTags } from '../hooks/useTags';
+import FilterChips from '../components/FilterChips';
 import RecipeCard from '../components/RecipeCard';
 import SearchBar from '../components/SearchBar';
-import TagChips from '../components/TagChips';
 
 export default function RecipeListPage() {
   const [search, setSearch] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
-  const { data: tags } = useQuery({ queryKey: ['tags'], queryFn: getTags });
-  const { data: categories } = useQuery({ queryKey: ['categories'], queryFn: getCategories });
+  const { data: tags } = useTags();
+  const { data: categories } = useCategories();
   const {
     data: recipes,
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ['recipes', search, activeTag, activeCategory],
+    queryKey: queryKeys.recipes({ search, tag: activeTag, category: activeCategory }),
     queryFn: () => getRecipes({ search, tag: activeTag, category: activeCategory }),
   });
 
@@ -26,12 +28,8 @@ export default function RecipeListPage() {
     <div className="space-y-6">
       <div className="space-y-4">
         <SearchBar value={search} onChange={setSearch} />
-        <CategoryChips
-          categories={categories}
-          activeCategory={activeCategory}
-          onSelect={setActiveCategory}
-        />
-        <TagChips tags={tags} activeTag={activeTag} onSelect={setActiveTag} />
+        <FilterChips items={categories} activeValue={activeCategory} onSelect={setActiveCategory} />
+        <FilterChips items={tags} activeValue={activeTag} onSelect={setActiveTag} />
       </div>
 
       {isLoading && <p className="text-stone-500">Loading recipes...</p>}

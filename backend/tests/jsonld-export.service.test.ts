@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { recipeToJsonLd } from '../src/services/jsonld-export.service.js';
-import type { RecipeWithRelations } from '../src/services/recipe.service.js';
+import type { RecipeWithRelations } from '../src/services/recipe.types.js';
 
 const fullRecipe: RecipeWithRelations = {
   id: 1,

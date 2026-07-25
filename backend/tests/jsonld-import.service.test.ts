@@ -144,4 +144,23 @@ describe('parseRecipeFromJsonLd', () => {
   it('throws on invalid JSON', () => {
     expect(() => parseRecipeFromJsonLd('not json')).toThrow();
   });
+
+  it('drops non-string entries from recipeIngredient instead of throwing', () => {
+    const node = {
+      ...bareRecipe,
+      recipeIngredient: ['1 cup rice', { '@type': 'HowToStep', text: 'not an ingredient' }, null],
+    };
+    const recipe = parseRecipeFromJsonLd(JSON.stringify(node));
+    expect(recipe.ingredients).toHaveLength(1);
+    expect(recipe.ingredients[0].name).toBe('rice');
+  });
+
+  it('drops non-string entries from keywords instead of throwing', () => {
+    const node = {
+      ...bareRecipe,
+      keywords: ['pancakes', { name: 'not a keyword' }, 42, 'easy'],
+    };
+    const recipe = parseRecipeFromJsonLd(JSON.stringify(node));
+    expect(recipe.tags.sort()).toEqual(['pancakes', 'easy'].sort());
+  });
 });

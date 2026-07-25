@@ -63,3 +63,13 @@ ALTER TABLE categories ADD CONSTRAINT categories_name_lowercase CHECK (name = lo
 
 DROP TABLE category_dupe_map;
 DROP TABLE category_canonical;
+
+-- Down Migration
+
+-- Only the constraint additions above are reversible. The duplicate-row merge
+-- is not: once case-variant tags/categories are merged into one canonical
+-- (lowercase) row, the original separate rows and their ids are gone. This
+-- down migration removes the constraints; it does not (and cannot) restore
+-- the pre-merge duplicates.
+ALTER TABLE categories DROP CONSTRAINT IF EXISTS categories_name_lowercase;
+ALTER TABLE tags DROP CONSTRAINT IF EXISTS tags_name_lowercase;

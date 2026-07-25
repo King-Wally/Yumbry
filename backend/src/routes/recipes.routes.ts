@@ -10,14 +10,15 @@ import {
   uploadRecipePhoto,
 } from '../controllers/recipes.controller.js';
 import { uploadJsonFile, uploadPhoto } from '../middleware/upload.js';
+import { asyncHandler } from '../utils/async-handler.js';
 
 export const recipesRouter = Router();
 
-recipesRouter.post('/import', uploadJsonFile.single('file'), importRecipe);
-recipesRouter.get('/', getRecipes);
-recipesRouter.get('/:id', getRecipe);
-recipesRouter.get('/:id/export', exportRecipe);
-recipesRouter.post('/', postRecipe);
-recipesRouter.put('/:id', putRecipe);
-recipesRouter.delete('/:id', removeRecipe);
-recipesRouter.post('/:id/photo', uploadPhoto.single('photo'), uploadRecipePhoto);
+recipesRouter.post('/import', uploadJsonFile.single('file'), asyncHandler(importRecipe));
+recipesRouter.get('/', asyncHandler(getRecipes));
+recipesRouter.get('/:id', asyncHandler(getRecipe));
+recipesRouter.get('/:id/export', asyncHandler(exportRecipe));
+recipesRouter.post('/', asyncHandler(postRecipe));
+recipesRouter.put('/:id', asyncHandler(putRecipe));
+recipesRouter.delete('/:id', asyncHandler(removeRecipe));
+recipesRouter.post('/:id/photo', uploadPhoto.single('photo'), asyncHandler(uploadRecipePhoto));

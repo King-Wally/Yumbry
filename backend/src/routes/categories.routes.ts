@@ -1,12 +1,7 @@
 import { Router } from 'express';
-import { listCategories } from '../services/recipe.service.js';
+import { getCategories } from '../controllers/categories.controller.js';
+import { asyncHandler } from '../utils/async-handler.js';
 
 export const categoriesRouter = Router();
 
-categoriesRouter.get('/', async (req, res, next) => {
-  try {
-    res.json(await listCategories());
-  } catch (err) {
-    next(err);
-  }
-});
+categoriesRouter.get('/', asyncHandler(getCategories));

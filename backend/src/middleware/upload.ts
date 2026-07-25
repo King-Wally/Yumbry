@@ -17,7 +17,11 @@ const storage = multer.diskStorage({
   },
 });
 
-function imageFileFilter(req: Request, file: Express.Multer.File, cb: FileFilterCallback): void {
+export function imageFileFilter(
+  req: Request,
+  file: Express.Multer.File,
+  cb: FileFilterCallback
+): void {
   if (!file.mimetype.startsWith('image/')) {
     cb(new Error('Only image uploads are allowed'));
     return;

@@ -1,4 +1,4 @@
-import type { RecipeWithRelations } from './recipe.service.js';
+import type { RecipeWithRelations } from './recipe.types.js';
 import { minutesToIsoDuration } from '../utils/iso-duration.js';
 
 /** Serializes a stored recipe as a schema.org Recipe JSON-LD document, the

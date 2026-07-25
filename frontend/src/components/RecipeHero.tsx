@@ -7,7 +7,13 @@ export default function RecipeHero({ title, imagePath }: RecipeHeroProps) {
   return (
     <div className="relative h-56 overflow-hidden rounded-2xl shadow-sm sm:h-72 md:h-full">
       {imagePath ? (
-        <img src={imagePath} alt={title} className="absolute inset-0 h-full w-full object-cover" />
+        <img
+          src={imagePath}
+          alt={title}
+          loading="lazy"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-stone-100 text-stone-300">
           <svg

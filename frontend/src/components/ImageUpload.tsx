@@ -18,7 +18,13 @@ export default function ImageUpload({ currentUrl, onUpload, label = 'Photo' }: I
   return (
     <div className="flex items-center gap-3">
       {currentUrl && (
-        <img src={currentUrl} alt={label} className="h-16 w-16 rounded object-cover" />
+        <img
+          src={currentUrl}
+          alt={label}
+          loading="lazy"
+          decoding="async"
+          className="h-16 w-16 rounded object-cover"
+        />
       )}
       <button
         type="button"

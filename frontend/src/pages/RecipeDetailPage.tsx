@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { deleteRecipe, getRecipe } from '../api/client';
+import { deleteRecipe, getRecipe, getRecipeExportUrl } from '../api/client';
+import { queryKeys } from '../api/queryKeys';
 import RecipeHero from '../components/RecipeHero';
 import ServingsStepper from '../components/ServingsStepper';
 import TimeStat from '../components/TimeStat';
 import { useScaledIngredients } from '../hooks/useScaledIngredients';
+import { toNumber } from '../utils/numeric';
 
 export default function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -13,7 +15,7 @@ export default function RecipeDetailPage() {
   const queryClient = useQueryClient();
 
   const { data: recipe, isLoading } = useQuery({
-    queryKey: ['recipe', id],
+    queryKey: queryKeys.recipe(id!),
     queryFn: () => getRecipe(id!),
   });
 
@@ -25,19 +27,19 @@ export default function RecipeDetailPage() {
   // state from async data without an extra render/flash of stale values.
   if (recipe && servingsForRecipeId !== recipe.id) {
     setServingsForRecipeId(recipe.id);
-    setServings(Number(recipe.servings));
+    setServings(toNumber(recipe.servings, 1));
   }
 
   const scaledIngredients = useScaledIngredients(
     recipe?.ingredients,
-    Number(recipe?.servings ?? 1),
+    toNumber(recipe?.servings, 1),
     servings
   );
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteRecipe(id!),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['recipes'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.recipes() });
       navigate('/');
     },
   });
@@ -66,7 +68,7 @@ export default function RecipeDetailPage() {
         </Link>
         <div className="flex gap-2">
           <a
-            href={`/api/recipes/${id}/export`}
+            href={getRecipeExportUrl(id!)}
             download
             className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
           >

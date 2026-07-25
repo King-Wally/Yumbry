@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Category } from '../types';
+import Chip from './Chip';
 
 interface CategoryPickerProps {
   categories: Category[] | undefined;
@@ -12,7 +13,10 @@ export default function CategoryPicker({ categories, value, onChange }: Category
 
   function addCustom() {
     const name = customInput.trim();
-    if (name) onChange(name);
+    if (name) {
+      const existing = categories?.find((c) => c.name.toLowerCase() === name.toLowerCase());
+      onChange(existing ? existing.name : name);
+    }
     setCustomInput('');
   }
 
@@ -21,18 +25,13 @@ export default function CategoryPicker({ categories, value, onChange }: Category
       {categories && categories.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
           {categories.map((category) => (
-            <button
+            <Chip
               key={category.id}
-              type="button"
+              active={value === category.name}
               onClick={() => onChange(category.name === value ? null : category.name)}
-              className={`rounded-full px-3 py-1 text-sm capitalize transition ${
-                value === category.name
-                  ? 'bg-clay text-white shadow-sm'
-                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-              }`}
             >
               {category.name}
-            </button>
+            </Chip>
           ))}
         </div>
       )}

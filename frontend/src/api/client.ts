@@ -48,6 +48,10 @@ export function deleteRecipe(id: string | number) {
   return request<null>(`/recipes/${id}`, { method: 'DELETE' });
 }
 
+export function getRecipeExportUrl(id: string | number) {
+  return `/api/recipes/${id}/export`;
+}
+
 export function importRecipe({ jsonLd, file }: { jsonLd?: string; file?: File }) {
   if (file) {
     const formData = new FormData();

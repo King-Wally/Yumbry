@@ -84,8 +84,11 @@ function extractTagNames(node: JsonLdNode): string[] {
   const names: string[] = [];
 
   const keywords = node.keywords;
-  if (Array.isArray(keywords)) names.push(...(keywords as string[]));
-  else if (typeof keywords === 'string') names.push(...keywords.split(','));
+  if (Array.isArray(keywords)) {
+    names.push(...keywords.filter((entry): entry is string => typeof entry === 'string'));
+  } else if (typeof keywords === 'string') {
+    names.push(...keywords.split(','));
+  }
 
   return [...new Set(names.map((name) => name.trim()).filter(Boolean))];
 }
@@ -160,7 +163,7 @@ export function parseRecipeFromJsonLd(rawJsonLdText: string): ParsedRecipeImport
       : null);
 
   const ingredientLines: string[] = Array.isArray(node.recipeIngredient)
-    ? (node.recipeIngredient as string[])
+    ? node.recipeIngredient.filter((entry): entry is string => typeof entry === 'string')
     : [];
   const ingredients = ingredientLines.map((line, index) => ({
     ...parseIngredientLine(line),

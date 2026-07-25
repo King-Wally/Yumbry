@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { formatFraction } from '../utils/format-fraction';
+import { toNumber } from '../utils/numeric';
 import type { Ingredient } from '../types';
 
 export interface ScaledIngredient extends Ingredient {
@@ -21,15 +22,11 @@ export function useScaledIngredients(
     const multiplier = baseServings > 0 ? desiredServings / baseServings : 1;
 
     return (ingredients ?? []).map((ingredient): ScaledIngredient => {
-      if (
-        !ingredient.is_scalable ||
-        ingredient.amount === null ||
-        ingredient.amount === undefined
-      ) {
+      if (!ingredient.is_scalable || ingredient.amount === null) {
         return { ...ingredient, displayText: ingredient.raw_text };
       }
 
-      const scaledAmount = Number(ingredient.amount) * multiplier;
+      const scaledAmount = toNumber(ingredient.amount) * multiplier;
       const formattedAmount = formatFraction(scaledAmount);
       const unitPart = ingredient.unit ? ` ${ingredient.unit}` : '';
 

@@ -24,3 +24,4 @@ export const RecipeBodySchema = z.object({
 });
 
 export type RecipeBody = z.infer<typeof RecipeBodySchema>;
+export type InstructionInput = z.infer<typeof InstructionInputSchema>;
