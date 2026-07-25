@@ -59,7 +59,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
     expect(createRes.body.title).toBe('Test Soup');
     expect(createRes.body.ingredients).toHaveLength(1);
     expect(createRes.body.tags.map((t) => t.name).sort()).toEqual(['dinner', 'soup']);
-    expect(createRes.body.category).toMatchObject({ name: 'Main course' });
+    expect(createRes.body.category).toMatchObject({ name: 'main course' });
 
     const getRes = await request(app).get(`/api/recipes/${createRes.body.id}`);
     expect(getRes.status).toBe(200);
@@ -102,7 +102,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
       .post('/api/recipes')
       .send({ title: 'Cookies', servings: 12, category: 'Dessert' });
 
-    const res = await request(app).get('/api/recipes').query({ category: 'Main course' });
+    const res = await request(app).get('/api/recipes').query({ category: 'main course' });
     expect(res.body).toHaveLength(1);
     expect(res.body[0].title).toBe('Tacos');
   });
@@ -148,9 +148,9 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
     expect(res.status).toBe(201);
     expect(res.body.title).toBe('Imported Recipe');
     expect(res.body.ingredients[0].name).toBe('rice');
-    expect(res.body.category).toMatchObject({ name: 'Hoofdgerecht' });
+    expect(res.body.category).toMatchObject({ name: 'hoofdgerecht' });
     expect(res.body.tags.map((t) => t.name).sort()).toEqual(
-      ['hoofdgerecht', 'vlees', 'comfortfood', 'Zweeds'].sort()
+      ['hoofdgerecht', 'vlees', 'comfortfood', 'zweeds'].sort()
     );
   });
 
@@ -181,7 +181,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
       recipeYield: '4',
       prepTime: 'PT10M',
       recipeIngredient: ['1 cup rice'],
-      recipeCategory: 'Side dish',
+      recipeCategory: 'side dish',
       keywords: 'grain',
     });
     expect(res.body.recipeInstructions).toEqual([{ '@type': 'HowToStep', text: 'Boil rice.' }]);
@@ -224,7 +224,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
       .post('/api/recipes')
       .send({ title: 'B', servings: 1, category: 'Dessert' });
     const res = await request(app).get('/api/categories');
-    expect(res.body.map((c) => c.name).sort()).toEqual(['Dessert', 'Snack']);
+    expect(res.body.map((c) => c.name).sort()).toEqual(['dessert', 'snack']);
   });
 
   it('reuses the same category across recipes with the same name', async () => {
@@ -251,7 +251,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
       .send({ title: 'Tagged', servings: 1, category: 'Dessert' });
 
     const afterUpdate = await request(app).get('/api/categories');
-    expect(afterUpdate.body.map((c) => c.name)).toEqual(['Dessert']);
+    expect(afterUpdate.body.map((c) => c.name)).toEqual(['dessert']);
 
     await request(app).delete(`/api/recipes/${created.body.id}`);
 

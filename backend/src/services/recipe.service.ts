@@ -198,11 +198,12 @@ export async function getRecipeById(id: string | number): Promise<RecipeWithRela
 
 async function upsertTags(client: Queryable, recipeId: number, tagNames: string[]): Promise<void> {
   for (const name of tagNames) {
+    const normalized = name.trim().toLowerCase();
     const { rows } = await client.query<{ id: number }>(
       `INSERT INTO tags (name) VALUES ($1)
        ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
        RETURNING id`,
-      [name]
+      [normalized]
     );
     await client.query(
       'INSERT INTO recipe_tags (recipe_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
@@ -222,11 +223,12 @@ async function upsertCategory(
   name: string | null | undefined
 ): Promise<number | null> {
   if (!name) return null;
+  const normalized = name.trim().toLowerCase();
   const { rows } = await client.query<{ id: number }>(
     `INSERT INTO categories (name) VALUES ($1)
      ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
      RETURNING id`,
-    [name]
+    [normalized]
   );
   return rows[0].id;
 }

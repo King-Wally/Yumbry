@@ -25,7 +25,7 @@ export default function CategoryPicker({ categories, value, onChange }: Category
               key={category.id}
               type="button"
               onClick={() => onChange(category.name === value ? null : category.name)}
-              className={`rounded-full px-3 py-1 text-sm transition ${
+              className={`rounded-full px-3 py-1 text-sm capitalize transition ${
                 value === category.name
                   ? 'bg-clay text-white shadow-sm'
                   : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
@@ -60,7 +60,7 @@ export default function CategoryPicker({ categories, value, onChange }: Category
       </div>
       {value && (
         <p className="mt-1.5 text-xs text-stone-500">
-          Selected: <span className="font-medium text-stone-700">{value}</span>{' '}
+          Selected: <span className="font-medium capitalize text-stone-700">{value}</span>{' '}
           <button
             type="button"
             onClick={() => onChange(null)}

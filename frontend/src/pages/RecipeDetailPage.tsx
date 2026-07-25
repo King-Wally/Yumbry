@@ -107,7 +107,7 @@ export default function RecipeDetailPage() {
               {recipe.tags.map((tag) => (
                 <span
                   key={tag.id}
-                  className="rounded-full border border-clay/25 bg-clay/10 px-3 py-1 text-xs font-medium tracking-wide text-clay"
+                  className="rounded-full border border-clay/25 bg-clay/10 px-3 py-1 text-xs font-medium tracking-wide text-clay capitalize"
                 >
                   {tag.name}
                 </span>

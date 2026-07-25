@@ -27,7 +27,7 @@ export default function TagChips({ tags, activeTag, onSelect }: TagChipsProps) {
           key={tag.id}
           type="button"
           onClick={() => onSelect(tag.name === activeTag ? null : tag.name)}
-          className={`rounded-full px-3 py-1 text-sm transition ${
+          className={`rounded-full px-3 py-1 text-sm capitalize transition ${
             activeTag === tag.name
               ? 'bg-clay text-white shadow-sm'
               : 'bg-stone-100 text-stone-600 hover:bg-stone-200'

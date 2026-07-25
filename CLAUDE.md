@@ -31,6 +31,15 @@ TEST_DATABASE_URL=postgres://chef:changeme@localhost:5432/recipe_vault_test npm 
 
 Without `TEST_DATABASE_URL` (or `DATABASE_URL`) set, that suite is skipped automatically (`describe.skipIf`) and the rest of the tests still run — this is expected in most sandboxes.
 
+To verify a new migration's actual data-transforming logic (e.g. a one-off `UPDATE`/merge migration), running the suite above isn't enough — it only proves the migration applies cleanly to an empty schema, not that it does the right thing to pre-existing data. Don't seed that into the `db` service's real `db_data` volume. Instead spin up a fully disposable Postgres container on a different port, migrate up to (but not including) the new migration, seed the specific pre-migration state you want to exercise, run the new migration, inspect the result, then throw the container away:
+
+```sh
+docker run --rm -d --name mig-test -p 5433:5432 -e POSTGRES_USER=chef -e POSTGRES_PASSWORD=changeme -e POSTGRES_DB=recipe_vault_test postgres:16-alpine
+# seed via: docker exec mig-test psql -U chef -d recipe_vault_test -c "..."
+# migrate via: DATABASE_URL=postgres://chef:changeme@localhost:5433/recipe_vault_test npx node-pg-migrate up   (run from backend/)
+docker stop mig-test   # cleans up automatically, --rm
+```
+
 Full stack via Docker:
 
 ```sh
@@ -64,12 +73,15 @@ docker compose up --build
 
 **Manual create/update replace child rows wholesale.** `services/recipe.service.ts`'s `updateRecipe()` deletes and re-inserts all `ingredients`/`instructions`/`recipe_tags` rows inside one transaction rather than diffing — this is deliberate for a single-user app with small recipes, not an oversight. `createRecipe`/`updateRecipe` are also the only two places recipes get persisted; both `POST /api/recipes` and `POST /api/recipes/import` funnel through `createRecipe`.
 
+**Tags and categories are stored lowercase; capitalization is display-only.** `tags.name`/`categories.name` carry a `CHECK (name = lower(name))` constraint (added in `1784974116000_lowercase-tags-and-categories.sql`, which also merged any pre-existing case-variant duplicates like `"Vegan"`/`"vegan"` into one row). `upsertTags`/`upsertCategory` in `recipe.service.ts` lowercase+trim every name right before the `INSERT ... ON CONFLICT` upsert, so this holds no matter the entry path (manual form, JSON-LD import) — don't add normalization anywhere else, that's the one centralized spot (same pattern as ingredient parsing above). There is no separate "display name" — the frontend renders the capitalized look purely via Tailwind's `capitalize` utility class at each render site (`RecipeCard`, `RecipeDetailPage`, `TagChips`, `RecipeFormPage`, `CategoryChips`, `CategoryPicker`), not a JS helper. The two category *badges* (as opposed to filter chips) in `RecipeCard`/`RecipeDetailPage` already use `uppercase` for a deliberate all-caps style and intentionally don't also get `capitalize`. Any new code comparing or deduping tag/category names should compare case-insensitively (or lowercase first) rather than assuming input is already normalized — e.g. `RecipeFormPage.tsx`'s in-progress tag-chip list is user-typed and not yet lowercased client-side.
+
 ## Type-package gotchas already resolved once — don't redo this research
 
 - `typescript-eslint@8.x` currently pins its `typescript` peer range to `>=4.8.4 <6.1.0`. TypeScript's own "latest" dist-tag can be ahead of that (it was mid-7.x when this repo was set up). Both packages pin `typescript` to the newest version still inside typescript-eslint's supported range — check that range again before bumping `typescript`, or ESLint will silently mismatch the compiler it lints against.
 - `uuid`'s own bundled types only exist from v10+; earlier majors need `@types/uuid`, but the current `@types/uuid` publish is an empty stub ("uuid provides its own types now") with no actual declarations — installing it errors with `TS2688: Cannot find type definition file for 'uuid'`. The fix used here was bumping the `uuid` runtime dependency itself to `^11.x` (own types, no `@types/uuid` needed) rather than fighting the stub.
 - `eslint-plugin-react-hooks`'s `configs['recommended-latest']` export is still in legacy eslint-plugin config shape (`{ plugins: ['react-hooks'], rules: {...} }`), not a flat-config object, despite ESLint 10 requiring flat config — spread only `.rules` into a flat config block and register the plugin object yourself under `plugins: { 'react-hooks': reactHooks }` (see `frontend/eslint.config.js`).
 - Tailwind's `content` glob in `tailwind.config.js` must list the actual source extensions (`**/*.{ts,tsx}`) — leaving a stale `**/*.{js,jsx}` glob after the TS conversion doesn't error, it just silently purges almost every utility class from the production CSS bundle (looks fine in dev, breaks in the `vite build` output). If a Tailwind-based UI change looks unstyled only in the built/Docker version, check this glob first.
+- `frontend/eslint.config.js`'s `ignores` only excludes `dist/**`, not `dev-dist/**` — the latter is the PWA plugin's dev-mode service-worker output (generated because `devOptions.enabled: true`, see Architecture above) and only appears locally after running `npm run dev` at least once. If it's present, `npm run lint` reports dozens of `no-undef`/`@typescript-eslint/ban-types` errors from that generated Workbox bundle; these are pre-existing noise from an ungitignored-from-lint build artifact, not real findings, and unrelated to whatever you just changed. Scope to `npx eslint src/` for a clean read instead of chasing them.
 
 ## Quality bar before calling a change done
 

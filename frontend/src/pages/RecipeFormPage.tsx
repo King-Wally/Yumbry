@@ -108,7 +108,7 @@ export default function RecipeFormPage() {
 
   function addTag() {
     const name = tagInput.trim();
-    if (name && !form.tags.includes(name)) {
+    if (name && !form.tags.some((t) => t.toLowerCase() === name.toLowerCase())) {
       setForm((f) => ({ ...f, tags: [...f.tags, name] }));
     }
     setTagInput('');
@@ -227,7 +227,7 @@ export default function RecipeFormPage() {
             {form.tags.map((tag) => (
               <span
                 key={tag}
-                className="flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600"
+                className="flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600 capitalize"
               >
                 {tag}
                 <button
