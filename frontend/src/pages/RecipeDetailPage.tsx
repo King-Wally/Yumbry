@@ -47,29 +47,47 @@ export default function RecipeDetailPage() {
 
   return (
     <article className="space-y-8">
-      <div className="flex justify-end gap-2">
-        <a
-          href={`/api/recipes/${id}/export`}
-          download
-          className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
-        >
-          Export
-        </a>
+      <div className="flex items-center justify-between gap-2">
         <Link
-          to={`/recipes/${id}/edit`}
-          className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
+          to="/"
+          className="flex items-center gap-1 rounded-md px-2 py-1.5 text-sm text-stone-600 transition-colors hover:text-stone-900"
         >
-          Edit
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            className="h-4 w-4"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back
         </Link>
-        <button
-          type="button"
-          onClick={() => {
-            if (confirm('Delete this recipe?')) deleteMutation.mutate();
-          }}
-          className="rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-600 transition-colors hover:border-red-300 hover:bg-red-50"
-        >
-          Delete
-        </button>
+        <div className="flex gap-2">
+          <a
+            href={`/api/recipes/${id}/export`}
+            download
+            className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
+          >
+            Export
+          </a>
+          <Link
+            to={`/recipes/${id}/edit`}
+            className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
+          >
+            Edit
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm('Delete this recipe?')) deleteMutation.mutate();
+            }}
+            className="rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-600 transition-colors hover:border-red-300 hover:bg-red-50"
+          >
+            Delete
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
