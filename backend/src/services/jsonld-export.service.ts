@@ -28,6 +28,8 @@ export function recipeToJsonLd(recipe: RecipeWithRelations): Record<string, unkn
     text: instruction.text,
   }));
 
+  if (recipe.category) jsonLd.recipeCategory = recipe.category.name;
+
   if (recipe.tags.length > 0) {
     jsonLd.keywords = recipe.tags.map((tag) => tag.name).join(', ');
   }

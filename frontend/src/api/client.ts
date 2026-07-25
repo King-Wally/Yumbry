@@ -1,4 +1,4 @@
-import type { Recipe, RecipeInput, RecipeSummary, Tag } from '../types';
+import type { Category, Recipe, RecipeInput, RecipeSummary, Tag } from '../types';
 
 interface ApiErrorBody {
   error?: string;
@@ -19,10 +19,15 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return res.json();
 }
 
-export function getRecipes({ search, tag }: { search?: string; tag?: string | null } = {}) {
+export function getRecipes({
+  search,
+  tag,
+  category,
+}: { search?: string; tag?: string | null; category?: string | null } = {}) {
   const params = new URLSearchParams();
   if (search) params.set('search', search);
   if (tag) params.set('tag', tag);
+  if (category) params.set('category', category);
   const query = params.toString();
   return request<RecipeSummary[]>(`/recipes${query ? `?${query}` : ''}`);
 }
@@ -63,4 +68,8 @@ export function uploadRecipePhoto(id: string | number, file: File) {
 
 export function getTags() {
   return request<Tag[]>('/tags');
+}
+
+export function getCategories() {
+  return request<Category[]>('/categories');
 }

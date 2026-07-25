@@ -54,7 +54,8 @@ describe('parseRecipeFromJsonLd', () => {
     expect(recipe.cook_time_minutes).toBe(15);
     expect(recipe.total_time_minutes).toBe(25); // derived from prep + cook
     expect(recipe.servings).toBe(4);
-    expect(recipe.tags.sort()).toEqual(['Breakfast', 'pancakes', 'breakfast', 'easy'].sort());
+    expect(recipe.category).toBe('Breakfast');
+    expect(recipe.tags.sort()).toEqual(['pancakes', 'breakfast', 'easy'].sort());
 
     expect(recipe.ingredients).toHaveLength(3);
     expect(recipe.ingredients[0]).toMatchObject({ amount: 1.5, unit: 'cups', name: 'flour' });
@@ -120,6 +121,18 @@ describe('parseRecipeFromJsonLd', () => {
     const node = { ...bareRecipe, recipeYield: undefined };
     const recipe = parseRecipeFromJsonLd(JSON.stringify(node));
     expect(recipe.servings).toBe(1);
+  });
+
+  it('takes the first entry when recipeCategory is an array', () => {
+    const node = { ...bareRecipe, recipeCategory: ['Main course', 'Dinner'] };
+    const recipe = parseRecipeFromJsonLd(JSON.stringify(node));
+    expect(recipe.category).toBe('Main course');
+  });
+
+  it('sets category to null when recipeCategory is absent', () => {
+    const node = { ...bareRecipe, recipeCategory: undefined };
+    const recipe = parseRecipeFromJsonLd(JSON.stringify(node));
+    expect(recipe.category).toBeNull();
   });
 
   it('throws when the input has no Recipe node', () => {

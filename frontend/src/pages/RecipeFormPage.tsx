@@ -1,7 +1,14 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createRecipe, getRecipe, updateRecipe, uploadRecipePhoto } from '../api/client';
+import {
+  createRecipe,
+  getCategories,
+  getRecipe,
+  updateRecipe,
+  uploadRecipePhoto,
+} from '../api/client';
+import CategoryPicker from '../components/CategoryPicker';
 import ImageUpload from '../components/ImageUpload';
 import IngredientListEditor from '../components/IngredientListEditor';
 import InstructionListEditor, { type InstructionDraft } from '../components/InstructionListEditor';
@@ -18,6 +25,7 @@ interface FormState {
   ingredients: string[];
   instructions: InstructionDraft[];
   tags: string[];
+  category: string | null;
 }
 
 const emptyForm: FormState = {
@@ -31,6 +39,7 @@ const emptyForm: FormState = {
   ingredients: [''],
   instructions: [{ text: '' }],
   tags: [],
+  category: null,
 };
 
 export default function RecipeFormPage() {
@@ -48,6 +57,8 @@ export default function RecipeFormPage() {
     queryFn: () => getRecipe(id!),
     enabled: isEditing,
   });
+
+  const { data: categories } = useQuery({ queryKey: ['categories'], queryFn: getCategories });
 
   // Populate the form during render when a new recipe loads, rather than in a
   // useEffect — this is React's documented pattern for initializing editable
@@ -70,6 +81,7 @@ export default function RecipeFormPage() {
         ? existingRecipe.instructions.map((i) => ({ id: i.id, text: i.text }))
         : [{ text: '' }],
       tags: existingRecipe.tags?.map((t) => t.name) ?? [],
+      category: existingRecipe.category?.name ?? null,
     });
   }
 
@@ -79,6 +91,7 @@ export default function RecipeFormPage() {
     onSuccess: (recipe) => {
       queryClient.invalidateQueries({ queryKey: ['recipes'] });
       queryClient.invalidateQueries({ queryKey: ['tags'] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
       queryClient.invalidateQueries({ queryKey: ['recipe', String(recipe.id)] });
       navigate(`/recipes/${recipe.id}`);
     },
@@ -120,6 +133,7 @@ export default function RecipeFormPage() {
         .filter((step) => step.text.trim() !== '')
         .map((step, index) => ({ step_number: index + 1, text: step.text })),
       tags: form.tags,
+      category: form.category,
     });
   }
 
@@ -196,6 +210,15 @@ export default function RecipeFormPage() {
               className="mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5"
             />
           </label>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-stone-700">Category</label>
+          <CategoryPicker
+            categories={categories}
+            value={form.category}
+            onChange={(category) => updateField('category', category)}
+          />
         </div>
 
         <div>

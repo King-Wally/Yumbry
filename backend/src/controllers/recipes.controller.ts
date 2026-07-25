@@ -79,7 +79,8 @@ export async function getRecipes(req: Request, res: Response, next: NextFunction
   try {
     const search = typeof req.query.search === 'string' ? req.query.search : undefined;
     const tag = typeof req.query.tag === 'string' ? req.query.tag : undefined;
-    const recipes = await listRecipes({ search, tag });
+    const category = typeof req.query.category === 'string' ? req.query.category : undefined;
+    const recipes = await listRecipes({ search, tag, category });
     res.json(recipes);
   } catch (err) {
     next(err);

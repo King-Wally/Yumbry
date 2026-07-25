@@ -16,6 +16,7 @@ const recipe: RecipeSummary = {
   created_at: '2026-01-01T00:00:00.000Z',
   updated_at: '2026-01-01T00:00:00.000Z',
   tags: [{ id: 1, name: 'dessert' }],
+  category: { id: 1, name: 'Dessert' },
 };
 
 function renderCard() {
@@ -27,11 +28,12 @@ function renderCard() {
 }
 
 describe('RecipeCard', () => {
-  it('renders the title, description, and tags', () => {
+  it('renders the title, description, category, and tags', () => {
     renderCard();
 
     expect(screen.getByText('Chocolate Cake')).toBeInTheDocument();
     expect(screen.getByText('Rich and moist.')).toBeInTheDocument();
+    expect(screen.getByText('Dessert')).toBeInTheDocument();
     expect(screen.getByText('dessert')).toBeInTheDocument();
   });
 

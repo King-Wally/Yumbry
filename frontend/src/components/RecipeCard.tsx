@@ -37,6 +37,11 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
         )}
       </div>
       <div className="p-4">
+        {recipe.category && (
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-clay">
+            {recipe.category.name}
+          </p>
+        )}
         <h3 className="font-serif text-lg text-stone-900 transition-colors group-hover:text-clay">
           {recipe.title}
         </h3>

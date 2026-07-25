@@ -25,6 +25,7 @@ export interface ParsedRecipeImport {
   ingredients: (ParsedIngredient & { sort_order: number })[];
   instructions: { step_number: number; text: string }[];
   tags: string[];
+  category: string | null;
 }
 
 function hasRecipeType(node: unknown): node is JsonLdNode {
@@ -82,15 +83,27 @@ function extractServings(recipeYield: unknown): number {
 function extractTagNames(node: JsonLdNode): string[] {
   const names: string[] = [];
 
-  const category = node.recipeCategory;
-  if (Array.isArray(category)) names.push(...(category as string[]));
-  else if (typeof category === 'string') names.push(category);
-
   const keywords = node.keywords;
   if (Array.isArray(keywords)) names.push(...(keywords as string[]));
   else if (typeof keywords === 'string') names.push(...keywords.split(','));
 
   return [...new Set(names.map((name) => name.trim()).filter(Boolean))];
+}
+
+/** recipeCategory is single-valued in our model; schema.org allows a bare
+ * string or an array, so take the first non-empty entry when it's an array. */
+function extractCategoryName(node: JsonLdNode): string | null {
+  const category = node.recipeCategory;
+  if (typeof category === 'string') {
+    const trimmed = category.trim();
+    return trimmed || null;
+  }
+  if (Array.isArray(category)) {
+    for (const entry of category) {
+      if (typeof entry === 'string' && entry.trim()) return entry.trim();
+    }
+  }
+  return null;
 }
 
 /** Flattens recipeInstructions (string | HowToStep[] | HowToSection[]) into ordered step strings. */
@@ -170,5 +183,6 @@ export function parseRecipeFromJsonLd(rawJsonLdText: string): ParsedRecipeImport
     ingredients,
     instructions,
     tags: extractTagNames(node),
+    category: extractCategoryName(node),
   };
 }

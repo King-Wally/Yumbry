@@ -43,6 +43,7 @@ const fullRecipe: RecipeWithRelations = {
     { id: 1, name: 'breakfast' },
     { id: 2, name: 'easy' },
   ],
+  category: { id: 1, name: 'Breakfast' },
 };
 
 describe('recipeToJsonLd', () => {
@@ -60,6 +61,7 @@ describe('recipeToJsonLd', () => {
       cookTime: 'PT15M',
       totalTime: 'PT25M',
       recipeIngredient: ['1 1/2 cups flour', 'salt to taste'],
+      recipeCategory: 'Breakfast',
       keywords: 'breakfast, easy',
     });
     expect(jsonLd.recipeInstructions).toEqual([
@@ -77,6 +79,7 @@ describe('recipeToJsonLd', () => {
       cook_time_minutes: null,
       total_time_minutes: null,
       tags: [],
+      category: null,
     };
 
     const jsonLd = recipeToJsonLd(sparseRecipe);
@@ -87,6 +90,7 @@ describe('recipeToJsonLd', () => {
     expect(jsonLd).not.toHaveProperty('cookTime');
     expect(jsonLd).not.toHaveProperty('totalTime');
     expect(jsonLd).not.toHaveProperty('keywords');
+    expect(jsonLd).not.toHaveProperty('recipeCategory');
   });
 
   it('preserves ingredient and instruction ordering', () => {

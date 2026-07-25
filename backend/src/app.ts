@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { recipesRouter } from './routes/recipes.routes.js';
 import { tagsRouter } from './routes/tags.routes.js';
+import { categoriesRouter } from './routes/categories.routes.js';
 import { UPLOADS_DIR } from './middleware/upload.js';
 
 const PUBLIC_DIR = path.join(process.cwd(), 'public');
@@ -15,6 +16,7 @@ app.use('/uploads', express.static(UPLOADS_DIR));
 
 app.use('/api/recipes', recipesRouter);
 app.use('/api/tags', tagsRouter);
+app.use('/api/categories', categoriesRouter);
 
 if (fs.existsSync(PUBLIC_DIR)) {
   app.use(express.static(PUBLIC_DIR));

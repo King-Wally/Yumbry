@@ -20,6 +20,7 @@ export const RecipeBodySchema = z.object({
   ingredients: z.array(IngredientInputSchema).optional(),
   instructions: z.array(InstructionInputSchema).optional(),
   tags: z.array(z.string()).optional(),
+  category: z.string().nullable().optional(),
 });
 
 export type RecipeBody = z.infer<typeof RecipeBodySchema>;

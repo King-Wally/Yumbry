@@ -39,7 +39,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
 
   beforeEach(async () => {
     await pool.query(
-      'TRUNCATE recipes, ingredients, instructions, tags, recipe_tags RESTART IDENTITY CASCADE'
+      'TRUNCATE recipes, ingredients, instructions, tags, recipe_tags, categories RESTART IDENTITY CASCADE'
     );
   });
 
@@ -52,12 +52,14 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
         ingredients: [{ raw_text: '2 cups broth', amount: 2, unit: 'cups', name: 'broth' }],
         instructions: [{ step_number: 1, text: 'Simmer.' }],
         tags: ['soup', 'dinner'],
+        category: 'Main course',
       });
 
     expect(createRes.status).toBe(201);
     expect(createRes.body.title).toBe('Test Soup');
     expect(createRes.body.ingredients).toHaveLength(1);
     expect(createRes.body.tags.map((t) => t.name).sort()).toEqual(['dinner', 'soup']);
+    expect(createRes.body.category).toMatchObject({ name: 'Main course' });
 
     const getRes = await request(app).get(`/api/recipes/${createRes.body.id}`);
     expect(getRes.status).toBe(200);
@@ -88,6 +90,19 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
       .send({ title: 'Pasta', servings: 2, tags: ['italian'] });
 
     const res = await request(app).get('/api/recipes').query({ tag: 'mexican' });
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].title).toBe('Tacos');
+  });
+
+  it('filters the recipe list by category', async () => {
+    await request(app)
+      .post('/api/recipes')
+      .send({ title: 'Tacos', servings: 2, category: 'Main course' });
+    await request(app)
+      .post('/api/recipes')
+      .send({ title: 'Cookies', servings: 12, category: 'Dessert' });
+
+    const res = await request(app).get('/api/recipes').query({ category: 'Main course' });
     expect(res.body).toHaveLength(1);
     expect(res.body[0].title).toBe('Tacos');
   });
@@ -123,6 +138,8 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
       '@type': 'Recipe',
       name: 'Imported Recipe',
       recipeYield: '2',
+      recipeCategory: 'Hoofdgerecht',
+      keywords: 'hoofdgerecht, vlees, comfortfood, Zweeds',
       recipeIngredient: ['1 cup rice'],
       recipeInstructions: 'Boil rice.',
     });
@@ -131,6 +148,10 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
     expect(res.status).toBe(201);
     expect(res.body.title).toBe('Imported Recipe');
     expect(res.body.ingredients[0].name).toBe('rice');
+    expect(res.body.category).toMatchObject({ name: 'Hoofdgerecht' });
+    expect(res.body.tags.map((t) => t.name).sort()).toEqual(
+      ['hoofdgerecht', 'vlees', 'comfortfood', 'Zweeds'].sort()
+    );
   });
 
   it('rejects import with no JSON-LD provided', async () => {
@@ -148,6 +169,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
         ingredients: [{ raw_text: '1 cup rice' }],
         instructions: [{ step_number: 1, text: 'Boil rice.' }],
         tags: ['grain'],
+        category: 'Side dish',
       });
 
     const res = await request(app).get(`/api/recipes/${created.body.id}/export`);
@@ -159,6 +181,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
       recipeYield: '4',
       prepTime: 'PT10M',
       recipeIngredient: ['1 cup rice'],
+      recipeCategory: 'Side dish',
       keywords: 'grain',
     });
     expect(res.body.recipeInstructions).toEqual([{ '@type': 'HowToStep', text: 'Boil rice.' }]);
@@ -192,6 +215,47 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
     await request(app).delete(`/api/recipes/${created.body.id}`);
 
     const afterDelete = await request(app).get('/api/tags');
+    expect(afterDelete.body).toEqual([]);
+  });
+
+  it('lists categories', async () => {
+    await request(app).post('/api/recipes').send({ title: 'A', servings: 1, category: 'Snack' });
+    await request(app)
+      .post('/api/recipes')
+      .send({ title: 'B', servings: 1, category: 'Dessert' });
+    const res = await request(app).get('/api/categories');
+    expect(res.body.map((c) => c.name).sort()).toEqual(['Dessert', 'Snack']);
+  });
+
+  it('reuses the same category across recipes with the same name', async () => {
+    const first = await request(app)
+      .post('/api/recipes')
+      .send({ title: 'A', servings: 1, category: 'Snack' });
+    const second = await request(app)
+      .post('/api/recipes')
+      .send({ title: 'B', servings: 1, category: 'Snack' });
+
+    expect(first.body.category.id).toBe(second.body.category.id);
+
+    const res = await request(app).get('/api/categories');
+    expect(res.body).toHaveLength(1);
+  });
+
+  it('deletes a category once no recipe references it anymore', async () => {
+    const created = await request(app)
+      .post('/api/recipes')
+      .send({ title: 'Tagged', servings: 1, category: 'Snack' });
+
+    await request(app)
+      .put(`/api/recipes/${created.body.id}`)
+      .send({ title: 'Tagged', servings: 1, category: 'Dessert' });
+
+    const afterUpdate = await request(app).get('/api/categories');
+    expect(afterUpdate.body.map((c) => c.name)).toEqual(['Dessert']);
+
+    await request(app).delete(`/api/recipes/${created.body.id}`);
+
+    const afterDelete = await request(app).get('/api/categories');
     expect(afterDelete.body).toEqual([]);
   });
 });

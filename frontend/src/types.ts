@@ -3,6 +3,11 @@ export interface Tag {
   name: string;
 }
 
+export interface Category {
+  id: number;
+  name: string;
+}
+
 export interface Ingredient {
   id: number;
   recipe_id: number;
@@ -33,6 +38,7 @@ interface RecipeBase {
   created_at: string;
   updated_at: string;
   tags: Tag[];
+  category: Category | null;
 }
 
 /** Shape returned by GET /api/recipes (list view) — no ingredients/instructions. */
@@ -56,4 +62,5 @@ export interface RecipeInput {
   ingredients: string[];
   instructions: { step_number: number; text: string }[];
   tags: string[];
+  category: string | null;
 }
