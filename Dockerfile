@@ -1,13 +1,13 @@
 # syntax=docker/dockerfile:1
 
-FROM node:20-alpine AS frontend-build
+FROM node:24-alpine AS frontend-build
 WORKDIR /frontend
 COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-FROM node:20-alpine AS backend-build
+FROM node:24-alpine AS backend-build
 WORKDIR /app
 COPY backend/package*.json ./
 RUN npm ci
@@ -15,7 +15,7 @@ COPY backend/tsconfig.json ./
 COPY backend/src ./src
 RUN npm run build
 
-FROM node:20-alpine AS runtime
+FROM node:24-alpine AS runtime
 WORKDIR /app
 COPY backend/package*.json ./
 RUN npm ci --omit=dev

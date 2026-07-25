@@ -45,7 +45,7 @@ simply won't scale with the servings stepper.
 
 ## Development (without Docker)
 
-Requires Node 20+ and a local Postgres instance.
+Requires Node 24+ and a local Postgres instance.
 
 ```sh
 # Backend
