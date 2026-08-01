@@ -22,9 +22,12 @@ No authentication — this is meant for a single user on a trusted local network
 
 3. Open [http://localhost:3000](http://localhost:3000) (or whatever `APP_PORT` you set in `.env`).
 
-Recipe photos are stored in a named Docker volume (`uploads_data`) and the
-database in another (`db_data`), so your data survives container restarts and
-rebuilds. `docker compose down -v` will remove both — use with care.
+Recipe photos are stored on disk at `backend/uploads/` (bind-mounted into the
+`app` container so they're visible to a locally-run backend too — see
+Development below) and the database in a named Docker volume (`db_data`), so
+your data survives container restarts and rebuilds. `docker compose down -v`
+removes the database volume — use with care; recipe photos live in
+`backend/uploads/` regardless and aren't affected by `-v`.
 
 ## Importing a recipe
 
@@ -67,6 +70,11 @@ echo 'DATABASE_URL=postgres://chef:changeme@localhost:5432/recipe_vault' > .env
 ```
 
 (adjust user/password/db name to match whatever's in the root `.env`.)
+
+Recipe photos live in `backend/uploads/` on disk (`UPLOADS_DIR` defaults to
+`./uploads` relative to the backend process's cwd) — this is the same folder
+`docker-compose.yml` bind-mounts into the `app` container, so photos uploaded
+via one route are visible via the other with no extra copying.
 
 ```sh
 # Backend
