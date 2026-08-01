@@ -1,5 +1,0 @@
-{
-  "dir": "migrations",
-  "migration-file-language": "sql",
-  "schema": "public"
-}

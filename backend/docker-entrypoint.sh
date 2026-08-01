@@ -1,6 +1,6 @@
 #!/bin/sh
 set -e
 
-node_modules/.bin/node-pg-migrate up -j sql --config-file .node-pg-migrate.json
+node_modules/.bin/prisma migrate deploy
 
 exec node dist/index.js

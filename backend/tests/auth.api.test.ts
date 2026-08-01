@@ -1,12 +1,8 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import pg from 'pg';
-import { runner } from 'node-pg-migrate';
 import type { Express } from 'express';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { resetTestDatabase } from './helpers/db.js';
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
 
@@ -19,16 +15,8 @@ describe.skipIf(!TEST_DATABASE_URL)('auth API', () => {
   beforeAll(async () => {
     process.env.DATABASE_URL = TEST_DATABASE_URL;
 
+    await resetTestDatabase(TEST_DATABASE_URL as string);
     pool = new pg.Pool({ connectionString: TEST_DATABASE_URL });
-    await pool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
-
-    await runner({
-      databaseUrl: TEST_DATABASE_URL,
-      dir: path.join(__dirname, '../migrations'),
-      direction: 'up',
-      migrationsTable: 'pgmigrations',
-      log: () => {},
-    });
 
     ({ app } = await import('../src/app.js'));
   });
@@ -54,7 +42,9 @@ describe.skipIf(!TEST_DATABASE_URL)('auth API', () => {
 
   it('rejects registering the same email twice', async () => {
     const agent = request.agent(app);
-    await agent.post('/api/auth/register').send({ email: 'bob@example.com', password: 'password123' });
+    await agent
+      .post('/api/auth/register')
+      .send({ email: 'bob@example.com', password: 'password123' });
 
     const res = await agent
       .post('/api/auth/register')
@@ -101,7 +91,9 @@ describe.skipIf(!TEST_DATABASE_URL)('auth API', () => {
 
   it('logs out and clears the auth cookie', async () => {
     const agent = request.agent(app);
-    await agent.post('/api/auth/register').send({ email: 'dave@example.com', password: 'password123' });
+    await agent
+      .post('/api/auth/register')
+      .send({ email: 'dave@example.com', password: 'password123' });
 
     const logout = await agent.post('/api/auth/logout');
     expect(logout.status).toBe(204);

@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  recipes    Recipe[]
+  tags       Tag[]
+  categories Category[]
+  aiSettings AiSettings?
+
+  @@map("users")
+}
+
+model Recipe {
+  id                Int      @id @default(autoincrement())
+  title             String
+  description       String?
+  imagePath         String?  @map("image_path")
+  prepTimeMinutes   Int?     @map("prep_time_minutes")
+  cookTimeMinutes   Int?     @map("cook_time_minutes")
+  totalTimeMinutes  Int?     @map("total_time_minutes")
+  servings          Decimal  @default(1)
+  categoryId        Int?     @map("category_id")
+  userId            Int      @map("user_id")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  category     Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredients  Ingredient[]
+  instructions Instruction[]
+  recipeTags   RecipeTag[]
+
+  @@index([categoryId], map: "idx_recipes_category_id")
+  @@index([userId], map: "idx_recipes_user_id")
+  @@map("recipes")
+}
+
+model Ingredient {
+  id         Int     @id @default(autoincrement())
+  recipeId   Int     @map("recipe_id")
+  rawText    String  @map("raw_text")
+  amount     Decimal?
+  unit       String?
+  name       String
+  isScalable Boolean @default(true) @map("is_scalable")
+  sortOrder  Int     @map("sort_order")
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId], map: "idx_ingredients_recipe_id")
+  @@map("ingredients")
+}
+
+model Instruction {
+  id         Int    @id @default(autoincrement())
+  recipeId   Int    @map("recipe_id")
+  stepNumber Int    @map("step_number")
+  text       String
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId], map: "idx_instructions_recipe_id")
+  @@map("instructions")
+}
+
+model Tag {
+  id     Int    @id @default(autoincrement())
+  name   String
+  userId Int    @map("user_id")
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipeTags RecipeTag[]
+
+  @@unique([userId, name], map: "tags_user_id_name_key")
+  @@index([userId], map: "idx_tags_user_id")
+  @@map("tags")
+}
+
+model RecipeTag {
+  recipeId Int @map("recipe_id")
+  tagId    Int @map("tag_id")
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([recipeId, tagId])
+  @@index([tagId], map: "idx_recipe_tags_tag_id")
+  @@map("recipe_tags")
+}
+
+model Category {
+  id     Int    @id @default(autoincrement())
+  name   String
+  userId Int    @map("user_id")
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipes Recipe[]
+
+  @@unique([userId, name], map: "categories_user_id_name_key")
+  @@index([userId], map: "idx_categories_user_id")
+  @@map("categories")
+}
+
+model AiSettings {
+  id        Int      @id @default(autoincrement())
+  baseUrl   String   @map("base_url")
+  model     String?
+  userId    Int      @unique @map("user_id")
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_settings")
+}

@@ -1,13 +1,9 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import pg from 'pg';
-import { runner } from 'node-pg-migrate';
 import type { Express } from 'express';
 import { registerTestUser } from './helpers/auth.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { resetTestDatabase } from './helpers/db.js';
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
 
@@ -31,16 +27,8 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
   beforeAll(async () => {
     process.env.DATABASE_URL = TEST_DATABASE_URL;
 
+    await resetTestDatabase(TEST_DATABASE_URL as string);
     pool = new pg.Pool({ connectionString: TEST_DATABASE_URL });
-    await pool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
-
-    await runner({
-      databaseUrl: TEST_DATABASE_URL,
-      dir: path.join(__dirname, '../migrations'),
-      direction: 'up',
-      migrationsTable: 'pgmigrations',
-      log: () => {},
-    });
 
     ({ app } = await import('../src/app.js'));
     ({ OllamaError } = await import('../src/services/ollama.service.js'));
@@ -89,9 +77,7 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
     });
 
     it('rejects an invalid base_url with 400', async () => {
-      const res = await agent
-        .put('/api/ai/settings')
-        .send({ base_url: 'not-a-url', model: 'x' });
+      const res = await agent.put('/api/ai/settings').send({ base_url: 'not-a-url', model: 'x' });
       expect(res.status).toBe(400);
     });
   });
@@ -138,12 +124,10 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
         })
       );
 
-      const res = await agent
-        .post('/api/ai/chat')
-        .send({
-          messages: [{ role: 'user', content: 'a spicy curry, serves 4' }],
-          current_draft: null,
-        });
+      const res = await agent.post('/api/ai/chat').send({
+        messages: [{ role: 'user', content: 'a spicy curry, serves 4' }],
+        current_draft: null,
+      });
 
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({
@@ -191,12 +175,10 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
         category: null,
       };
 
-      const res = await agent
-        .post('/api/ai/chat')
-        .send({
-          messages: [{ role: 'user', content: 'make it spicier' }],
-          current_draft: currentDraft,
-        });
+      const res = await agent.post('/api/ai/chat').send({
+        messages: [{ role: 'user', content: 'make it spicier' }],
+        current_draft: currentDraft,
+      });
 
       expect(res.status).toBe(200);
       expect(res.body.recipe.ingredients).toContain('2 tbsp chili paste');

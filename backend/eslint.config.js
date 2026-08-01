@@ -4,7 +4,7 @@ import globals from 'globals';
 import eslintConfigPrettier from 'eslint-config-prettier';
 
 export default tseslint.config(
-  { ignores: ['dist/**'] },
+  { ignores: ['dist/**', 'src/generated/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

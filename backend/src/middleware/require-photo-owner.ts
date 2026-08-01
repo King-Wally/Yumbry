@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import { pool } from '../db/pool.js';
+import { prisma } from '../db/prisma.js';
 
 /** Uploaded photos live at /uploads/recipes/:recipeId/... with no per-user
  * subdirectory (recipe ids are a single global sequence, not user-scoped),
@@ -16,11 +16,11 @@ export async function requirePhotoOwner(
     return;
   }
 
-  const { rows } = await pool.query('SELECT 1 FROM recipes WHERE id = $1 AND user_id = $2', [
-    match[1],
-    req.userId,
-  ]);
-  if (rows.length === 0) {
+  const recipe = await prisma.recipe.findFirst({
+    where: { id: Number(match[1]), userId: req.userId },
+    select: { id: true },
+  });
+  if (!recipe) {
     res.status(404).end();
     return;
   }

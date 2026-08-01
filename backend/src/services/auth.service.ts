@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
-import { pool } from '../db/pool.js';
+import { Prisma } from '../generated/prisma/client.js';
+import { prisma } from '../db/prisma.js';
 import { withTransaction } from '../db/transaction.js';
 
 export interface UserRow {
@@ -16,6 +17,20 @@ const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', BCRYPT_COST_FACTOR);
 
 const PLACEHOLDER_BASE_URL = 'http://localhost:11434';
 
+function toUserRow(user: {
+  id: number;
+  email: string;
+  passwordHash: string;
+  createdAt: Date;
+}): UserRow {
+  return {
+    id: user.id,
+    email: user.email,
+    password_hash: user.passwordHash,
+    created_at: user.createdAt,
+  };
+}
+
 export function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, BCRYPT_COST_FACTOR);
 }
@@ -25,13 +40,13 @@ export function verifyPassword(password: string, hash: string | undefined): Prom
 }
 
 export async function findUserByEmail(email: string): Promise<UserRow | null> {
-  const { rows } = await pool.query<UserRow>('SELECT * FROM users WHERE email = $1', [email]);
-  return rows[0] ?? null;
+  const user = await prisma.user.findUnique({ where: { email } });
+  return user ? toUserRow(user) : null;
 }
 
 export async function findUserById(id: number): Promise<UserRow | null> {
-  const { rows } = await pool.query<UserRow>('SELECT * FROM users WHERE id = $1', [id]);
-  return rows[0] ?? null;
+  const user = await prisma.user.findUnique({ where: { id } });
+  return user ? toUserRow(user) : null;
 }
 
 /** Creates a user and their placeholder ai_settings row in one transaction.
@@ -39,20 +54,21 @@ export async function findUserById(id: number): Promise<UserRow | null> {
 export async function registerUser(email: string, password: string): Promise<UserRow | null> {
   const passwordHash = await hashPassword(password);
 
-  return withTransaction(async (client) => {
-    const { rows } = await client.query<UserRow>(
-      `INSERT INTO users (email, password_hash) VALUES ($1, $2)
-       ON CONFLICT (email) DO NOTHING RETURNING *`,
-      [email, passwordHash]
-    );
-    const user = rows[0];
-    if (!user) return null;
+  return withTransaction(async (tx) => {
+    let user;
+    try {
+      user = await tx.user.create({ data: { email, passwordHash } });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        return null;
+      }
+      throw err;
+    }
 
-    await client.query(
-      `INSERT INTO ai_settings (user_id, base_url, model) VALUES ($1, $2, NULL)`,
-      [user.id, PLACEHOLDER_BASE_URL]
-    );
+    await tx.aiSettings.create({
+      data: { userId: user.id, baseUrl: PLACEHOLDER_BASE_URL, model: null },
+    });
 
-    return user;
+    return toUserRow(user);
   });
 }

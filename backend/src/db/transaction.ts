@@ -1,19 +1,8 @@
-import type { PoolClient } from 'pg';
-import { pool } from './pool.js';
+import type { Prisma } from '../generated/prisma/client.js';
+import { prisma } from './prisma.js';
 
-export type Queryable = Pick<PoolClient, 'query'>;
+export type Queryable = Prisma.TransactionClient;
 
-export async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const result = await fn(client);
-    await client.query('COMMIT');
-    return result;
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
-  }
+export async function withTransaction<T>(fn: (tx: Queryable) => Promise<T>): Promise<T> {
+  return prisma.$transaction((tx) => fn(tx));
 }

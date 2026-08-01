@@ -1,13 +1,9 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import pg from 'pg';
-import { runner } from 'node-pg-migrate';
 import type { Express } from 'express';
 import { registerTestUser } from './helpers/auth.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { resetTestDatabase } from './helpers/db.js';
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
 
@@ -21,16 +17,8 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
   beforeAll(async () => {
     process.env.DATABASE_URL = TEST_DATABASE_URL;
 
+    await resetTestDatabase(TEST_DATABASE_URL as string);
     pool = new pg.Pool({ connectionString: TEST_DATABASE_URL });
-    await pool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
-
-    await runner({
-      databaseUrl: TEST_DATABASE_URL,
-      dir: path.join(__dirname, '../migrations'),
-      direction: 'up',
-      migrationsTable: 'pgmigrations',
-      log: () => {},
-    });
 
     ({ app } = await import('../src/app.js'));
     ({ agent } = await registerTestUser(app));
@@ -47,16 +35,14 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
   });
 
   it('creates and fetches a recipe', async () => {
-    const createRes = await agent
-      .post('/api/recipes')
-      .send({
-        title: 'Test Soup',
-        servings: 4,
-        ingredients: [{ raw_text: '2 cups broth', amount: 2, unit: 'cups', name: 'broth' }],
-        instructions: [{ step_number: 1, text: 'Simmer.' }],
-        tags: ['soup', 'dinner'],
-        category: 'Main course',
-      });
+    const createRes = await agent.post('/api/recipes').send({
+      title: 'Test Soup',
+      servings: 4,
+      ingredients: [{ raw_text: '2 cups broth', amount: 2, unit: 'cups', name: 'broth' }],
+      instructions: [{ step_number: 1, text: 'Simmer.' }],
+      tags: ['soup', 'dinner'],
+      category: 'Main course',
+    });
 
     expect(createRes.status).toBe(201);
     expect(createRes.body.title).toBe('Test Soup');
@@ -85,12 +71,8 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
   });
 
   it('filters the recipe list by tag', async () => {
-    await agent
-      .post('/api/recipes')
-      .send({ title: 'Tacos', servings: 2, tags: ['mexican'] });
-    await agent
-      .post('/api/recipes')
-      .send({ title: 'Pasta', servings: 2, tags: ['italian'] });
+    await agent.post('/api/recipes').send({ title: 'Tacos', servings: 2, tags: ['mexican'] });
+    await agent.post('/api/recipes').send({ title: 'Pasta', servings: 2, tags: ['italian'] });
 
     const res = await agent.get('/api/recipes').query({ tag: 'mexican' });
     expect(res.body).toHaveLength(1);
@@ -98,12 +80,8 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
   });
 
   it('filters the recipe list by category', async () => {
-    await agent
-      .post('/api/recipes')
-      .send({ title: 'Tacos', servings: 2, category: 'Main course' });
-    await agent
-      .post('/api/recipes')
-      .send({ title: 'Cookies', servings: 12, category: 'Dessert' });
+    await agent.post('/api/recipes').send({ title: 'Tacos', servings: 2, category: 'Main course' });
+    await agent.post('/api/recipes').send({ title: 'Cookies', servings: 12, category: 'Dessert' });
 
     const res = await agent.get('/api/recipes').query({ category: 'main course' });
     expect(res.body).toHaveLength(1);
@@ -111,9 +89,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
   });
 
   it('updates a recipe', async () => {
-    const created = await agent
-      .post('/api/recipes')
-      .send({ title: 'Original', servings: 2 });
+    const created = await agent.post('/api/recipes').send({ title: 'Original', servings: 2 });
 
     const updated = await agent
       .put(`/api/recipes/${created.body.id}`)
@@ -125,9 +101,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
   });
 
   it('deletes a recipe', async () => {
-    const created = await agent
-      .post('/api/recipes')
-      .send({ title: 'To Delete', servings: 1 });
+    const created = await agent.post('/api/recipes').send({ title: 'To Delete', servings: 1 });
 
     const del = await agent.delete(`/api/recipes/${created.body.id}`);
     expect(del.status).toBe(204);
@@ -163,17 +137,15 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
   });
 
   it('exports a recipe as schema.org Recipe JSON-LD', async () => {
-    const created = await agent
-      .post('/api/recipes')
-      .send({
-        title: 'Export Me',
-        servings: 4,
-        prep_time_minutes: 10,
-        ingredients: [{ raw_text: '1 cup rice' }],
-        instructions: [{ step_number: 1, text: 'Boil rice.' }],
-        tags: ['grain'],
-        category: 'Side dish',
-      });
+    const created = await agent.post('/api/recipes').send({
+      title: 'Export Me',
+      servings: 4,
+      prep_time_minutes: 10,
+      ingredients: [{ raw_text: '1 cup rice' }],
+      instructions: [{ step_number: 1, text: 'Boil rice.' }],
+      tags: ['grain'],
+      category: 'Side dish',
+    });
 
     const res = await agent.get(`/api/recipes/${created.body.id}/export`);
     expect(res.status).toBe(200);
@@ -196,9 +168,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
   });
 
   it('lists tags', async () => {
-    await agent
-      .post('/api/recipes')
-      .send({ title: 'A', servings: 1, tags: ['x', 'y'] });
+    await agent.post('/api/recipes').send({ title: 'A', servings: 1, tags: ['x', 'y'] });
     const res = await agent.get('/api/tags');
     expect(res.body.map((t) => t.name).sort()).toEqual(['x', 'y']);
   });

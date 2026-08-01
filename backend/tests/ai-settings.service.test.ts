@@ -1,10 +1,6 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import pg from 'pg';
-import { runner } from 'node-pg-migrate';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { resetTestDatabase } from './helpers/db.js';
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
 
@@ -18,16 +14,8 @@ describe.skipIf(!TEST_DATABASE_URL)('ai-settings.service', () => {
   beforeAll(async () => {
     process.env.DATABASE_URL = TEST_DATABASE_URL;
 
+    await resetTestDatabase(TEST_DATABASE_URL as string);
     pool = new pg.Pool({ connectionString: TEST_DATABASE_URL });
-    await pool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
-
-    await runner({
-      databaseUrl: TEST_DATABASE_URL,
-      dir: path.join(__dirname, '../migrations'),
-      direction: 'up',
-      migrationsTable: 'pgmigrations',
-      log: () => {},
-    });
 
     ({ getAiSettings, updateAiSettings } = await import('../src/services/ai-settings.service.js'));
     ({ registerUser } = await import('../src/services/auth.service.js'));
