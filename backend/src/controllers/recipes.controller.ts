@@ -38,7 +38,7 @@ export async function importRecipe(req: Request, res: Response) {
     }
 
     const parsedRecipe = parseRecipeFromJsonLd(rawJsonLdText);
-    const recipe = await createRecipe(parsedRecipe);
+    const recipe = await createRecipe(parsedRecipe, req.userId as number);
     res.status(201).json(recipe);
   } catch (err) {
     if (err instanceof ZodError) {
@@ -68,7 +68,7 @@ function slugify(title: string): string {
 }
 
 export async function exportRecipe(req: Request, res: Response) {
-  const recipe = await getRecipeById(req.params.id);
+  const recipe = await getRecipeById(req.params.id, req.userId as number);
   if (!recipe) return res.status(404).json({ error: 'Recipe not found' });
 
   const jsonLd = recipeToJsonLd(recipe);
@@ -80,12 +80,12 @@ export async function getRecipes(req: Request, res: Response) {
   const search = typeof req.query.search === 'string' ? req.query.search : undefined;
   const tag = typeof req.query.tag === 'string' ? req.query.tag : undefined;
   const category = typeof req.query.category === 'string' ? req.query.category : undefined;
-  const recipes = await listRecipes({ search, tag, category });
+  const recipes = await listRecipes(req.userId as number, { search, tag, category });
   res.json(recipes);
 }
 
 export async function getRecipe(req: Request, res: Response) {
-  const recipe = await getRecipeById(req.params.id);
+  const recipe = await getRecipeById(req.params.id, req.userId as number);
   if (!recipe) return res.status(404).json({ error: 'Recipe not found' });
   res.json(recipe);
 }
@@ -93,10 +93,13 @@ export async function getRecipe(req: Request, res: Response) {
 export async function postRecipe(req: Request, res: Response) {
   try {
     const body = RecipeBodySchema.parse(req.body);
-    const recipe = await createRecipe({
-      ...body,
-      ingredients: normalizeIngredients(body.ingredients),
-    });
+    const recipe = await createRecipe(
+      {
+        ...body,
+        ingredients: normalizeIngredients(body.ingredients),
+      },
+      req.userId as number
+    );
     res.status(201).json(recipe);
   } catch (err) {
     if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
@@ -107,10 +110,14 @@ export async function postRecipe(req: Request, res: Response) {
 export async function putRecipe(req: Request, res: Response) {
   try {
     const body = RecipeBodySchema.parse(req.body);
-    const recipe = await updateRecipe(req.params.id, {
-      ...body,
-      ingredients: normalizeIngredients(body.ingredients),
-    });
+    const recipe = await updateRecipe(
+      req.params.id,
+      {
+        ...body,
+        ingredients: normalizeIngredients(body.ingredients),
+      },
+      req.userId as number
+    );
     if (!recipe) return res.status(404).json({ error: 'Recipe not found' });
     res.json(recipe);
   } catch (err) {
@@ -120,7 +127,7 @@ export async function putRecipe(req: Request, res: Response) {
 }
 
 export async function removeRecipe(req: Request, res: Response) {
-  const deleted = await deleteRecipe(req.params.id);
+  const deleted = await deleteRecipe(req.params.id, req.userId as number);
   if (!deleted) return res.status(404).json({ error: 'Recipe not found' });
   res.status(204).end();
 }
@@ -129,7 +136,7 @@ export async function uploadRecipePhoto(req: Request, res: Response) {
   if (!req.file) return res.status(400).json({ error: 'No image file provided.' });
 
   const imagePath = publicUploadPath(req.file.path);
-  const updated = await setRecipePhoto(req.params.id, imagePath);
+  const updated = await setRecipePhoto(req.params.id, imagePath, req.userId as number);
   if (!updated) return res.status(404).json({ error: 'Recipe not found' });
   res.json({ image_path: imagePath });
 }

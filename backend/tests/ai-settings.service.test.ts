@@ -12,7 +12,8 @@ describe.skipIf(!TEST_DATABASE_URL)('ai-settings.service', () => {
   let pool: pg.Pool;
   let getAiSettings: typeof import('../src/services/ai-settings.service.js').getAiSettings;
   let updateAiSettings: typeof import('../src/services/ai-settings.service.js').updateAiSettings;
-  let seedAiSettingsFromEnv: typeof import('../src/services/ai-settings.service.js').seedAiSettingsFromEnv;
+  let registerUser: typeof import('../src/services/auth.service.js').registerUser;
+  let userId: number;
 
   beforeAll(async () => {
     process.env.DATABASE_URL = TEST_DATABASE_URL;
@@ -28,8 +29,11 @@ describe.skipIf(!TEST_DATABASE_URL)('ai-settings.service', () => {
       log: () => {},
     });
 
-    ({ getAiSettings, updateAiSettings, seedAiSettingsFromEnv } =
-      await import('../src/services/ai-settings.service.js'));
+    ({ getAiSettings, updateAiSettings } = await import('../src/services/ai-settings.service.js'));
+    ({ registerUser } = await import('../src/services/auth.service.js'));
+
+    const user = await registerUser('ai-settings-test@example.com', 'password123');
+    userId = user!.id;
   });
 
   afterAll(async () => {
@@ -37,50 +41,29 @@ describe.skipIf(!TEST_DATABASE_URL)('ai-settings.service', () => {
   });
 
   afterEach(async () => {
-    delete process.env.OLLAMA_BASE_URL;
-    delete process.env.OLLAMA_MODEL;
     await pool.query(
-      "UPDATE ai_settings SET base_url = 'http://localhost:11434', model = NULL WHERE id = 1"
+      "UPDATE ai_settings SET base_url = 'http://localhost:11434', model = NULL WHERE user_id = $1",
+      [userId]
     );
   });
 
-  it('returns the migration-seeded placeholder row', async () => {
-    const settings = await getAiSettings();
-    expect(settings).toMatchObject({ id: 1, base_url: 'http://localhost:11434', model: null });
+  it("returns the user's placeholder row created at registration", async () => {
+    const settings = await getAiSettings(userId);
+    expect(settings).toMatchObject({
+      user_id: userId,
+      base_url: 'http://localhost:11434',
+      model: null,
+    });
   });
 
   it('persists an update', async () => {
-    const updated = await updateAiSettings({
+    const updated = await updateAiSettings(userId, {
       base_url: 'http://192.168.1.50:11434',
       model: 'llama3.1:8b',
     });
     expect(updated).toMatchObject({ base_url: 'http://192.168.1.50:11434', model: 'llama3.1:8b' });
 
-    const fetched = await getAiSettings();
+    const fetched = await getAiSettings(userId);
     expect(fetched).toMatchObject({ base_url: 'http://192.168.1.50:11434', model: 'llama3.1:8b' });
-  });
-
-  it('seeds base_url/model from env only while still at the placeholder', async () => {
-    process.env.OLLAMA_BASE_URL = 'http://ollama.local:11434';
-    process.env.OLLAMA_MODEL = 'mistral:7b';
-
-    await seedAiSettingsFromEnv();
-    expect(await getAiSettings()).toMatchObject({
-      base_url: 'http://ollama.local:11434',
-      model: 'mistral:7b',
-    });
-  });
-
-  it('does not overwrite a value already set via updateAiSettings', async () => {
-    await updateAiSettings({ base_url: 'http://manually-set:11434', model: 'manual-model' });
-
-    process.env.OLLAMA_BASE_URL = 'http://ollama.local:11434';
-    process.env.OLLAMA_MODEL = 'mistral:7b';
-    await seedAiSettingsFromEnv();
-
-    expect(await getAiSettings()).toMatchObject({
-      base_url: 'http://manually-set:11434',
-      model: 'manual-model',
-    });
   });
 });

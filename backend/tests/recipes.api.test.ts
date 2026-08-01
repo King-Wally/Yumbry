@@ -5,6 +5,7 @@ import request from 'supertest';
 import pg from 'pg';
 import { runner } from 'node-pg-migrate';
 import type { Express } from 'express';
+import { registerTestUser } from './helpers/auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -15,6 +16,7 @@ const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL || process.env.DATABASE_
 describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
   let app: Express;
   let pool: pg.Pool;
+  let agent: Awaited<ReturnType<typeof registerTestUser>>['agent'];
 
   beforeAll(async () => {
     process.env.DATABASE_URL = TEST_DATABASE_URL;
@@ -31,6 +33,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
     });
 
     ({ app } = await import('../src/app.js'));
+    ({ agent } = await registerTestUser(app));
   });
 
   afterAll(async () => {
@@ -44,7 +47,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
   });
 
   it('creates and fetches a recipe', async () => {
-    const createRes = await request(app)
+    const createRes = await agent
       .post('/api/recipes')
       .send({
         title: 'Test Soup',
@@ -61,58 +64,58 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
     expect(createRes.body.tags.map((t) => t.name).sort()).toEqual(['dinner', 'soup']);
     expect(createRes.body.category).toMatchObject({ name: 'main course' });
 
-    const getRes = await request(app).get(`/api/recipes/${createRes.body.id}`);
+    const getRes = await agent.get(`/api/recipes/${createRes.body.id}`);
     expect(getRes.status).toBe(200);
     expect(getRes.body.title).toBe('Test Soup');
   });
 
   it('returns 404 for a missing recipe', async () => {
-    const res = await request(app).get('/api/recipes/999999');
+    const res = await agent.get('/api/recipes/999999');
     expect(res.status).toBe(404);
   });
 
   it('filters the recipe list by search text', async () => {
-    await request(app).post('/api/recipes').send({ title: 'Chocolate Cake', servings: 8 });
-    await request(app).post('/api/recipes').send({ title: 'Vegetable Soup', servings: 4 });
+    await agent.post('/api/recipes').send({ title: 'Chocolate Cake', servings: 8 });
+    await agent.post('/api/recipes').send({ title: 'Vegetable Soup', servings: 4 });
 
-    const res = await request(app).get('/api/recipes').query({ search: 'cake' });
+    const res = await agent.get('/api/recipes').query({ search: 'cake' });
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
     expect(res.body[0].title).toBe('Chocolate Cake');
   });
 
   it('filters the recipe list by tag', async () => {
-    await request(app)
+    await agent
       .post('/api/recipes')
       .send({ title: 'Tacos', servings: 2, tags: ['mexican'] });
-    await request(app)
+    await agent
       .post('/api/recipes')
       .send({ title: 'Pasta', servings: 2, tags: ['italian'] });
 
-    const res = await request(app).get('/api/recipes').query({ tag: 'mexican' });
+    const res = await agent.get('/api/recipes').query({ tag: 'mexican' });
     expect(res.body).toHaveLength(1);
     expect(res.body[0].title).toBe('Tacos');
   });
 
   it('filters the recipe list by category', async () => {
-    await request(app)
+    await agent
       .post('/api/recipes')
       .send({ title: 'Tacos', servings: 2, category: 'Main course' });
-    await request(app)
+    await agent
       .post('/api/recipes')
       .send({ title: 'Cookies', servings: 12, category: 'Dessert' });
 
-    const res = await request(app).get('/api/recipes').query({ category: 'main course' });
+    const res = await agent.get('/api/recipes').query({ category: 'main course' });
     expect(res.body).toHaveLength(1);
     expect(res.body[0].title).toBe('Tacos');
   });
 
   it('updates a recipe', async () => {
-    const created = await request(app)
+    const created = await agent
       .post('/api/recipes')
       .send({ title: 'Original', servings: 2 });
 
-    const updated = await request(app)
+    const updated = await agent
       .put(`/api/recipes/${created.body.id}`)
       .send({ title: 'Updated', servings: 3 });
 
@@ -122,14 +125,14 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
   });
 
   it('deletes a recipe', async () => {
-    const created = await request(app)
+    const created = await agent
       .post('/api/recipes')
       .send({ title: 'To Delete', servings: 1 });
 
-    const del = await request(app).delete(`/api/recipes/${created.body.id}`);
+    const del = await agent.delete(`/api/recipes/${created.body.id}`);
     expect(del.status).toBe(204);
 
-    const getRes = await request(app).get(`/api/recipes/${created.body.id}`);
+    const getRes = await agent.get(`/api/recipes/${created.body.id}`);
     expect(getRes.status).toBe(404);
   });
 
@@ -144,7 +147,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
       recipeInstructions: 'Boil rice.',
     });
 
-    const res = await request(app).post('/api/recipes/import').send({ jsonLd });
+    const res = await agent.post('/api/recipes/import').send({ jsonLd });
     expect(res.status).toBe(201);
     expect(res.body.title).toBe('Imported Recipe');
     expect(res.body.ingredients[0].name).toBe('rice');
@@ -155,12 +158,12 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
   });
 
   it('rejects import with no JSON-LD provided', async () => {
-    const res = await request(app).post('/api/recipes/import').send({});
+    const res = await agent.post('/api/recipes/import').send({});
     expect(res.status).toBe(400);
   });
 
   it('exports a recipe as schema.org Recipe JSON-LD', async () => {
-    const created = await request(app)
+    const created = await agent
       .post('/api/recipes')
       .send({
         title: 'Export Me',
@@ -172,7 +175,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
         category: 'Side dish',
       });
 
-    const res = await request(app).get(`/api/recipes/${created.body.id}/export`);
+    const res = await agent.get(`/api/recipes/${created.body.id}/export`);
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
       '@context': 'https://schema.org',
@@ -188,72 +191,162 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
   });
 
   it('returns 404 exporting a missing recipe', async () => {
-    const res = await request(app).get('/api/recipes/999999/export');
+    const res = await agent.get('/api/recipes/999999/export');
     expect(res.status).toBe(404);
   });
 
   it('lists tags', async () => {
-    await request(app)
+    await agent
       .post('/api/recipes')
       .send({ title: 'A', servings: 1, tags: ['x', 'y'] });
-    const res = await request(app).get('/api/tags');
+    const res = await agent.get('/api/tags');
     expect(res.body.map((t) => t.name).sort()).toEqual(['x', 'y']);
   });
 
   it('deletes a tag once no recipe references it anymore', async () => {
-    const created = await request(app)
+    const created = await agent
       .post('/api/recipes')
       .send({ title: 'Tagged', servings: 1, tags: ['keep-me', 'drop-me'] });
 
-    await request(app)
+    await agent
       .put(`/api/recipes/${created.body.id}`)
       .send({ title: 'Tagged', servings: 1, tags: ['keep-me'] });
 
-    const afterUpdate = await request(app).get('/api/tags');
+    const afterUpdate = await agent.get('/api/tags');
     expect(afterUpdate.body.map((t) => t.name).sort()).toEqual(['keep-me']);
 
-    await request(app).delete(`/api/recipes/${created.body.id}`);
+    await agent.delete(`/api/recipes/${created.body.id}`);
 
-    const afterDelete = await request(app).get('/api/tags');
+    const afterDelete = await agent.get('/api/tags');
     expect(afterDelete.body).toEqual([]);
   });
 
   it('lists categories', async () => {
-    await request(app).post('/api/recipes').send({ title: 'A', servings: 1, category: 'Snack' });
-    await request(app).post('/api/recipes').send({ title: 'B', servings: 1, category: 'Dessert' });
-    const res = await request(app).get('/api/categories');
+    await agent.post('/api/recipes').send({ title: 'A', servings: 1, category: 'Snack' });
+    await agent.post('/api/recipes').send({ title: 'B', servings: 1, category: 'Dessert' });
+    const res = await agent.get('/api/categories');
     expect(res.body.map((c) => c.name).sort()).toEqual(['dessert', 'snack']);
   });
 
   it('reuses the same category across recipes with the same name', async () => {
-    const first = await request(app)
+    const first = await agent
       .post('/api/recipes')
       .send({ title: 'A', servings: 1, category: 'Snack' });
-    const second = await request(app)
+    const second = await agent
       .post('/api/recipes')
       .send({ title: 'B', servings: 1, category: 'Snack' });
 
     expect(first.body.category.id).toBe(second.body.category.id);
 
-    const res = await request(app).get('/api/categories');
+    const res = await agent.get('/api/categories');
     expect(res.body).toHaveLength(1);
   });
 
   it('deletes a category once no recipe references it anymore', async () => {
-    const created = await request(app)
+    const created = await agent
       .post('/api/recipes')
       .send({ title: 'Tagged', servings: 1, category: 'Snack' });
 
-    await request(app)
+    await agent
       .put(`/api/recipes/${created.body.id}`)
       .send({ title: 'Tagged', servings: 1, category: 'Dessert' });
 
-    const afterUpdate = await request(app).get('/api/categories');
+    const afterUpdate = await agent.get('/api/categories');
     expect(afterUpdate.body.map((c) => c.name)).toEqual(['dessert']);
 
-    await request(app).delete(`/api/recipes/${created.body.id}`);
+    await agent.delete(`/api/recipes/${created.body.id}`);
 
-    const afterDelete = await request(app).get('/api/categories');
+    const afterDelete = await agent.get('/api/categories');
     expect(afterDelete.body).toEqual([]);
+  });
+
+  describe('per-user isolation', () => {
+    it('rejects unauthenticated requests with 401', async () => {
+      const res = await request(app).get('/api/recipes');
+      expect(res.status).toBe(401);
+    });
+
+    it("does not let one user see, edit, or delete another user's recipe", async () => {
+      const created = await agent
+        .post('/api/recipes')
+        .send({ title: "Owner's Recipe", servings: 1, tags: ['private'] });
+
+      const { agent: otherAgent } = await registerTestUser(app);
+
+      const list = await otherAgent.get('/api/recipes');
+      expect(list.body).toEqual([]);
+
+      const get = await otherAgent.get(`/api/recipes/${created.body.id}`);
+      expect(get.status).toBe(404);
+
+      const put = await otherAgent
+        .put(`/api/recipes/${created.body.id}`)
+        .send({ title: 'Hijacked', servings: 1 });
+      expect(put.status).toBe(404);
+
+      const del = await otherAgent.delete(`/api/recipes/${created.body.id}`);
+      expect(del.status).toBe(404);
+
+      const stillThere = await agent.get(`/api/recipes/${created.body.id}`);
+      expect(stillThere.status).toBe(200);
+
+      const otherTags = await otherAgent.get('/api/tags');
+      expect(otherTags.body).toEqual([]);
+    });
+
+    it("does not let one user see another user's categories", async () => {
+      await agent
+        .post('/api/recipes')
+        .send({ title: "Owner's Recipe", servings: 1, category: 'Private Category' });
+
+      const { agent: otherAgent } = await registerTestUser(app);
+
+      const otherCategories = await otherAgent.get('/api/categories');
+      expect(otherCategories.body).toEqual([]);
+    });
+
+    it("does not let one user upload to or view another user's recipe photo", async () => {
+      const created = await agent
+        .post('/api/recipes')
+        .send({ title: "Owner's Recipe", servings: 1 });
+
+      const ownPhoto = await agent
+        .post(`/api/recipes/${created.body.id}/photo`)
+        .attach('photo', Buffer.from('fake-image-bytes'), {
+          filename: 'photo.png',
+          contentType: 'image/png',
+        });
+      expect(ownPhoto.status).toBe(200);
+
+      const { agent: otherAgent } = await registerTestUser(app);
+
+      const otherUpload = await otherAgent
+        .post(`/api/recipes/${created.body.id}/photo`)
+        .attach('photo', Buffer.from('fake-image-bytes'), {
+          filename: 'photo.png',
+          contentType: 'image/png',
+        });
+      expect(otherUpload.status).toBe(404);
+
+      const otherView = await otherAgent.get(ownPhoto.body.image_path);
+      expect(otherView.status).toBe(404);
+
+      const ownView = await agent.get(ownPhoto.body.image_path);
+      expect(ownView.status).toBe(200);
+    });
+
+    it("does not delete another user's still-referenced tag when this user's last reference to the same name is removed", async () => {
+      const mine = await agent
+        .post('/api/recipes')
+        .send({ title: 'Mine', servings: 1, tags: ['vegan'] });
+
+      const { agent: otherAgent } = await registerTestUser(app);
+      await otherAgent.post('/api/recipes').send({ title: 'Theirs', servings: 1, tags: ['vegan'] });
+
+      await agent.delete(`/api/recipes/${mine.body.id}`);
+
+      const otherTags = await otherAgent.get('/api/tags');
+      expect(otherTags.body.map((t) => t.name)).toEqual(['vegan']);
+    });
   });
 });

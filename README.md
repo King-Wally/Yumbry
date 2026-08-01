@@ -1,10 +1,15 @@
 # Recipe Vault
 
-A self-hosted, single-user recipe manager. Store recipes manually or import them
+A self-hosted, multi-user recipe manager. Store recipes manually or import them
 from a recipe site's JSON-LD, search and filter by tag, scale ingredients to any
 serving size, and attach photos.
 
-No authentication — this is meant for a single user on a trusted local network.
+Each user logs in with an email and password and only ever sees their own
+recipes, tags, categories, and AI settings — there's no sharing between
+accounts. Anyone reaching the app can self-register; there's no invite system,
+so this is still meant for a trusted local network (household, small team),
+not the open internet, unless you put it behind your own access control.
+Logins last up to 30 days (see `JWT_SECRET` below).
 
 ## Setup
 
@@ -66,10 +71,13 @@ the backend directly means `db:5432` won't resolve, so it needs a separate
 
 ```sh
 cd backend
-echo 'DATABASE_URL=postgres://chef:changeme@localhost:5432/recipe_vault' > .env
+echo 'DATABASE_URL=postgres://chef:changeme@localhost:5432/recipe_vault
+JWT_SECRET=dev-secret-not-for-production' > .env
 ```
 
-(adjust user/password/db name to match whatever's in the root `.env`.)
+(adjust user/password/db name to match whatever's in the root `.env`.) `JWT_SECRET`
+has no fallback — the app throws at startup if it's unset, so this always needs
+setting, even for local development.
 
 Recipe photos live in `backend/uploads/` on disk (`UPLOADS_DIR` defaults to
 `./uploads` relative to the backend process's cwd) — this is the same folder

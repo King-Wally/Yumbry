@@ -10,6 +10,7 @@ import {
   uploadRecipePhoto,
 } from '../controllers/recipes.controller.js';
 import { uploadJsonFile, uploadPhoto } from '../middleware/upload.js';
+import { requireRecipeOwner } from '../middleware/require-recipe-owner.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
 export const recipesRouter = Router();
@@ -21,4 +22,9 @@ recipesRouter.get('/:id/export', asyncHandler(exportRecipe));
 recipesRouter.post('/', asyncHandler(postRecipe));
 recipesRouter.put('/:id', asyncHandler(putRecipe));
 recipesRouter.delete('/:id', asyncHandler(removeRecipe));
-recipesRouter.post('/:id/photo', uploadPhoto.single('photo'), asyncHandler(uploadRecipePhoto));
+recipesRouter.post(
+  '/:id/photo',
+  asyncHandler(requireRecipeOwner),
+  uploadPhoto.single('photo'),
+  asyncHandler(uploadRecipePhoto)
+);

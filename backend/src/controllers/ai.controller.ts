@@ -10,8 +10,11 @@ function isEnvelopeParseError(err: unknown): err is Error {
   return err instanceof Error && err.message.startsWith('The AI response');
 }
 
-async function requireModel(res: Response): Promise<{ base_url: string; model: string } | null> {
-  const settings = await getAiSettings();
+async function requireModel(
+  res: Response,
+  userId: number
+): Promise<{ base_url: string; model: string } | null> {
+  const settings = await getAiSettings(userId);
   if (!settings.model) {
     res
       .status(409)
@@ -24,7 +27,7 @@ async function requireModel(res: Response): Promise<{ base_url: string; model: s
 export async function postAiChat(req: Request, res: Response) {
   try {
     const body = AiChatTurnRequestSchema.parse(req.body);
-    const settings = await requireModel(res);
+    const settings = await requireModel(res, req.userId as number);
     if (!settings) return;
 
     const raw = await chatWithOllama(buildChatMessages(body.messages, body.current_draft), {

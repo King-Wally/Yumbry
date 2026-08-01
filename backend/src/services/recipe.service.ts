@@ -31,15 +31,12 @@ function attachCategory<T extends RecipeRowWithCategoryName>(
   };
 }
 
-export async function listRecipes({
-  search,
-  tag,
-  category,
-}: { search?: string; tag?: string; category?: string } = {}): Promise<
-  (RecipeRow & { tags: TagRef[]; category: CategoryRef | null })[]
-> {
-  const conditions: string[] = [];
-  const params: string[] = [];
+export async function listRecipes(
+  userId: number,
+  { search, tag, category }: { search?: string; tag?: string; category?: string } = {}
+): Promise<(RecipeRow & { tags: TagRef[]; category: CategoryRef | null })[]> {
+  const conditions: string[] = ['r.user_id = $1'];
+  const params: (string | number)[] = [userId];
 
   if (search) {
     params.push(`%${search}%`);
@@ -58,12 +55,10 @@ export async function listRecipes({
     conditions.push(`c.name = $${params.length}`);
   }
 
-  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-
   const { rows } = await pool.query<RecipeRowWithCategoryName>(
     `SELECT r.*, c.name AS category_name FROM recipes r
      LEFT JOIN categories c ON c.id = r.category_id
-     ${where} ORDER BY r.created_at DESC`,
+     WHERE ${conditions.join(' AND ')} ORDER BY r.created_at DESC`,
     params
   );
 
@@ -75,12 +70,15 @@ export async function listRecipes({
   return rows.map((row) => ({ ...attachCategory(row), tags: tagsByRecipe.get(row.id) ?? [] }));
 }
 
-export async function getRecipeById(id: string | number): Promise<RecipeWithRelations | null> {
+export async function getRecipeById(
+  id: string | number,
+  userId: number
+): Promise<RecipeWithRelations | null> {
   const { rows } = await pool.query<RecipeRowWithCategoryName>(
     `SELECT r.*, c.name AS category_name FROM recipes r
      LEFT JOIN categories c ON c.id = r.category_id
-     WHERE r.id = $1`,
-    [id]
+     WHERE r.id = $1 AND r.user_id = $2`,
+    [id, userId]
   );
   const recipe = rows[0];
   if (!recipe) return null;
@@ -149,15 +147,18 @@ async function insertInstructions(
   );
 }
 
-export async function createRecipe(data: RecipeInput): Promise<RecipeWithRelations | null> {
+export async function createRecipe(
+  data: RecipeInput,
+  userId: number
+): Promise<RecipeWithRelations | null> {
   const recipeId = await withTransaction(async (client) => {
-    const categoryId = await upsertCategory(client, data.category);
+    const categoryId = await upsertCategory(client, data.category, userId);
 
     const { rows } = await client.query<{ id: number }>(
       `INSERT INTO recipes
         (title, description, image_path, prep_time_minutes, cook_time_minutes,
-         total_time_minutes, servings, category_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         total_time_minutes, servings, category_id, user_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING id`,
       [
         data.title,
@@ -168,33 +169,35 @@ export async function createRecipe(data: RecipeInput): Promise<RecipeWithRelatio
         data.total_time_minutes ?? null,
         data.servings ?? 1,
         categoryId,
+        userId,
       ]
     );
     const recipeId = rows[0].id;
 
     await insertIngredients(client, recipeId, data.ingredients ?? []);
     await insertInstructions(client, recipeId, data.instructions ?? []);
-    await upsertTags(client, recipeId, data.tags ?? []);
+    await upsertTags(client, recipeId, data.tags ?? [], userId);
 
     return recipeId;
   });
 
-  return getRecipeById(recipeId);
+  return getRecipeById(recipeId, userId);
 }
 
 export async function updateRecipe(
   id: string,
-  data: RecipeInput
+  data: RecipeInput,
+  userId: number
 ): Promise<RecipeWithRelations | null> {
   const updated = await withTransaction(async (client) => {
-    const categoryId = await upsertCategory(client, data.category);
+    const categoryId = await upsertCategory(client, data.category, userId);
 
     const { rowCount } = await client.query(
       `UPDATE recipes SET
         title = $1, description = $2, image_path = $3, prep_time_minutes = $4,
         cook_time_minutes = $5, total_time_minutes = $6, servings = $7,
         category_id = $8, updated_at = now()
-       WHERE id = $9`,
+       WHERE id = $9 AND user_id = $10`,
       [
         data.title,
         data.description ?? null,
@@ -205,6 +208,7 @@ export async function updateRecipe(
         data.servings ?? 1,
         categoryId,
         id,
+        userId,
       ]
     );
 
@@ -216,29 +220,34 @@ export async function updateRecipe(
 
     await insertIngredients(client, Number(id), data.ingredients ?? []);
     await insertInstructions(client, Number(id), data.instructions ?? []);
-    await upsertTags(client, Number(id), data.tags ?? []);
-    await deleteOrphaned(client, 'tags', 'SELECT DISTINCT tag_id FROM recipe_tags');
+    await upsertTags(client, Number(id), data.tags ?? [], userId);
+    await deleteOrphaned(client, 'tags', 'SELECT DISTINCT tag_id FROM recipe_tags', userId);
     await deleteOrphaned(
       client,
       'categories',
-      'SELECT DISTINCT category_id FROM recipes WHERE category_id IS NOT NULL'
+      'SELECT DISTINCT category_id FROM recipes WHERE category_id IS NOT NULL',
+      userId
     );
 
     return true;
   });
 
   if (!updated) return null;
-  return getRecipeById(id);
+  return getRecipeById(id, userId);
 }
 
-export async function deleteRecipe(id: string): Promise<boolean> {
+export async function deleteRecipe(id: string, userId: number): Promise<boolean> {
   return withTransaction(async (client) => {
-    const { rowCount } = await client.query('DELETE FROM recipes WHERE id = $1', [id]);
-    await deleteOrphaned(client, 'tags', 'SELECT DISTINCT tag_id FROM recipe_tags');
+    const { rowCount } = await client.query(
+      'DELETE FROM recipes WHERE id = $1 AND user_id = $2',
+      [id, userId]
+    );
+    await deleteOrphaned(client, 'tags', 'SELECT DISTINCT tag_id FROM recipe_tags', userId);
     await deleteOrphaned(
       client,
       'categories',
-      'SELECT DISTINCT category_id FROM recipes WHERE category_id IS NOT NULL'
+      'SELECT DISTINCT category_id FROM recipes WHERE category_id IS NOT NULL',
+      userId
     );
     return (rowCount ?? 0) > 0;
   });
@@ -246,11 +255,12 @@ export async function deleteRecipe(id: string): Promise<boolean> {
 
 export async function setRecipePhoto(
   id: string,
-  imagePath: string
+  imagePath: string,
+  userId: number
 ): Promise<{ id: number } | null> {
   const { rows } = await pool.query<{ id: number }>(
-    'UPDATE recipes SET image_path = $1, updated_at = now() WHERE id = $2 RETURNING id',
-    [imagePath, id]
+    'UPDATE recipes SET image_path = $1, updated_at = now() WHERE id = $2 AND user_id = $3 RETURNING id',
+    [imagePath, id, userId]
   );
   return rows[0] ?? null;
 }

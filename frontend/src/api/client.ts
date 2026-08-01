@@ -24,14 +24,19 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+
   const res = await fetch(`/api${path}`, {
-    headers: options.body instanceof FormData ? undefined : { 'Content-Type': 'application/json' },
+    credentials: 'include',
     ...options,
+    headers,
   });
 
   if (!res.ok) {
     const body: ApiErrorBody = await res.json().catch(() => ({}));
-    throw new ApiError(body.error || `Request failed with status ${res.status}`, body.kind);
+    const kind = res.status === 401 ? 'unauthenticated' : body.kind;
+    throw new ApiError(body.error || `Request failed with status ${res.status}`, kind);
   }
 
   if (res.status === 204) return null as T;
@@ -115,4 +120,28 @@ export function chatAboutRecipe(data: AiChatTurnRequest) {
     method: 'POST',
     body: JSON.stringify(data),
   });
+}
+
+export interface CurrentUser {
+  id: number;
+  email: string;
+}
+
+export function getCurrentUser() {
+  return request<CurrentUser>('/auth/me');
+}
+
+export function login(email: string, password: string) {
+  return request<CurrentUser>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+}
+
+export function register(email: string, password: string) {
+  return request<CurrentUser>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export function logout() {
+  return request<null>('/auth/logout', { method: 'POST' });
 }

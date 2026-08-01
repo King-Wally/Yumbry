@@ -29,15 +29,20 @@ export async function fetchTagsForRecipeIds(
 export async function deleteOrphaned(
   client: Queryable,
   table: 'tags' | 'categories',
-  referencedIdsSql: string
+  referencedIdsSql: string,
+  userId: number
 ): Promise<void> {
-  await client.query(`DELETE FROM ${table} WHERE id NOT IN (${referencedIdsSql})`);
+  await client.query(
+    `DELETE FROM ${table} WHERE user_id = $1 AND id NOT IN (${referencedIdsSql})`,
+    [userId]
+  );
 }
 
 export async function upsertTags(
   client: Queryable,
   recipeId: number,
-  tagNames: string[]
+  tagNames: string[],
+  userId: number
 ): Promise<void> {
   const normalized = [...new Set(tagNames.map((name) => name.trim().toLowerCase()))].filter(
     Boolean
@@ -45,11 +50,11 @@ export async function upsertTags(
   if (normalized.length === 0) return;
 
   const { rows } = await client.query<{ id: number }>(
-    `INSERT INTO tags (name)
-     SELECT * FROM UNNEST($1::text[])
-     ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+    `INSERT INTO tags (user_id, name)
+     SELECT $1, * FROM UNNEST($2::text[])
+     ON CONFLICT (user_id, name) DO UPDATE SET name = EXCLUDED.name
      RETURNING id`,
-    [normalized]
+    [userId, normalized]
   );
 
   const values = rows.map((_, index) => `($1, $${index + 2})`).join(', ');
@@ -61,25 +66,31 @@ export async function upsertTags(
 
 export async function upsertCategory(
   client: Queryable,
-  name: string | null | undefined
+  name: string | null | undefined,
+  userId: number
 ): Promise<number | null> {
   if (!name) return null;
   const normalized = name.trim().toLowerCase();
   const { rows } = await client.query<{ id: number }>(
-    `INSERT INTO categories (name) VALUES ($1)
-     ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+    `INSERT INTO categories (user_id, name) VALUES ($1, $2)
+     ON CONFLICT (user_id, name) DO UPDATE SET name = EXCLUDED.name
      RETURNING id`,
-    [normalized]
+    [userId, normalized]
   );
   return rows[0].id;
 }
 
-export async function listTags(): Promise<TagRef[]> {
-  const { rows } = await pool.query<TagRef>('SELECT * FROM tags ORDER BY name');
+export async function listTags(userId: number): Promise<TagRef[]> {
+  const { rows } = await pool.query<TagRef>('SELECT * FROM tags WHERE user_id = $1 ORDER BY name', [
+    userId,
+  ]);
   return rows;
 }
 
-export async function listCategories(): Promise<CategoryRef[]> {
-  const { rows } = await pool.query<CategoryRef>('SELECT * FROM categories ORDER BY name');
+export async function listCategories(userId: number): Promise<CategoryRef[]> {
+  const { rows } = await pool.query<CategoryRef>(
+    'SELECT * FROM categories WHERE user_id = $1 ORDER BY name',
+    [userId]
+  );
   return rows;
 }

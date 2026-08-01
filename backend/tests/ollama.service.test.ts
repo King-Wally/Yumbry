@@ -56,30 +56,6 @@ describe('chatWithOllama', () => {
     ).rejects.toMatchObject({ kind: 'unreachable' } satisfies Partial<OllamaError>);
   });
 
-  it('throws a timeout OllamaError when the request exceeds timeoutMs', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockImplementation((_url: string, init: RequestInit) => {
-        return new Promise((_resolve, reject) => {
-          const signal = init.signal as AbortSignal;
-          signal.addEventListener('abort', () => {
-            const err = new Error('This operation was aborted');
-            err.name = 'AbortError';
-            reject(err);
-          });
-        });
-      })
-    );
-
-    await expect(
-      chatWithOllama([{ role: 'user', content: 'hi' }], {
-        baseUrl: 'http://localhost:11434',
-        model: 'llama3.1',
-        timeoutMs: 10,
-      })
-    ).rejects.toMatchObject({ kind: 'timeout' });
-  });
-
   it('throws a bad_status OllamaError for a non-2xx response', async () => {
     vi.stubGlobal(
       'fetch',

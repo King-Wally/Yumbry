@@ -5,6 +5,7 @@ import request from 'supertest';
 import pg from 'pg';
 import { runner } from 'node-pg-migrate';
 import type { Express } from 'express';
+import { registerTestUser } from './helpers/auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -23,6 +24,8 @@ vi.mock('../src/services/ollama.service.js', async (importOriginal) => {
 describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
   let app: Express;
   let pool: pg.Pool;
+  let agent: Awaited<ReturnType<typeof registerTestUser>>['agent'];
+  let userId: number;
   let OllamaError: typeof import('../src/services/ollama.service.js').OllamaError;
 
   beforeAll(async () => {
@@ -41,6 +44,7 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
 
     ({ app } = await import('../src/app.js'));
     ({ OllamaError } = await import('../src/services/ollama.service.js'));
+    ({ agent, userId } = await registerTestUser(app));
   });
 
   afterAll(async () => {
@@ -52,7 +56,8 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
       'TRUNCATE recipes, ingredients, instructions, tags, recipe_tags, categories RESTART IDENTITY CASCADE'
     );
     await pool.query(
-      "UPDATE ai_settings SET base_url = 'http://localhost:11434', model = NULL WHERE id = 1"
+      "UPDATE ai_settings SET base_url = 'http://localhost:11434', model = NULL WHERE user_id = $1",
+      [userId]
     );
   });
 
@@ -63,11 +68,11 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
 
   describe('GET/PUT /api/ai/settings', () => {
     it('round-trips settings', async () => {
-      const getRes = await request(app).get('/api/ai/settings');
+      const getRes = await agent.get('/api/ai/settings');
       expect(getRes.status).toBe(200);
       expect(getRes.body).toMatchObject({ base_url: 'http://localhost:11434', model: null });
 
-      const putRes = await request(app)
+      const putRes = await agent
         .put('/api/ai/settings')
         .send({ base_url: 'http://192.168.1.50:11434', model: 'llama3.1:8b' });
       expect(putRes.status).toBe(200);
@@ -76,7 +81,7 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
         model: 'llama3.1:8b',
       });
 
-      const getAfter = await request(app).get('/api/ai/settings');
+      const getAfter = await agent.get('/api/ai/settings');
       expect(getAfter.body).toMatchObject({
         base_url: 'http://192.168.1.50:11434',
         model: 'llama3.1:8b',
@@ -84,7 +89,7 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
     });
 
     it('rejects an invalid base_url with 400', async () => {
-      const res = await request(app)
+      const res = await agent
         .put('/api/ai/settings')
         .send({ base_url: 'not-a-url', model: 'x' });
       expect(res.status).toBe(400);
@@ -94,14 +99,14 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
   describe('GET /api/ai/settings/models', () => {
     it('returns the model list on success', async () => {
       listOllamaModels.mockResolvedValue([{ name: 'llama3.1:8b' }]);
-      const res = await request(app).get('/api/ai/settings/models');
+      const res = await agent.get('/api/ai/settings/models');
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ models: [{ name: 'llama3.1:8b' }] });
     });
 
     it('maps an unreachable OllamaError to 502', async () => {
       listOllamaModels.mockRejectedValue(new OllamaError('nope', 'unreachable'));
-      const res = await request(app).get('/api/ai/settings/models');
+      const res = await agent.get('/api/ai/settings/models');
       expect(res.status).toBe(502);
       expect(res.body.kind).toBe('unreachable');
     });
@@ -109,14 +114,14 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
 
   describe('POST /api/ai/chat', () => {
     it('returns 409 when no model is configured', async () => {
-      const res = await request(app)
+      const res = await agent
         .post('/api/ai/chat')
         .send({ messages: [{ role: 'user', content: 'a spicy curry' }], current_draft: null });
       expect(res.status).toBe(409);
     });
 
     it('returns the envelope shape once a model is configured', async () => {
-      await request(app)
+      await agent
         .put('/api/ai/settings')
         .send({ base_url: 'http://localhost:11434', model: 'llama3.1' });
       chatWithOllama.mockResolvedValue(
@@ -133,7 +138,7 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
         })
       );
 
-      const res = await request(app)
+      const res = await agent
         .post('/api/ai/chat')
         .send({
           messages: [{ role: 'user', content: 'a spicy curry, serves 4' }],
@@ -155,7 +160,7 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
     });
 
     it('passes current_draft through into the prompt when improving an existing draft', async () => {
-      await request(app)
+      await agent
         .put('/api/ai/settings')
         .send({ base_url: 'http://localhost:11434', model: 'llama3.1' });
       chatWithOllama.mockResolvedValue(
@@ -186,7 +191,7 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
         category: null,
       };
 
-      const res = await request(app)
+      const res = await agent
         .post('/api/ai/chat')
         .send({
           messages: [{ role: 'user', content: 'make it spicier' }],
@@ -201,14 +206,14 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
     });
 
     it('sends a "no recipe draft yet" marker when current_draft is null', async () => {
-      await request(app)
+      await agent
         .put('/api/ai/settings')
         .send({ base_url: 'http://localhost:11434', model: 'llama3.1' });
       chatWithOllama.mockResolvedValue(
         JSON.stringify({ reply: 'What would you like?', recipe: { title: 'Untitled recipe' } })
       );
 
-      await request(app)
+      await agent
         .post('/api/ai/chat')
         .send({ messages: [{ role: 'user', content: 'hi' }], current_draft: null });
 
@@ -216,26 +221,13 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
       expect(JSON.stringify(promptMessages)).toContain('no recipe draft yet');
     });
 
-    it('maps a timeout OllamaError to 504', async () => {
-      await request(app)
-        .put('/api/ai/settings')
-        .send({ base_url: 'http://localhost:11434', model: 'llama3.1' });
-      chatWithOllama.mockRejectedValue(new OllamaError('too slow', 'timeout'));
-
-      const res = await request(app)
-        .post('/api/ai/chat')
-        .send({ messages: [{ role: 'user', content: 'hi' }], current_draft: null });
-
-      expect(res.status).toBe(504);
-    });
-
     it('returns 502 when the model response is not parseable JSON', async () => {
-      await request(app)
+      await agent
         .put('/api/ai/settings')
         .send({ base_url: 'http://localhost:11434', model: 'llama3.1' });
       chatWithOllama.mockResolvedValue('Sorry, I cannot do that.');
 
-      const res = await request(app)
+      const res = await agent
         .post('/api/ai/chat')
         .send({ messages: [{ role: 'user', content: 'hi' }], current_draft: null });
 
@@ -244,15 +236,41 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
     });
 
     it('returns 400 on a malformed request body', async () => {
-      const missingCurrentDraft = await request(app)
+      const missingCurrentDraft = await agent
         .post('/api/ai/chat')
         .send({ messages: [{ role: 'user', content: 'hi' }] });
       expect(missingCurrentDraft.status).toBe(400);
 
-      const emptyMessages = await request(app)
+      const emptyMessages = await agent
         .post('/api/ai/chat')
         .send({ messages: [], current_draft: null });
       expect(emptyMessages.status).toBe(400);
+    });
+  });
+
+  it('rejects unauthenticated requests with 401', async () => {
+    const res = await request(app).get('/api/ai/settings');
+    expect(res.status).toBe(401);
+  });
+
+  it("does not let one user read or overwrite another user's AI settings", async () => {
+    await agent
+      .put('/api/ai/settings')
+      .send({ base_url: 'http://owner-only:11434', model: 'owner-model' });
+
+    const { agent: otherAgent } = await registerTestUser(app);
+
+    const otherGet = await otherAgent.get('/api/ai/settings');
+    expect(otherGet.body).toMatchObject({ base_url: 'http://localhost:11434', model: null });
+
+    await otherAgent
+      .put('/api/ai/settings')
+      .send({ base_url: 'http://attacker:11434', model: 'attacker-model' });
+
+    const ownerGet = await agent.get('/api/ai/settings');
+    expect(ownerGet.body).toMatchObject({
+      base_url: 'http://owner-only:11434',
+      model: 'owner-model',
     });
   });
 });

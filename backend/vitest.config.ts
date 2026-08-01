@@ -8,5 +8,10 @@ export default defineConfig({
     // locks during migration and on table truncation between tests, so all
     // test files run sequentially instead.
     fileParallelism: false,
+    env: {
+      // utils/jwt.ts throws at import time if this is unset; tests never touch
+      // a real deployment secret so a fixed test-only value is fine here.
+      JWT_SECRET: 'test-jwt-secret-not-for-production',
+    },
   },
 });
