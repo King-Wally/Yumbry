@@ -15,8 +15,6 @@ const BCRYPT_COST_FACTOR = 12;
 // same amount of time either way and doesn't leak which emails are registered.
 const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', BCRYPT_COST_FACTOR);
 
-const PLACEHOLDER_BASE_URL = 'http://localhost:11434';
-
 function toUserRow(user: {
   id: number;
   email: string;
@@ -66,7 +64,7 @@ export async function registerUser(email: string, password: string): Promise<Use
     }
 
     await tx.aiSettings.create({
-      data: { userId: user.id, baseUrl: PLACEHOLDER_BASE_URL, model: null },
+      data: { userId: user.id, provider: null, baseUrl: null, model: null },
     });
 
     return toUserRow(user);

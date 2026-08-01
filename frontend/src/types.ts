@@ -65,9 +65,13 @@ export interface RecipeInput {
   category: string | null;
 }
 
+export type AiProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'custom';
+
 export interface AiSettings {
-  base_url: string;
+  provider: AiProvider | null;
+  base_url: string | null;
   model: string | null;
+  has_api_key: boolean;
   updated_at: string;
 }
 

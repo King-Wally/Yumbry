@@ -1,6 +1,7 @@
 import type {
   AiChatTurnRequest,
   AiChatTurnResponse,
+  AiProvider,
   AiSettings,
   Category,
   Recipe,
@@ -106,13 +107,21 @@ export function getAiSettings() {
   return request<AiSettings>('/ai/settings');
 }
 
-export function updateAiSettings(data: { base_url: string; model: string | null }) {
+export function updateAiSettings(data: {
+  provider: AiProvider;
+  base_url: string | null;
+  model: string | null;
+  api_key?: string | null;
+}) {
   return request<AiSettings>('/ai/settings', { method: 'PUT', body: JSON.stringify(data) });
 }
 
-export function listAiModels(baseUrl?: string) {
-  const query = baseUrl ? `?base_url=${encodeURIComponent(baseUrl)}` : '';
-  return request<{ models: { name: string }[] }>(`/ai/settings/models${query}`);
+export function listAiModels(baseUrl?: string, provider?: AiProvider) {
+  const params = new URLSearchParams();
+  if (baseUrl) params.set('base_url', baseUrl);
+  if (provider) params.set('provider', provider);
+  const query = params.toString();
+  return request<{ models: { name: string }[] }>(`/ai/settings/models${query ? `?${query}` : ''}`);
 }
 
 export function chatAboutRecipe(data: AiChatTurnRequest) {
@@ -132,7 +141,10 @@ export function getCurrentUser() {
 }
 
 export function login(email: string, password: string) {
-  return request<CurrentUser>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+  return request<CurrentUser>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
 }
 
 export function register(email: string, password: string) {

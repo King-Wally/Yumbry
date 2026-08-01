@@ -1,4 +1,4 @@
-import type { OllamaChatMessage } from './ollama.service.js';
+import type { AiChatMessage } from './ai-provider.service.js';
 
 /** The shape every /api/ai/chat turn returns. Deliberately matches the
  * frontend's RecipeInput exactly (raw ingredient line strings,
@@ -58,7 +58,7 @@ these two top-level keys:
   "recipe": ${RECIPE_JSON_SHAPE}
 }`.trim();
 
-function buildChatSystemPrompt(): OllamaChatMessage {
+function buildChatSystemPrompt(): AiChatMessage {
   return {
     role: 'system',
     content:
@@ -99,10 +99,10 @@ function buildChatSystemPrompt(): OllamaChatMessage {
  * static instructions) since it changes every turn while the instructions
  * don't — keeps buildChatSystemPrompt a pure, argument-free function. */
 export function buildChatMessages(
-  conversation: OllamaChatMessage[],
+  conversation: AiChatMessage[],
   currentDraft: AiRecipeDraft | null
-): OllamaChatMessage[] {
-  const draftContext: OllamaChatMessage = {
+): AiChatMessage[] {
+  const draftContext: AiChatMessage = {
     role: 'system',
     content: currentDraft
       ? `Current recipe draft (JSON):\n${JSON.stringify(currentDraft, null, 2)}`

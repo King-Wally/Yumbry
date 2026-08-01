@@ -12,6 +12,9 @@ export default defineConfig({
       // utils/jwt.ts throws at import time if this is unset; tests never touch
       // a real deployment secret so a fixed test-only value is fine here.
       JWT_SECRET: 'test-jwt-secret-not-for-production',
+      // utils/crypto.ts throws at import time if this is unset; must decode to
+      // exactly 32 bytes (base64) — this is a fixed test-only value.
+      AI_SETTINGS_ENCRYPTION_KEY: 'BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc=',
     },
   },
 });

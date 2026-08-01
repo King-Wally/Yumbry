@@ -200,7 +200,7 @@ describe('AiChatPage improve mode', () => {
   it('shows AiErrorBanner on a failed chat call', async () => {
     vi.mocked(apiClient.getRecipe).mockResolvedValue(recipe);
     vi.mocked(apiClient.chatAboutRecipe).mockRejectedValue(
-      new Error('Could not reach Ollama at http://localhost:11434.')
+      new Error('Could not reach the AI provider.')
     );
 
     renderImprove();
@@ -211,6 +211,6 @@ describe('AiChatPage improve mode', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
-    expect(await screen.findByText('Check your Ollama settings')).toBeInTheDocument();
+    expect(await screen.findByText('Check your AI settings')).toBeInTheDocument();
   });
 });

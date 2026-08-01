@@ -9,10 +9,12 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
+import { useAiSettings } from './hooks/useAiSettings';
 import { version } from '../package.json';
 
 export default function App() {
   const { user, logout } = useAuth();
+  const { data: aiSettings } = useAiSettings({ enabled: Boolean(user) });
 
   return (
     <div className="flex min-h-screen flex-col bg-cream">
@@ -30,9 +32,11 @@ export default function App() {
                 <Link to="/import" className="transition-colors hover:text-clay">
                   Import
                 </Link>
-                <Link to="/create-with-ai" className="transition-colors hover:text-clay">
-                  Create with AI
-                </Link>
+                {aiSettings?.model && (
+                  <Link to="/create-with-ai" className="transition-colors hover:text-clay">
+                    Create with AI
+                  </Link>
+                )}
                 <Link to="/settings" className="transition-colors hover:text-clay">
                   Settings
                 </Link>

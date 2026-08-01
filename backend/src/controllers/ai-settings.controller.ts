@@ -1,9 +1,19 @@
 import type { Request, Response } from 'express';
 import { ZodError } from 'zod';
-import { getAiSettings, updateAiSettings } from '../services/ai-settings.service.js';
-import { listOllamaModels } from '../services/ollama.service.js';
+import {
+  getAiSettings,
+  getAiSettingsForCall,
+  updateAiSettings,
+} from '../services/ai-settings.service.js';
+import { listAiModels, type AiProvider } from '../services/ai-provider.service.js';
 import { AiSettingsBodySchema } from '../schemas/ai-settings.schema.js';
-import { sendOllamaError } from '../utils/ollama-error-response.js';
+import { sendAiProviderError } from '../utils/ai-provider-error-response.js';
+
+const KNOWN_PROVIDERS: AiProvider[] = ['openai', 'anthropic', 'gemini', 'ollama', 'custom'];
+
+function isAiProvider(value: unknown): value is AiProvider {
+  return typeof value === 'string' && (KNOWN_PROVIDERS as string[]).includes(value);
+}
 
 export async function getAiSettingsHandler(req: Request, res: Response) {
   res.json(await getAiSettings(req.userId as number));
@@ -21,11 +31,23 @@ export async function putAiSettingsHandler(req: Request, res: Response) {
 
 export async function getAiModelsHandler(req: Request, res: Response) {
   const overrideBaseUrl = typeof req.query.base_url === 'string' ? req.query.base_url : undefined;
-  const baseUrl = overrideBaseUrl || (await getAiSettings(req.userId as number)).base_url;
+  const overrideProvider = isAiProvider(req.query.provider) ? req.query.provider : undefined;
+  const settings = await getAiSettingsForCall(req.userId as number);
+  const baseUrl = overrideBaseUrl || settings.base_url;
+  const provider = overrideProvider || settings.provider;
+
+  if (!provider) {
+    return res.status(400).json({ error: 'Choose a provider first.' });
+  }
+
   try {
-    const models = await listOllamaModels(baseUrl);
+    const models = await listAiModels({
+      provider,
+      baseUrl: baseUrl ?? null,
+      apiKey: settings.api_key,
+    });
     res.json({ models });
   } catch (err) {
-    sendOllamaError(res, err);
+    sendAiProviderError(res, err);
   }
 }

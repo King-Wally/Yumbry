@@ -7,12 +7,14 @@ import RecipeHero from '../components/RecipeHero';
 import ServingsStepper from '../components/ServingsStepper';
 import TimeStat from '../components/TimeStat';
 import { useScaledIngredients } from '../hooks/useScaledIngredients';
+import { useAiSettings } from '../hooks/useAiSettings';
 import { toNumber } from '../utils/numeric';
 
 export default function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { data: aiSettings } = useAiSettings();
 
   const { data: recipe, isLoading } = useQuery({
     queryKey: queryKeys.recipe(id!),
@@ -80,12 +82,14 @@ export default function RecipeDetailPage() {
           >
             Edit
           </Link>
-          <Link
-            to={`/recipes/${id}/ai-improve`}
-            className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
-          >
-            Improve with AI
-          </Link>
+          {aiSettings?.model && (
+            <Link
+              to={`/recipes/${id}/ai-improve`}
+              className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
+            >
+              Improve with AI
+            </Link>
+          )}
           <button
             type="button"
             onClick={() => {

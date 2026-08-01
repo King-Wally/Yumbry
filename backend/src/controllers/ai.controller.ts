@@ -1,10 +1,10 @@
 import type { Request, Response } from 'express';
 import { ZodError } from 'zod';
-import { getAiSettings } from '../services/ai-settings.service.js';
-import { chatWithOllama } from '../services/ollama.service.js';
+import { getAiSettingsForCall } from '../services/ai-settings.service.js';
+import { chatWithAi, type AiProvider } from '../services/ai-provider.service.js';
 import { buildChatMessages, parseChatEnvelope } from '../services/ai-recipe-draft.service.js';
 import { AiChatTurnRequestSchema } from '../schemas/ai-chat.schema.js';
-import { sendOllamaError } from '../utils/ollama-error-response.js';
+import { sendAiProviderError } from '../utils/ai-provider-error-response.js';
 
 function isEnvelopeParseError(err: unknown): err is Error {
   return err instanceof Error && err.message.startsWith('The AI response');
@@ -13,15 +13,23 @@ function isEnvelopeParseError(err: unknown): err is Error {
 async function requireModel(
   res: Response,
   userId: number
-): Promise<{ base_url: string; model: string } | null> {
-  const settings = await getAiSettings(userId);
-  if (!settings.model) {
-    res
-      .status(409)
-      .json({ error: 'No Ollama model is configured yet. Visit Settings to choose one.' });
+): Promise<{
+  provider: AiProvider;
+  base_url: string | null;
+  api_key: string | null;
+  model: string;
+} | null> {
+  const settings = await getAiSettingsForCall(userId);
+  if (!settings.model || !settings.provider) {
+    res.status(409).json({ error: 'No AI model is configured yet. Visit Settings to choose one.' });
     return null;
   }
-  return { base_url: settings.base_url, model: settings.model };
+  return {
+    provider: settings.provider,
+    base_url: settings.base_url,
+    api_key: settings.api_key,
+    model: settings.model,
+  };
 }
 
 export async function postAiChat(req: Request, res: Response) {
@@ -30,10 +38,12 @@ export async function postAiChat(req: Request, res: Response) {
     const settings = await requireModel(res, req.userId as number);
     if (!settings) return;
 
-    const raw = await chatWithOllama(buildChatMessages(body.messages, body.current_draft), {
+    const raw = await chatWithAi(buildChatMessages(body.messages, body.current_draft), {
+      provider: settings.provider,
       baseUrl: settings.base_url,
+      apiKey: settings.api_key,
       model: settings.model,
-      format: 'json',
+      jsonMode: true,
     });
 
     res.json(parseChatEnvelope(raw));
@@ -42,6 +52,6 @@ export async function postAiChat(req: Request, res: Response) {
     if (isEnvelopeParseError(err)) {
       return res.status(502).json({ error: err.message, kind: 'malformed_response' });
     }
-    sendOllamaError(res, err);
+    sendAiProviderError(res, err);
   }
 }

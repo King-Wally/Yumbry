@@ -113,11 +113,13 @@ model Category {
 }
 
 model AiSettings {
-  id        Int      @id @default(autoincrement())
-  baseUrl   String   @map("base_url")
-  model     String?
-  userId    Int      @unique @map("user_id")
-  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz
+  id              Int      @id @default(autoincrement())
+  provider        String?
+  baseUrl         String?  @map("base_url")
+  model           String?
+  apiKeyEncrypted String?  @map("api_key_encrypted")
+  userId          Int      @unique @map("user_id")
+  updatedAt       DateTime @default(now()) @map("updated_at") @db.Timestamptz
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
