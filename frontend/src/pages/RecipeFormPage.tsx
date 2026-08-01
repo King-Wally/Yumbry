@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createRecipe, getRecipe, updateRecipe, uploadRecipePhoto } from '../api/client';
 import { queryKeys } from '../api/queryKeys';
@@ -44,10 +44,14 @@ export default function RecipeFormPage() {
   const isEditing = Boolean(id);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const location = useLocation();
 
   const [form, setForm] = useState<FormState>(emptyForm);
   const [formForRecipeId, setFormForRecipeId] = useState<number | null>(null);
   const [tagInput, setTagInput] = useState('');
+  const [aiDraftApplied, setAiDraftApplied] = useState(false);
+
+  const aiDraft = (location.state as { aiDraft?: RecipeInput } | null)?.aiDraft ?? null;
 
   const { data: existingRecipe } = useQuery({
     queryKey: queryKeys.recipe(id!),
@@ -60,7 +64,7 @@ export default function RecipeFormPage() {
   // Populate the form during render when a new recipe loads, rather than in a
   // useEffect — this is React's documented pattern for initializing editable
   // state from async data without an extra render/flash of stale values.
-  if (existingRecipe && formForRecipeId !== existingRecipe.id) {
+  if (existingRecipe && formForRecipeId !== existingRecipe.id && !aiDraft) {
     setFormForRecipeId(existingRecipe.id);
     setForm({
       title: existingRecipe.title ?? '',
@@ -79,6 +83,31 @@ export default function RecipeFormPage() {
         : [{ text: '' }],
       tags: existingRecipe.tags?.map((t) => t.name) ?? [],
       category: existingRecipe.category?.name ?? null,
+    });
+  }
+
+  // Same render-time-init pattern: pre-fill the form (create OR edit) from
+  // an AI-generated draft handed off via router state (see AiChatPage),
+  // once. Takes priority over existingRecipe hydration above (guarded by
+  // `!aiDraft` there) since aiDraft is available synchronously while
+  // existingRecipe resolves later, and would otherwise clobber it.
+  if (aiDraft && !aiDraftApplied) {
+    setAiDraftApplied(true);
+    setForm({
+      title: aiDraft.title,
+      description: aiDraft.description ?? '',
+      prep_time_minutes: aiDraft.prep_time_minutes != null ? String(aiDraft.prep_time_minutes) : '',
+      cook_time_minutes: aiDraft.cook_time_minutes != null ? String(aiDraft.cook_time_minutes) : '',
+      total_time_minutes:
+        aiDraft.total_time_minutes != null ? String(aiDraft.total_time_minutes) : '',
+      servings: aiDraft.servings,
+      image_path: aiDraft.image_path ?? null,
+      ingredients: aiDraft.ingredients.length ? aiDraft.ingredients : [''],
+      instructions: aiDraft.instructions.length
+        ? aiDraft.instructions.map((i) => ({ text: i.text }))
+        : [{ text: '' }],
+      tags: aiDraft.tags,
+      category: aiDraft.category,
     });
   }
 
@@ -139,6 +168,12 @@ export default function RecipeFormPage() {
       <h1 className="font-serif text-2xl text-stone-900">
         {isEditing ? 'Edit recipe' : 'Add a recipe'}
       </h1>
+
+      {aiDraft && (
+        <p className="rounded-md border border-clay/25 bg-clay/10 px-3 py-2 text-sm text-clay">
+          Reviewing an AI-generated draft — check it carefully before saving.
+        </p>
+      )}
 
       <div className="space-y-3">
         <input

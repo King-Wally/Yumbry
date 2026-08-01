@@ -1,7 +1,26 @@
-import type { Category, Recipe, RecipeInput, RecipeSummary, Tag } from '../types';
+import type {
+  AiChatTurnRequest,
+  AiChatTurnResponse,
+  AiSettings,
+  Category,
+  Recipe,
+  RecipeInput,
+  RecipeSummary,
+  Tag,
+} from '../types';
 
 interface ApiErrorBody {
   error?: string;
+  kind?: string;
+}
+
+export class ApiError extends Error {
+  readonly kind?: string;
+
+  constructor(message: string, kind?: string) {
+    super(message);
+    this.kind = kind;
+  }
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -12,7 +31,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     const body: ApiErrorBody = await res.json().catch(() => ({}));
-    throw new Error(body.error || `Request failed with status ${res.status}`);
+    throw new ApiError(body.error || `Request failed with status ${res.status}`, body.kind);
   }
 
   if (res.status === 204) return null as T;
@@ -76,4 +95,24 @@ export function getTags() {
 
 export function getCategories() {
   return request<Category[]>('/categories');
+}
+
+export function getAiSettings() {
+  return request<AiSettings>('/ai/settings');
+}
+
+export function updateAiSettings(data: { base_url: string; model: string | null }) {
+  return request<AiSettings>('/ai/settings', { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export function listAiModels(baseUrl?: string) {
+  const query = baseUrl ? `?base_url=${encodeURIComponent(baseUrl)}` : '';
+  return request<{ models: { name: string }[] }>(`/ai/settings/models${query}`);
+}
+
+export function chatAboutRecipe(data: AiChatTurnRequest) {
+  return request<AiChatTurnResponse>('/ai/chat', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
 }

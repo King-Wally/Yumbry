@@ -64,3 +64,31 @@ export interface RecipeInput {
   tags: string[];
   category: string | null;
 }
+
+export interface AiSettings {
+  base_url: string;
+  model: string | null;
+  updated_at: string;
+}
+
+export interface AiChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+/** AI-generated recipe drafts (from POST /api/ai/chat's `recipe` field) are
+ * response-shape-identical to RecipeInput, so they're typed directly as
+ * RecipeInput rather than a separate type. */
+
+/** Request body for POST /api/ai/chat. */
+export interface AiChatTurnRequest {
+  messages: AiChatMessage[];
+  current_draft: RecipeInput | null;
+}
+
+/** Response body for POST /api/ai/chat — the model's conversational reply
+ * plus its full current best-guess recipe, every turn. */
+export interface AiChatTurnResponse {
+  reply: string;
+  recipe: RecipeInput;
+}

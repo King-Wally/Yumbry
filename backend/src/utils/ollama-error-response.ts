@@ -1,0 +1,15 @@
+import type { Response } from 'express';
+import { OllamaError, type OllamaErrorKind } from '../services/ollama.service.js';
+
+const STATUS_BY_KIND: Record<OllamaErrorKind, number> = {
+  unreachable: 502,
+  bad_status: 502,
+  malformed_response: 502,
+};
+
+/** Turns an OllamaError into the right HTTP response; rethrows anything else
+ * so asyncHandler forwards it to app.ts's generic 500 handler. */
+export function sendOllamaError(res: Response, err: unknown): void {
+  if (!(err instanceof OllamaError)) throw err;
+  res.status(STATUS_BY_KIND[err.kind]).json({ error: err.message, kind: err.kind });
+}

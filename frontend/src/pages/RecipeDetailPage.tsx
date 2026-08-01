@@ -80,6 +80,12 @@ export default function RecipeDetailPage() {
           >
             Edit
           </Link>
+          <Link
+            to={`/recipes/${id}/ai-improve`}
+            className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
+          >
+            Improve with AI
+          </Link>
           <button
             type="button"
             onClick={() => {

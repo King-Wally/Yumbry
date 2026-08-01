@@ -47,9 +47,29 @@ simply won't scale with the servings stepper.
 
 Requires Node 24+ and a local Postgres instance.
 
+The easiest way to get Postgres without running the whole app in Docker is to
+start just the `db` service from `docker-compose.yml`:
+
+```sh
+docker compose up -d db   # uses the same db_data volume and .env credentials
+```
+
+The backend also needs its own `backend/.env` — the root `.env` is for Docker
+Compose, where `DATABASE_URL` points at the `db` service by hostname; running
+the backend directly means `db:5432` won't resolve, so it needs a separate
+`DATABASE_URL` pointing at `localhost` instead. `backend/src/index.ts` loads
+`.env` from the process's working directory, so this file has to live in
+`backend/`, not the repo root:
+
+```sh
+cd backend
+echo 'DATABASE_URL=postgres://chef:changeme@localhost:5432/recipe_vault' > .env
+```
+
+(adjust user/password/db name to match whatever's in the root `.env`.)
+
 ```sh
 # Backend
-cd backend
 npm install
 npm run db:migrate   # apply pending migrations (re-run after pulling new ones)
 npm run dev           # http://localhost:3000

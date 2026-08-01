@@ -12,4 +12,6 @@ export const queryKeys = {
   recipe: (id: string | number) => ['recipe', String(id)] as const,
   tags: ['tags'] as const,
   categories: ['categories'] as const,
+  aiSettings: ['ai-settings'] as const,
+  aiModels: (baseUrl?: string) => ['ai-models', baseUrl ?? null] as const,
 };

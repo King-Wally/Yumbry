@@ -3,6 +3,8 @@ import RecipeListPage from './pages/RecipeListPage';
 import RecipeDetailPage from './pages/RecipeDetailPage';
 import RecipeFormPage from './pages/RecipeFormPage';
 import ImportPage from './pages/ImportPage';
+import AiChatPage from './pages/AiChatPage';
+import SettingsPage from './pages/SettingsPage';
 import { version } from '../package.json';
 
 export default function App() {
@@ -20,6 +22,12 @@ export default function App() {
             <Link to="/import" className="transition-colors hover:text-clay">
               Import
             </Link>
+            <Link to="/create-with-ai" className="transition-colors hover:text-clay">
+              Create with AI
+            </Link>
+            <Link to="/settings" className="transition-colors hover:text-clay">
+              Settings
+            </Link>
             <Link
               to="/recipes/new"
               className="rounded-md bg-clay px-3 py-1.5 text-white shadow-sm transition hover:bg-clay/90 hover:shadow"
@@ -36,7 +44,10 @@ export default function App() {
           <Route path="/recipes/new" element={<RecipeFormPage />} />
           <Route path="/recipes/:id" element={<RecipeDetailPage />} />
           <Route path="/recipes/:id/edit" element={<RecipeFormPage />} />
+          <Route path="/recipes/:id/ai-improve" element={<AiChatPage />} />
           <Route path="/import" element={<ImportPage />} />
+          <Route path="/create-with-ai" element={<AiChatPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>
 
