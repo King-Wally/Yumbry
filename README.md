@@ -27,12 +27,12 @@ Logins last up to 30 days (see `JWT_SECRET` below).
 
 3. Open [http://localhost:3000](http://localhost:3000) (or whatever `APP_PORT` you set in `.env`).
 
-Recipe photos are stored on disk at `backend/uploads/` (bind-mounted into the
-`app` container so they're visible to a locally-run backend too — see
-Development below) and the database in a named Docker volume (`db_data`), so
-your data survives container restarts and rebuilds. `docker compose down -v`
-removes the database volume — use with care; recipe photos live in
-`backend/uploads/` regardless and aren't affected by `-v`.
+Recipe photos and the database each persist in their own named Docker volume
+(`uploads_data` and `db_data`), so your data survives container restarts and
+rebuilds. `docker compose down -v` removes both volumes — use with care.
+Inspect uploaded photos via `docker compose exec app ls /app/uploads` (there's
+no host filesystem path for them in the Docker deployment — see Development
+below for the separate local-dev location).
 
 ## Importing a recipe
 
@@ -80,15 +80,17 @@ has no fallback — the app throws at startup if it's unset, so this always need
 setting, even for local development.
 
 Recipe photos live in `backend/uploads/` on disk (`UPLOADS_DIR` defaults to
-`./uploads` relative to the backend process's cwd) — this is the same folder
-`docker-compose.yml` bind-mounts into the `app` container, so photos uploaded
-via one route are visible via the other with no extra copying.
+`./uploads` relative to the backend process's cwd). This is a different
+location from the Docker deployment, which stores photos in a named volume
+(`uploads_data`) rather than on the host filesystem — the two don't share
+files.
 
 ```sh
 # Backend
 npm install
-npm run db:migrate   # apply pending migrations (re-run after pulling new ones)
-npm run dev           # http://localhost:3000
+npx prisma generate   # generates backend/src/generated/prisma
+npm run db:migrate    # apply pending migrations (re-run after pulling new ones)
+npm run dev            # http://localhost:3000
 
 # Frontend (separate terminal)
 cd frontend
@@ -103,11 +105,11 @@ cd backend && npm test    # unit tests always run; API integration tests need TE
 cd frontend && npm test
 ```
 
-The backend's `recipes.api.test.ts` integration suite talks to a real,
-disposable Postgres database — it drops and recreates the `public` schema on
-each run, then applies all migrations from `backend/migrations/` itself
-(no manual migration step needed for tests). Point it at a scratch database,
-never your real one:
+The backend's integration test suites (`recipes.api.test.ts` and others) talk
+to a real, disposable Postgres database — they drop and recreate the `public`
+schema on each run, then apply all migrations from `backend/prisma/migrations/`
+themselves via `prisma migrate deploy` (no manual migration step needed for
+tests). Point it at a scratch database, never your real one:
 
 ```sh
 TEST_DATABASE_URL=postgres://chef:changeme@localhost:5432/recipe_vault_test npm test
@@ -118,26 +120,28 @@ automatically and the rest of the suite still runs.
 
 ## Database migrations
 
-Schema changes live as timestamped SQL files in `backend/migrations/`,
-applied via [node-pg-migrate](https://github.com/salsita/node-pg-migrate) and
-tracked in a `pgmigrations` table — there's no more single `schema.sql`.
+Schema changes are managed by [Prisma](https://www.prisma.io/). The schema
+lives in `backend/prisma/schema.prisma`; generated migrations live as
+timestamped SQL folders in `backend/prisma/migrations/`, tracked in Prisma's
+own `_prisma_migrations` table.
 
 ```sh
-npm run db:migrate               # apply all pending migrations
-npm run db:migrate:create <name> # scaffold a new migration (fill in Up/Down)
-npm run db:migrate:down          # roll back the most recent migration
-npm run db:migrate:status        # dry-run: show what would be applied
+npm run db:migrate         # apply all pending migrations (prisma migrate deploy)
+npm run db:migrate:dev     # generate + apply a new migration from schema.prisma changes
+npm run db:migrate:status  # show which migrations are pending
 ```
 
 - **Docker**: migrations run automatically — the `app` container's entrypoint
-  applies pending migrations before starting the server, on every start. No
+  runs `prisma migrate deploy` before starting the server, on every start. No
   manual step needed; `docker compose exec app npm run db:migrate` also works
   as a manual escape hatch (e.g. to check status without restarting).
 - **Local dev / CI**: run `npm run db:migrate` yourself, once initially and
   again after pulling commits with new migrations.
-- **Conventions**: one migration per logical schema change; never edit a
-  migration that's already been committed — write a new one to fix it
-  forward instead; always fill in both the Up and Down sections.
+- **Conventions**: edit `schema.prisma`, then run `npm run db:migrate:dev`
+  against a local Postgres to generate and apply the new migration folder, and
+  commit it. Never hand-edit a migration folder that's already been committed
+  — write a new schema change to fix it forward instead. Prisma migrations
+  have no down-migration concept.
 
 ## Type checking, linting, and formatting
 

@@ -19,9 +19,6 @@ services:
 
   db:
     image: postgres:16-alpine
-    # Schema is owned entirely by the app container's entrypoint (node-pg-migrate
-    # against backend/migrations/), not by Postgres's docker-entrypoint-initdb.d —
-    # there's nothing to bind-mount here anymore.
     ports:
       - '5432:5432'
     environment:
