@@ -1,3 +1,5 @@
+import { Clock, Flame, Timer } from 'lucide-react';
+
 type TimeStatIcon = 'clock' | 'flame' | 'timer';
 
 interface TimeStatProps {
@@ -7,36 +9,11 @@ interface TimeStatProps {
 }
 
 function StatIcon({ icon }: { icon: TimeStatIcon }) {
-  const common = {
-    xmlns: 'http://www.w3.org/2000/svg',
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: 1.5,
-    className: 'h-5 w-5',
-  } as const;
+  const className = 'h-5 w-5';
 
-  if (icon === 'flame') {
-    return (
-      <svg {...common}>
-        <path d="M12 2c1 3-2 4-2 7a4 4 0 108 0c0-1-.5-2-1-2 .5 2-1 3-2 3 1-2-1-3-1-5 0-1 .5-2 .5-3-1 0-2.5 1-2.5 3-2-1-3-2-3-3z" />
-      </svg>
-    );
-  }
-  if (icon === 'timer') {
-    return (
-      <svg {...common}>
-        <circle cx="12" cy="13" r="8" />
-        <path d="M12 9v4l2.5 2.5M9 3h6" />
-      </svg>
-    );
-  }
-  return (
-    <svg {...common}>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 3" />
-    </svg>
-  );
+  if (icon === 'flame') return <Flame className={className} strokeWidth={1.5} />;
+  if (icon === 'timer') return <Timer className={className} strokeWidth={1.5} />;
+  return <Clock className={className} strokeWidth={1.5} />;
 }
 
 export default function TimeStat({ icon, label, minutes }: TimeStatProps) {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft } from 'lucide-react';
 import { deleteRecipe, getRecipe, getRecipeExportUrl } from '../api/client';
 import { queryKeys } from '../api/queryKeys';
 import RecipeHero from '../components/RecipeHero';
@@ -57,16 +58,7 @@ export default function RecipeDetailPage() {
           to="/"
           className="flex items-center gap-1 rounded-md px-2 py-1.5 text-sm text-stone-600 transition-colors hover:text-stone-900"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            className="h-4 w-4"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
+          <ArrowLeft className="h-4 w-4" />
           Back
         </Link>
         <CollapsibleActions>
