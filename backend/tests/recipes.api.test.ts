@@ -47,7 +47,10 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
     expect(createRes.status).toBe(201);
     expect(createRes.body.title).toBe('Test Soup');
     expect(createRes.body.ingredients).toHaveLength(1);
-    expect(createRes.body.tags.map((t: { name: string }) => t.name).sort()).toEqual(['dinner', 'soup']);
+    expect(createRes.body.tags.map((t: { name: string }) => t.name).sort()).toEqual([
+      'dinner',
+      'soup',
+    ]);
     expect(createRes.body.category).toMatchObject({ name: 'main course' });
 
     const getRes = await agent.get(`/api/recipes/${createRes.body.id}`);
