@@ -37,6 +37,18 @@ describe('parseChatEnvelope', () => {
     expect(envelope.recipe.category).toBe('Main course');
   });
 
+  it('carries the current draft image_path through unchanged, since the LLM never sets it', () => {
+    const currentDraft: AiRecipeDraft = {
+      ...wellFormedRecipe,
+      image_path: '/uploads/recipes/1/photo.jpg',
+      instructions: [{ step_number: 1, text: 'Simmer.' }],
+    };
+
+    const envelope = parseChatEnvelope(JSON.stringify(wellFormedEnvelope), currentDraft);
+
+    expect(envelope.recipe.image_path).toBe('/uploads/recipes/1/photo.jpg');
+  });
+
   it('falls back to a generic reply when reply is missing', () => {
     const envelope = parseChatEnvelope(JSON.stringify({ recipe: wellFormedRecipe }));
     expect(envelope.reply).toBe("Here's the updated recipe.");

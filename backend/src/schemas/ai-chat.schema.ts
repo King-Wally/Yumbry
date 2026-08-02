@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const AiRecipeDraftSchema = z.object({
   title: z.string(),
   description: z.string().nullable(),
-  image_path: z.null(),
+  image_path: z.string().nullable(),
   prep_time_minutes: z.number().nullable(),
   cook_time_minutes: z.number().nullable(),
   total_time_minutes: z.number().nullable(),

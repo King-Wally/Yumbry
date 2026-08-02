@@ -46,7 +46,7 @@ export async function postAiChat(req: Request, res: Response) {
       jsonMode: true,
     });
 
-    res.json(parseChatEnvelope(raw));
+    res.json(parseChatEnvelope(raw, body.current_draft));
   } catch (err) {
     if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
     if (isEnvelopeParseError(err)) {

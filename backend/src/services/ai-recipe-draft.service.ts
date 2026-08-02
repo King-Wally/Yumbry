@@ -10,7 +10,7 @@ import type { AiChatMessage } from './ai-provider.service.js';
 export interface AiRecipeDraft {
   title: string;
   description: string | null;
-  image_path: null;
+  image_path: string | null;
   prep_time_minutes: number | null;
   cook_time_minutes: number | null;
   total_time_minutes: number | null;
@@ -119,7 +119,10 @@ function stripJsonFences(text: string): string {
 /** Defensive per-field extraction of a recipe-shaped node into an
  * AiRecipeDraft — tolerates missing/malformed fields with sensible
  * defaults, modeled on jsonld-import.service.ts's extraction functions. */
-function extractRecipeDraft(node: Record<string, unknown>): AiRecipeDraft {
+function extractRecipeDraft(
+  node: Record<string, unknown>,
+  currentImagePath: string | null
+): AiRecipeDraft {
   const ingredientLines = Array.isArray(node.ingredients)
     ? node.ingredients.filter((e): e is string => typeof e === 'string')
     : [];
@@ -143,7 +146,7 @@ function extractRecipeDraft(node: Record<string, unknown>): AiRecipeDraft {
     title:
       typeof node.title === 'string' && node.title.trim() ? node.title.trim() : 'Untitled recipe',
     description: typeof node.description === 'string' ? node.description : null,
-    image_path: null,
+    image_path: currentImagePath,
     prep_time_minutes: typeof node.prep_time_minutes === 'number' ? node.prep_time_minutes : null,
     cook_time_minutes: typeof node.cook_time_minutes === 'number' ? node.cook_time_minutes : null,
     total_time_minutes:
@@ -162,8 +165,15 @@ function extractRecipeDraft(node: Record<string, unknown>): AiRecipeDraft {
  * modeled directly on jsonld-import.service.ts's parseRecipeFromJsonLd:
  * strips markdown fences, tolerates missing/malformed fields with sensible
  * defaults, never throws except when no JSON object can be recovered at all.
+ * The LLM is never asked to produce image_path (it has no way to generate or
+ * reference an uploaded photo), so it's carried over from currentDraft
+ * instead of the model's output — otherwise an existing recipe's photo
+ * would silently disappear from the draft after the first chat turn.
  */
-export function parseChatEnvelope(rawContent: string): AiChatEnvelope {
+export function parseChatEnvelope(
+  rawContent: string,
+  currentDraft: AiRecipeDraft | null = null
+): AiChatEnvelope {
   const jsonText = stripJsonFences(rawContent);
 
   let parsed: unknown;
@@ -186,5 +196,5 @@ export function parseChatEnvelope(rawContent: string): AiChatEnvelope {
   const recipeNode =
     node.recipe && typeof node.recipe === 'object' ? (node.recipe as Record<string, unknown>) : {};
 
-  return { reply, recipe: extractRecipeDraft(recipeNode) };
+  return { reply, recipe: extractRecipeDraft(recipeNode, currentDraft?.image_path ?? null) };
 }
