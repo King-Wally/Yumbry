@@ -2,7 +2,7 @@ services:
   app:
     build: .
     ports:
-      - "${APP_PORT:-3000}:3000"
+      - '${APP_PORT:-3000}:3000'
     environment:
       DATABASE_URL: ${DATABASE_URL}
       PORT: 3000
@@ -11,7 +11,7 @@ services:
       AI_SETTINGS_ENCRYPTION_KEY: ${AI_SETTINGS_ENCRYPTION_KEY}
       COOKIE_SECURE: ${COOKIE_SECURE:-}
     volumes:
-      - ./backend/uploads:/app/uploads
+      - uploads_data:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -23,7 +23,7 @@ services:
     # against backend/migrations/), not by Postgres's docker-entrypoint-initdb.d —
     # there's nothing to bind-mount here anymore.
     ports:
-      - "5432:5432"
+      - '5432:5432'
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -31,7 +31,7 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -39,3 +39,4 @@ services:
 
 volumes:
   db_data:
+  uploads_data:
