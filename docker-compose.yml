@@ -8,6 +8,7 @@ services:
       PORT: 3000
       NODE_ENV: production
       JWT_SECRET: ${JWT_SECRET}
+      AI_SETTINGS_ENCRYPTION_KEY: ${AI_SETTINGS_ENCRYPTION_KEY}
       COOKIE_SECURE: ${COOKIE_SECURE:-}
     volumes:
       - ./backend/uploads:/app/uploads
