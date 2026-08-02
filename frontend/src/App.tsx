@@ -19,7 +19,7 @@ export default function App() {
   return (
     <div className="flex min-h-screen flex-col bg-cream">
       <header className="sticky top-0 z-10 border-b border-stone-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <Link
             to="/"
             className="font-serif text-2xl tracking-tight text-stone-900 transition-colors hover:text-clay"
@@ -59,7 +59,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-8">
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -130,7 +130,7 @@ export default function App() {
         </Routes>
       </main>
 
-      <footer className="mx-auto max-w-5xl px-6 py-4 text-center text-xs text-stone-400">
+      <footer className="mx-auto max-w-7xl px-6 py-4 text-center text-xs text-stone-400">
         v{version}
       </footer>
     </div>

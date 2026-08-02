@@ -102,8 +102,8 @@ export default function RecipeDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <div className="flex flex-col gap-4 rounded-xl border border-stone-200 bg-white p-5 shadow-sm md:col-span-1">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="flex flex-col gap-4 rounded-xl border border-stone-200 bg-white p-5 shadow-sm lg:col-span-1">
           <div>
             <h1 className="font-serif text-3xl text-stone-900">{recipe.title}</h1>
             {recipe.category && (
@@ -127,7 +127,7 @@ export default function RecipeDetailPage() {
             </div>
           )}
 
-          <div className="flex flex-wrap gap-3 md:flex-col">
+          <div className="flex flex-wrap gap-3 lg:flex-col">
             {recipe.prep_time_minutes != null && (
               <TimeStat icon="clock" label="Prep" minutes={recipe.prep_time_minutes} />
             )}
@@ -140,13 +140,13 @@ export default function RecipeDetailPage() {
           </div>
         </div>
 
-        <div className="md:col-span-2">
+        <div className="lg:col-span-2">
           <RecipeHero title={recipe.title} imagePath={recipe.image_path} />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <section className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm md:col-span-1">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <section className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm lg:col-span-1">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-serif text-xl text-stone-900">Ingredients</h2>
           </div>
@@ -161,7 +161,7 @@ export default function RecipeDetailPage() {
           </ul>
         </section>
 
-        <section className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm md:col-span-2">
+        <section className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm lg:col-span-2">
           <h2 className="mb-3 font-serif text-xl text-stone-900">Instructions</h2>
           <ol className="space-y-5">
             {recipe.instructions?.map((step) => (

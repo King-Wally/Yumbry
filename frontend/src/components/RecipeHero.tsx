@@ -5,7 +5,7 @@ interface RecipeHeroProps {
 
 export default function RecipeHero({ title, imagePath }: RecipeHeroProps) {
   return (
-    <div className="relative h-56 overflow-hidden rounded-2xl shadow-sm sm:h-72 md:h-full">
+    <div className="relative h-56 overflow-hidden rounded-2xl shadow-sm sm:h-72 lg:h-full">
       {imagePath ? (
         <img
           src={imagePath}
