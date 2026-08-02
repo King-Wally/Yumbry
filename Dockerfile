@@ -11,7 +11,7 @@ FROM node:24-alpine AS backend-build
 WORKDIR /app
 COPY backend/package*.json ./
 RUN npm ci
-COPY backend/tsconfig.json backend/prisma.config.ts ./
+COPY backend/tsconfig.json backend/tsconfig.build.json backend/prisma.config.ts ./
 COPY backend/prisma ./prisma
 RUN npx prisma generate
 COPY backend/src ./src

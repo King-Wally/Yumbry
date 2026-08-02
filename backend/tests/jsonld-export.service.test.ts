@@ -11,6 +11,7 @@ const fullRecipe: RecipeWithRelations = {
   cook_time_minutes: 15,
   total_time_minutes: 25,
   servings: '4',
+  category_id: 1,
   created_at: new Date('2024-01-01'),
   updated_at: new Date('2024-01-01'),
   ingredients: [

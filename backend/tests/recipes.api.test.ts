@@ -47,7 +47,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
     expect(createRes.status).toBe(201);
     expect(createRes.body.title).toBe('Test Soup');
     expect(createRes.body.ingredients).toHaveLength(1);
-    expect(createRes.body.tags.map((t) => t.name).sort()).toEqual(['dinner', 'soup']);
+    expect(createRes.body.tags.map((t: { name: string }) => t.name).sort()).toEqual(['dinner', 'soup']);
     expect(createRes.body.category).toMatchObject({ name: 'main course' });
 
     const getRes = await agent.get(`/api/recipes/${createRes.body.id}`);
@@ -126,7 +126,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
     expect(res.body.title).toBe('Imported Recipe');
     expect(res.body.ingredients[0].name).toBe('rice');
     expect(res.body.category).toMatchObject({ name: 'hoofdgerecht' });
-    expect(res.body.tags.map((t) => t.name).sort()).toEqual(
+    expect(res.body.tags.map((t: { name: string }) => t.name).sort()).toEqual(
       ['hoofdgerecht', 'vlees', 'comfortfood', 'zweeds'].sort()
     );
   });
@@ -170,7 +170,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
   it('lists tags', async () => {
     await agent.post('/api/recipes').send({ title: 'A', servings: 1, tags: ['x', 'y'] });
     const res = await agent.get('/api/tags');
-    expect(res.body.map((t) => t.name).sort()).toEqual(['x', 'y']);
+    expect(res.body.map((t: { name: string }) => t.name).sort()).toEqual(['x', 'y']);
   });
 
   it('deletes a tag once no recipe references it anymore', async () => {
@@ -183,7 +183,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
       .send({ title: 'Tagged', servings: 1, tags: ['keep-me'] });
 
     const afterUpdate = await agent.get('/api/tags');
-    expect(afterUpdate.body.map((t) => t.name).sort()).toEqual(['keep-me']);
+    expect(afterUpdate.body.map((t: { name: string }) => t.name).sort()).toEqual(['keep-me']);
 
     await agent.delete(`/api/recipes/${created.body.id}`);
 
@@ -195,7 +195,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
     await agent.post('/api/recipes').send({ title: 'A', servings: 1, category: 'Snack' });
     await agent.post('/api/recipes').send({ title: 'B', servings: 1, category: 'Dessert' });
     const res = await agent.get('/api/categories');
-    expect(res.body.map((c) => c.name).sort()).toEqual(['dessert', 'snack']);
+    expect(res.body.map((c: { name: string }) => c.name).sort()).toEqual(['dessert', 'snack']);
   });
 
   it('reuses the same category across recipes with the same name', async () => {
@@ -222,7 +222,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
       .send({ title: 'Tagged', servings: 1, category: 'Dessert' });
 
     const afterUpdate = await agent.get('/api/categories');
-    expect(afterUpdate.body.map((c) => c.name)).toEqual(['dessert']);
+    expect(afterUpdate.body.map((c: { name: string }) => c.name)).toEqual(['dessert']);
 
     await agent.delete(`/api/recipes/${created.body.id}`);
 
@@ -316,7 +316,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
       await agent.delete(`/api/recipes/${mine.body.id}`);
 
       const otherTags = await otherAgent.get('/api/tags');
-      expect(otherTags.body.map((t) => t.name)).toEqual(['vegan']);
+      expect(otherTags.body.map((t: { name: string }) => t.name)).toEqual(['vegan']);
     });
   });
 });
