@@ -9,6 +9,7 @@ import TimeStat from '../components/TimeStat';
 import { useScaledIngredients } from '../hooks/useScaledIngredients';
 import { useAiSettings } from '../hooks/useAiSettings';
 import { toNumber } from '../utils/numeric';
+import CollapsibleActions from '../components/CollapsibleActions';
 
 export default function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -68,7 +69,7 @@ export default function RecipeDetailPage() {
           </svg>
           Back
         </Link>
-        <div className="flex gap-2">
+        <CollapsibleActions>
           <a
             href={getRecipeExportUrl(id!)}
             download
@@ -99,7 +100,7 @@ export default function RecipeDetailPage() {
           >
             Delete
           </button>
-        </div>
+        </CollapsibleActions>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

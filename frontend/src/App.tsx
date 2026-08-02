@@ -8,6 +8,7 @@ import SettingsPage from './pages/SettingsPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import CollapsibleActions from './components/CollapsibleActions';
 import { useAuth } from './context/AuthContext';
 import { useAiSettings } from './hooks/useAiSettings';
 import { version } from '../package.json';
@@ -26,9 +27,19 @@ export default function App() {
           >
             Recipe Vault
           </Link>
-          <nav className="flex items-center gap-5 text-sm font-medium text-stone-600">
+          <nav className="text-sm font-medium text-stone-600">
             {user && (
-              <>
+              <CollapsibleActions
+                rowClassName="gap-5"
+                pinned={
+                  <Link
+                    to="/recipes/new"
+                    className="rounded-md bg-clay px-3 py-1.5 text-white shadow-sm transition hover:bg-clay/90 hover:shadow"
+                  >
+                    Add recipe
+                  </Link>
+                }
+              >
                 <Link to="/import" className="transition-colors hover:text-clay">
                   Import
                 </Link>
@@ -40,20 +51,14 @@ export default function App() {
                 <Link to="/settings" className="transition-colors hover:text-clay">
                   Settings
                 </Link>
-                <Link
-                  to="/recipes/new"
-                  className="rounded-md bg-clay px-3 py-1.5 text-white shadow-sm transition hover:bg-clay/90 hover:shadow"
-                >
-                  Add recipe
-                </Link>
                 <button
                   type="button"
                   onClick={() => logout()}
-                  className="transition-colors hover:text-clay"
+                  className="text-left transition-colors hover:text-clay"
                 >
                   Log out
                 </button>
-              </>
+              </CollapsibleActions>
             )}
           </nav>
         </div>
