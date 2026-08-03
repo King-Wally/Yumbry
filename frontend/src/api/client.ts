@@ -157,3 +157,7 @@ export function register(email: string, password: string) {
 export function logout() {
   return request<null>('/auth/logout', { method: 'POST' });
 }
+
+export function deleteAccount(password: string) {
+  return request<null>('/auth/me', { method: 'DELETE', body: JSON.stringify({ password }) });
+}

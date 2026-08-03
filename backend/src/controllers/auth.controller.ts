@@ -1,8 +1,9 @@
 import type { Request, Response } from 'express';
 import { ZodError } from 'zod';
-import { AuthBodySchema } from '../schemas/auth.schema.js';
+import { AuthBodySchema, DeleteAccountBodySchema } from '../schemas/auth.schema.js';
 import { AUTH_COOKIE_NAME, signAuthToken } from '../utils/jwt.js';
 import {
+  deleteUser,
   findUserByEmail,
   findUserById,
   registerUser,
@@ -59,4 +60,20 @@ export async function getMe(req: Request, res: Response) {
   const user = await findUserById(req.userId as number);
   if (!user) return res.status(401).json({ error: 'Not authenticated.' });
   res.json({ id: user.id, email: user.email });
+}
+
+export async function deleteAccount(req: Request, res: Response) {
+  try {
+    const { password } = DeleteAccountBodySchema.parse(req.body);
+    const user = await findUserById(req.userId as number);
+    const valid = await verifyPassword(password, user?.password_hash);
+    if (!user || !valid) return res.status(401).json({ error: 'Incorrect password.' });
+
+    await deleteUser(user.id);
+    res.clearCookie(AUTH_COOKIE_NAME);
+    res.status(204).end();
+  } catch (err) {
+    if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
+    throw err;
+  }
 }

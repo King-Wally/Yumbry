@@ -11,6 +11,7 @@ import { useScaledIngredients } from '../hooks/useScaledIngredients';
 import { useAiSettings } from '../hooks/useAiSettings';
 import { toNumber } from '../utils/numeric';
 import CollapsibleActions from '../components/CollapsibleActions';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 export default function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +26,7 @@ export default function RecipeDetailPage() {
 
   const [servings, setServings] = useState(1);
   const [servingsForRecipeId, setServingsForRecipeId] = useState<number | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   // Adjust `servings` during render when a new recipe loads, rather than in a
   // useEffect — this is React's documented pattern for initializing editable
@@ -85,15 +87,24 @@ export default function RecipeDetailPage() {
           )}
           <button
             type="button"
-            onClick={() => {
-              if (confirm('Delete this recipe?')) deleteMutation.mutate();
-            }}
+            onClick={() => setConfirmDeleteOpen(true)}
             className="rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-600 transition-colors hover:border-red-300 hover:bg-red-50"
           >
             Delete
           </button>
         </CollapsibleActions>
       </div>
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title="Delete this recipe?"
+        description="This cannot be undone."
+        confirmLabel="Delete"
+        isDanger
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate()}
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="flex flex-col gap-4 rounded-xl border border-stone-200 bg-white p-5 shadow-sm lg:col-span-1">

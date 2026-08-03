@@ -107,6 +107,52 @@ describe.skipIf(!TEST_DATABASE_URL)('auth API', () => {
     expect(res.status).toBe(401);
   });
 
+  it('rejects account deletion with the wrong password, and still allows access', async () => {
+    const agent = request.agent(app);
+    await agent
+      .post('/api/auth/register')
+      .send({ email: 'erin@example.com', password: 'password123' });
+
+    const wrongPassword = await agent.delete('/api/auth/me').send({ password: 'wrong-password' });
+    expect(wrongPassword.status).toBe(401);
+
+    const me = await agent.get('/api/auth/me');
+    expect(me.status).toBe(200);
+  });
+
+  it('returns 401 from DELETE /api/auth/me without a session', async () => {
+    const res = await request(app).delete('/api/auth/me').send({ password: 'password123' });
+    expect(res.status).toBe(401);
+  });
+
+  it('deletes the account and cascades to owned recipes, tags, and categories', async () => {
+    const agent = request.agent(app);
+    await agent
+      .post('/api/auth/register')
+      .send({ email: 'frank@example.com', password: 'password123' });
+
+    const recipe = await agent
+      .post('/api/recipes')
+      .send({ title: 'Tacos', servings: 2, tags: ['mexican'], category: 'dinner' });
+    expect(recipe.status).toBe(201);
+
+    const del = await agent.delete('/api/auth/me').send({ password: 'password123' });
+    expect(del.status).toBe(204);
+
+    const me = await agent.get('/api/auth/me');
+    expect(me.status).toBe(401);
+
+    const { rows: userRows } = await pool.query('SELECT * FROM users WHERE email = $1', [
+      'frank@example.com',
+    ]);
+    expect(userRows).toHaveLength(0);
+
+    const { rows: recipeRows } = await pool.query('SELECT * FROM recipes WHERE id = $1', [
+      recipe.body.id,
+    ]);
+    expect(recipeRows).toHaveLength(0);
+  });
+
   it('rate-limits repeated login attempts', async () => {
     const setupAgent = request.agent(app);
     await setupAgent

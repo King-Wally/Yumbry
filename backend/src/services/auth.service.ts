@@ -47,6 +47,12 @@ export async function findUserById(id: number): Promise<UserRow | null> {
   return user ? toUserRow(user) : null;
 }
 
+/** Deletes the user row; cascading FKs remove all owned recipes, tags,
+ * categories, and ai_settings. */
+export async function deleteUser(id: number): Promise<void> {
+  await prisma.user.delete({ where: { id } });
+}
+
 /** Creates a user and their placeholder ai_settings row in one transaction.
  * Returns null if the email is already registered. */
 export async function registerUser(email: string, password: string): Promise<UserRow | null> {

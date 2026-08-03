@@ -6,3 +6,9 @@ export const AuthBodySchema = z.object({
 });
 
 export type AuthBody = z.infer<typeof AuthBodySchema>;
+
+export const DeleteAccountBodySchema = z.object({
+  password: z.string().min(1),
+});
+
+export type DeleteAccountBody = z.infer<typeof DeleteAccountBodySchema>;
