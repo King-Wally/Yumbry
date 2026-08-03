@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { deleteAccount, listAiModels, updateAiSettings } from '../api/client';
 import { queryKeys } from '../api/queryKeys';
 import { useAiSettings } from '../hooks/useAiSettings';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import Dialog from '../components/Dialog';
 import type { AiProvider } from '../types';
 

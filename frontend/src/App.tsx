@@ -9,7 +9,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import CollapsibleActions from './components/CollapsibleActions';
-import { useAuth } from './context/AuthContext';
+import { useAuth } from './hooks/useAuth';
 import { useAiSettings } from './hooks/useAiSettings';
 import { version } from '../package.json';
 
