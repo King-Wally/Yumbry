@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import SettingsPage from '../src/pages/SettingsPage';
+import { AuthProvider } from '../src/context/AuthContext';
 import * as apiClient from '../src/api/client';
 import type { AiSettings } from '../src/types';
 
@@ -21,7 +22,9 @@ function renderSettings() {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <SettingsPage />
+        <AuthProvider>
+          <SettingsPage />
+        </AuthProvider>
       </MemoryRouter>
     </QueryClientProvider>
   );
@@ -30,6 +33,7 @@ function renderSettings() {
 describe('SettingsPage', () => {
   beforeEach(() => {
     vi.mocked(apiClient.getAiSettings).mockResolvedValue(settings);
+    vi.mocked(apiClient.getCurrentUser).mockRejectedValue(new Error('not authenticated'));
   });
 
   it('hydrates the form from the fetched settings', async () => {
