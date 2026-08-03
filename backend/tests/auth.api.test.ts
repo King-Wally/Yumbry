@@ -29,6 +29,7 @@ describe.skipIf(!TEST_DATABASE_URL)('auth API', () => {
     const agent = request.agent(app);
     const res = await agent
       .post('/api/auth/register')
+      .set('X-Forwarded-For', '10.0.0.1')
       .send({ email: 'alice@example.com', password: 'password123' });
 
     expect(res.status).toBe(201);
@@ -44,10 +45,12 @@ describe.skipIf(!TEST_DATABASE_URL)('auth API', () => {
     const agent = request.agent(app);
     await agent
       .post('/api/auth/register')
+      .set('X-Forwarded-For', '10.0.0.2')
       .send({ email: 'bob@example.com', password: 'password123' });
 
     const res = await agent
       .post('/api/auth/register')
+      .set('X-Forwarded-For', '10.0.0.2')
       .send({ email: 'bob@example.com', password: 'password123' });
     expect(res.status).toBe(409);
   });
@@ -56,6 +59,7 @@ describe.skipIf(!TEST_DATABASE_URL)('auth API', () => {
     const agent = request.agent(app);
     const res = await agent
       .post('/api/auth/register')
+      .set('X-Forwarded-For', '10.0.0.3')
       .send({ email: 'shortpw@example.com', password: 'short' });
     expect(res.status).toBe(400);
   });
@@ -64,23 +68,27 @@ describe.skipIf(!TEST_DATABASE_URL)('auth API', () => {
     const registerAgent = request.agent(app);
     await registerAgent
       .post('/api/auth/register')
+      .set('X-Forwarded-For', '10.0.0.4')
       .send({ email: 'carol@example.com', password: 'password123' });
 
     const wrongPasswordAgent = request.agent(app);
     const wrongPassword = await wrongPasswordAgent
       .post('/api/auth/login')
+      .set('X-Forwarded-For', '10.0.0.4')
       .send({ email: 'carol@example.com', password: 'wrong-password' });
     expect(wrongPassword.status).toBe(401);
 
     const unknownEmailAgent = request.agent(app);
     const unknownEmail = await unknownEmailAgent
       .post('/api/auth/login')
+      .set('X-Forwarded-For', '10.0.0.4')
       .send({ email: 'nobody@example.com', password: 'password123' });
     expect(unknownEmail.status).toBe(401);
 
     const agent = request.agent(app);
     const correct = await agent
       .post('/api/auth/login')
+      .set('X-Forwarded-For', '10.0.0.4')
       .send({ email: 'carol@example.com', password: 'password123' });
     expect(correct.status).toBe(200);
 
@@ -93,6 +101,7 @@ describe.skipIf(!TEST_DATABASE_URL)('auth API', () => {
     const agent = request.agent(app);
     await agent
       .post('/api/auth/register')
+      .set('X-Forwarded-For', '10.0.0.5')
       .send({ email: 'dave@example.com', password: 'password123' });
 
     const logout = await agent.post('/api/auth/logout');
@@ -111,6 +120,7 @@ describe.skipIf(!TEST_DATABASE_URL)('auth API', () => {
     const agent = request.agent(app);
     await agent
       .post('/api/auth/register')
+      .set('X-Forwarded-For', '10.0.0.6')
       .send({ email: 'erin@example.com', password: 'password123' });
 
     const wrongPassword = await agent.delete('/api/auth/me').send({ password: 'wrong-password' });
@@ -129,6 +139,7 @@ describe.skipIf(!TEST_DATABASE_URL)('auth API', () => {
     const agent = request.agent(app);
     await agent
       .post('/api/auth/register')
+      .set('X-Forwarded-For', '10.0.0.7')
       .send({ email: 'frank@example.com', password: 'password123' });
 
     const recipe = await agent
