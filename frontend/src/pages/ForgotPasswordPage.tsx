@@ -1,32 +1,48 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { Link } from 'react-router-dom';
+import { forgotPassword } from '../api/client';
 
-export default function LoginPage() {
+export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login } = useAuth();
-  const navigate = useNavigate();
+  const [submitted, setSubmitted] = useState(false);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
     try {
-      await login(email, password);
-      navigate('/');
+      await forgotPassword(email);
+      // Always show the success state, regardless of whether the email is
+      // registered — avoids leaking which emails have accounts.
+      setSubmitted(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed.');
+      setError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
       setIsSubmitting(false);
     }
   }
 
+  if (submitted) {
+    return (
+      <div className="mx-auto max-w-sm space-y-6">
+        <h1 className="font-serif text-2xl text-stone-900">Check your email</h1>
+        <p className="text-sm text-stone-600">
+          If that email is registered, we&apos;ve sent a link to reset your password.
+        </p>
+        <p className="text-sm text-stone-500">
+          <Link to="/login" className="text-clay hover:underline">
+            Back to log in
+          </Link>
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-sm space-y-6">
-      <h1 className="font-serif text-2xl text-stone-900">Log in</h1>
+      <h1 className="font-serif text-2xl text-stone-900">Forgot password</h1>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <input
@@ -38,33 +54,20 @@ export default function LoginPage() {
           onChange={(e) => setEmail(e.target.value)}
           className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-clay focus:outline-none"
         />
-        <input
-          type="password"
-          required
-          autoComplete="current-password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-clay focus:outline-none"
-        />
         <button
           type="submit"
           disabled={isSubmitting}
           className="w-full rounded-md bg-clay px-4 py-2 text-white disabled:opacity-50"
         >
-          {isSubmitting ? 'Logging in…' : 'Log in'}
+          {isSubmitting ? 'Sending…' : 'Send reset link'}
         </button>
       </form>
 
       {error && <p className="text-red-600">{error}</p>}
 
-      {/* "Forgot your password?" link hidden until a verified sending domain
-          is configured for Resend — see /forgot-password, /reset-password. */}
-
       <p className="text-sm text-stone-500">
-        No account?{' '}
-        <Link to="/register" className="text-clay hover:underline">
-          Register
+        <Link to="/login" className="text-clay hover:underline">
+          Back to log in
         </Link>
       </p>
     </div>

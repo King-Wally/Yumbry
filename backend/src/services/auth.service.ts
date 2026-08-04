@@ -2,6 +2,10 @@ import bcrypt from 'bcryptjs';
 import { Prisma } from '../generated/prisma/client.js';
 import { prisma } from '../db/prisma.js';
 import { withTransaction } from '../db/transaction.js';
+import { generateResetToken, hashResetToken } from '../utils/reset-token.js';
+import { sendPasswordResetEmail } from './email.service.js';
+
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 export interface UserRow {
   id: number;
@@ -74,5 +78,62 @@ export async function registerUser(email: string, password: string): Promise<Use
     });
 
     return toUserRow(user);
+  });
+}
+
+/** Sends a password reset email if the address belongs to a registered user.
+ * Always resolves successfully regardless of whether the email exists, and
+ * burns comparable time either way, so callers can return the same response
+ * without leaking which emails are registered. */
+export async function requestPasswordReset(email: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { email } });
+
+  if (!user) {
+    await hashPassword('not-a-real-password');
+    return;
+  }
+
+  const rawToken = generateResetToken();
+  const tokenHash = hashResetToken(rawToken);
+
+  await prisma.passwordResetToken.create({
+    data: {
+      userId: user.id,
+      tokenHash,
+      expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+    },
+  });
+
+  await sendPasswordResetEmail(user.email, rawToken);
+}
+
+/** Verifies a raw reset token and, if valid/unused/unexpired, updates the
+ * user's password and marks the token used, atomically. Returns the userId
+ * on success, or null if the token is missing, already used, or expired. */
+export async function resetPassword(
+  rawToken: string,
+  newPassword: string,
+): Promise<number | null> {
+  const tokenHash = hashResetToken(rawToken);
+  const passwordHash = await hashPassword(newPassword);
+
+  return withTransaction(async (tx) => {
+    const resetToken = await tx.passwordResetToken.findUnique({ where: { tokenHash } });
+
+    if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date()) {
+      return null;
+    }
+
+    await tx.passwordResetToken.update({
+      where: { id: resetToken.id },
+      data: { usedAt: new Date() },
+    });
+
+    await tx.user.update({
+      where: { id: resetToken.userId },
+      data: { passwordHash },
+    });
+
+    return resetToken.userId;
   });
 }

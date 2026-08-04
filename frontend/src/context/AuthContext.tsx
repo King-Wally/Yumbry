@@ -32,6 +32,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(await api.register(email, password));
   }
 
+  async function resetPassword(token: string, password: string) {
+    await api.resetPassword(token, password);
+    setUser(await api.getCurrentUser());
+  }
+
   function clearSession() {
     setUser(null);
     queryClient.clear();
@@ -44,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, login, register, logout, clearSession }}
+      value={{ user, isLoading, login, register, resetPassword, logout, clearSession }}
     >
       {children}
     </AuthContext.Provider>

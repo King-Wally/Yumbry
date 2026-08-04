@@ -1,12 +1,19 @@
 import type { Request, Response } from 'express';
 import { ZodError } from 'zod';
-import { AuthBodySchema, DeleteAccountBodySchema } from '../schemas/auth.schema.js';
+import {
+  AuthBodySchema,
+  DeleteAccountBodySchema,
+  ForgotPasswordBodySchema,
+  ResetPasswordBodySchema,
+} from '../schemas/auth.schema.js';
 import { AUTH_COOKIE_NAME, signAuthToken } from '../utils/jwt.js';
 import {
   deleteUser,
   findUserByEmail,
   findUserById,
   registerUser,
+  requestPasswordReset,
+  resetPassword,
   verifyPassword,
 } from '../services/auth.service.js';
 
@@ -60,6 +67,33 @@ export async function getMe(req: Request, res: Response) {
   const user = await findUserById(req.userId as number);
   if (!user) return res.status(401).json({ error: 'Not authenticated.' });
   res.json({ id: user.id, email: user.email });
+}
+
+export async function postForgotPassword(req: Request, res: Response) {
+  try {
+    const { email } = ForgotPasswordBodySchema.parse(req.body);
+    await requestPasswordReset(email);
+    // Always the same response, whether or not the email is registered —
+    // avoids leaking which emails have accounts.
+    res.status(200).json({ message: 'If that email is registered, a reset link has been sent.' });
+  } catch (err) {
+    if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
+    throw err;
+  }
+}
+
+export async function postResetPassword(req: Request, res: Response) {
+  try {
+    const { token, password } = ResetPasswordBodySchema.parse(req.body);
+    const userId = await resetPassword(token, password);
+    if (!userId) return res.status(400).json({ error: 'Invalid or expired reset link.' });
+
+    setAuthCookie(res, userId);
+    res.status(200).json({ id: userId });
+  } catch (err) {
+    if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
+    throw err;
+  }
 }
 
 export async function deleteAccount(req: Request, res: Response) {

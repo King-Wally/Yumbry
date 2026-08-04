@@ -10,6 +10,17 @@ export const loginRateLimiter = rateLimit({
   message: { error: 'Too many attempts. Try again later.' },
 });
 
+/** Applied to /api/auth/forgot-password only — stricter than login/register
+ * since each hit triggers an outbound email via Resend, and this endpoint is
+ * a more attractive enumeration/abuse target. */
+export const forgotPasswordRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts. Try again later.' },
+});
+
 /** Applied to all of /api/* — a broad backstop so a buggy or abusive client
  * can't hammer the backend/Postgres through any endpoint, not just login.
  * Limits are generous relative to real single-household usage. */

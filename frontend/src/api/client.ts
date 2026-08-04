@@ -161,3 +161,17 @@ export function logout() {
 export function deleteAccount(password: string) {
   return request<null>('/auth/me', { method: 'DELETE', body: JSON.stringify({ password }) });
 }
+
+export function forgotPassword(email: string) {
+  return request<{ message: string }>('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function resetPassword(token: string, password: string) {
+  return request<{ id: number }>('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token, password }),
+  });
+}
