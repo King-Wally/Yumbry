@@ -4,7 +4,7 @@ import {
   parseChatEnvelope,
   type AiChatEnvelope,
   type AiRecipeDraft,
-} from 'recipe-vault-shared';
+} from 'yumbry-shared';
 
 /**
  * Browser → Ollama direct connection, bypassing the backend entirely — used
@@ -13,7 +13,7 @@ import {
  * from the backend. Every other provider still goes through
  * POST /api/ai/chat as normal.
  *
- * The prompt-building/envelope-parsing logic comes from `recipe-vault-shared`
+ * The prompt-building/envelope-parsing logic comes from `yumbry-shared`
  * (see shared/src/ai-recipe-draft.ts) — the same single source of truth the
  * backend's `/api/ai/chat` proxy uses, so a recipe drafted via direct Ollama
  * looks identical in quality/shape to one drafted through the backend.

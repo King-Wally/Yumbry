@@ -27,7 +27,7 @@ export default function App() {
             to="/"
             className="font-serif text-2xl tracking-tight text-stone-900 transition-colors hover:text-clay"
           >
-            Recipe Vault
+            Yumbry
           </Link>
           <nav className="text-sm font-medium text-stone-600">
             {user && (

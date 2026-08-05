@@ -1,5 +1,5 @@
 {
-  "name": "recipe-vault",
+  "name": "yumbry",
   "private": true,
   "workspaces": [
     "backend",

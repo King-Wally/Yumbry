@@ -1,5 +1,5 @@
 import OpenAI, { APIConnectionError, APIError } from 'openai';
-import type { AiChatMessage } from 'recipe-vault-shared';
+import type { AiChatMessage } from 'yumbry-shared';
 
 export type { AiChatMessage };
 

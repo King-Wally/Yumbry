@@ -13,7 +13,7 @@ export default defineConfig({
         enabled: true,
       },
       manifest: {
-        name: 'Recipe Vault',
+        name: 'Yumbry',
         short_name: 'Recipes',
         description: 'Self-hosted personal recipe manager and cookbook.',
         theme_color: '#b5603f',

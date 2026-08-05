@@ -1,5 +1,5 @@
 {
-  "name": "recipe-vault-frontend",
+  "name": "yumbry-frontend",
   "version": "1.1.3",
   "private": true,
   "type": "module",
@@ -20,7 +20,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.25.1",
-    "recipe-vault-shared": "*"
+    "yumbry-shared": "*"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

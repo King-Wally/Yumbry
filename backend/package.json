@@ -1,5 +1,5 @@
 {
-  "name": "recipe-vault-backend",
+  "name": "yumbry-backend",
   "version": "1.1.3",
   "private": true,
   "type": "module",
@@ -31,7 +31,7 @@
     "parse-ingredient": "^1.1.1",
     "pg": "^8.12.0",
     "prisma": "^7.9.1",
-    "recipe-vault-shared": "*",
+    "yumbry-shared": "*",
     "resend": "^6.18.1",
     "uuid": "^11.1.1",
     "zod": "^4.4.3"

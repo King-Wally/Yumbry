@@ -1,4 +1,4 @@
-# Recipe Vault
+# Yumbry
 
 A self-hosted, multi-user recipe manager. Store recipes manually or import them
 from a recipe site's JSON-LD, search and filter by tag, scale ingredients to any
@@ -42,7 +42,7 @@ structured recipe data. To import one:
 1. Open the recipe's page in your browser, view page source (or "Inspect"),
    and find the `<script type="application/ld+json">` block.
 2. Copy its full contents.
-3. In Recipe Vault, go to **Import**, paste the JSON into the textarea, and
+3. In Yumbry, go to **Import**, paste the JSON into the textarea, and
    submit — or save it as a `.json` file and use the file upload option instead.
 
 The importer handles both a bare `Recipe` object and a `@graph`-wrapped one,

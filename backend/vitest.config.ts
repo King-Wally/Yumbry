@@ -19,7 +19,7 @@ export default defineConfig({
       // Real sends never happen in tests — auth-reset.api.test.ts mocks
       // sendPasswordResetEmail — these just need to satisfy the fail-fast check.
       RESEND_API_KEY: 'test-resend-api-key-not-for-production',
-      EMAIL_FROM: 'Recipe Vault <no-reply@test.local>',
+      EMAIL_FROM: 'Yumbry <no-reply@test.local>',
       APP_BASE_URL: 'http://localhost:5173',
     },
   },

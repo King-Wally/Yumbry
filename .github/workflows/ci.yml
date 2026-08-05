@@ -81,4 +81,4 @@ jobs:
     needs: [backend, frontend]
     steps:
       - uses: actions/checkout@v5
-      - run: docker build -t recipe-vault:ci .
+      - run: docker build -t yumbry:ci .

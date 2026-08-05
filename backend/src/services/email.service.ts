@@ -30,9 +30,9 @@ export async function sendPasswordResetEmail(to: string, token: string): Promise
   const { error } = await resend.emails.send({
     from: EMAIL_FROM,
     to,
-    subject: 'Reset your Recipe Vault password',
-    text: `We received a request to reset your Recipe Vault password.\n\nOpen this link to choose a new password (it expires in 1 hour):\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email.`,
-    html: `<p>We received a request to reset your Recipe Vault password.</p><p><a href="${resetUrl}">Click here to choose a new password</a> (this link expires in 1 hour).</p><p>If you didn't request this, you can safely ignore this email.</p>`,
+    subject: 'Reset your Yumbry password',
+    text: `We received a request to reset your Yumbry password.\n\nOpen this link to choose a new password (it expires in 1 hour):\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email.`,
+    html: `<p>We received a request to reset your Yumbry password.</p><p><a href="${resetUrl}">Click here to choose a new password</a> (this link expires in 1 hour).</p><p>If you didn't request this, you can safely ignore this email.</p>`,
   });
 
   if (error) throw new Error(`Failed to send password reset email: ${error.message}`);

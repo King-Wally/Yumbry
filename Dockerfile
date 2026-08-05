@@ -30,7 +30,7 @@ RUN npm run build --workspace=backend
 # ---- production-only install: `npm ci --workspace=backend` installs most of
 # backend's own deps (express, prisma, etc.) straight into backend/node_modules
 # rather than hoisting them to the repo root, but hoists a handful of shared
-# transitive deps (plus the recipe-vault-shared workspace link) to the root
+# transitive deps (plus the yumbry-shared workspace link) to the root
 # node_modules instead — which one happens per-package isn't something to
 # hand-reason about, so the runtime stage below carries BOTH locations
 # forward, nested exactly as npm left them, and lets Node's normal node_modules
@@ -43,15 +43,15 @@ COPY frontend/package.json ./frontend/package.json
 COPY shared/package.json ./shared/package.json
 RUN npm ci --omit=dev --workspace=backend
 COPY --from=shared-build /repo/shared/dist ./shared/dist
-# The root node_modules/recipe-vault-shared entry is a symlink to ../shared,
+# The root node_modules/yumbry-shared entry is a symlink to ../shared,
 # which isn't carried into the runtime image — but backend/node_modules is
 # checked first by Node's resolution (it's the closer ancestor to backend's
 # own compiled code) so a real, non-symlinked copy placed there is all that's
 # actually needed; the dangling root symlink is simply never reached.
-RUN rm -rf backend/node_modules/recipe-vault-shared \
-  && mkdir -p backend/node_modules/recipe-vault-shared \
-  && cp shared/package.json backend/node_modules/recipe-vault-shared/package.json \
-  && cp -r shared/dist backend/node_modules/recipe-vault-shared/dist
+RUN rm -rf backend/node_modules/yumbry-shared \
+  && mkdir -p backend/node_modules/yumbry-shared \
+  && cp shared/package.json backend/node_modules/yumbry-shared/package.json \
+  && cp -r shared/dist backend/node_modules/yumbry-shared/dist
 
 # ---- runtime: /app mirrors the /repo monorepo shape (backend nested under
 # it) rather than the old flattened single-package layout, since that's what
