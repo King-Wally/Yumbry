@@ -32,7 +32,7 @@ npm run db:migrate:status
 
 `backend/` and `frontend/` both import `yumbry-shared` from `node_modules` like any other dependency — i.e. its **compiled** `dist/`, not its TypeScript source. Neither `tsx watch` (backend) nor Vite (frontend) rebuilds it automatically, so after editing anything in `shared/src/`, run `npm run build --workspace=shared` (or `cd shared && npm run dev` to `tsc --watch` it continuously) before the change is visible to either package.
 
-Backend integration tests (files matching `*.api.test.ts`, plus `ai-settings.service.test.ts`) hit a real Postgres instance and drop/recreate the `public` schema on every run. They're skipped automatically unless `TEST_DATABASE_URL` (or `DATABASE_URL`) is set — always point this at a disposable database:
+Backend integration tests (files matching `*.api.test.ts`, plus `ai-settings.service.test.ts`) hit a real Postgres instance and drop/recreate the `public` schema on every run. They're skipped automatically unless `TEST_DATABASE_URL` (or `DATABASE_URL`) is set — always point this at a disposable database, never the dev/prod one (if running via `docker compose up`, that same Postgres server is already up on port 5432 — create the scratch database inside it once with `docker exec -it <db-container-name> psql -U chef -d postgres -c "CREATE DATABASE recipe_vault_test;"`, a different database name on the same server so it can never collide with real data):
 
 ```sh
 TEST_DATABASE_URL=postgres://chef:changeme@localhost:5432/recipe_vault_test npm test

@@ -109,7 +109,18 @@ The backend's integration test suites (`recipes.api.test.ts` and others) talk
 to a real, disposable Postgres database — they drop and recreate the `public`
 schema on each run, then apply all migrations from `backend/prisma/migrations/`
 themselves via `prisma migrate deploy` (no manual migration step needed for
-tests). Point it at a scratch database, never your real one:
+tests). Point it at a scratch database, never your real one.
+
+If you're running the dev stack via `docker compose up`, the same Postgres
+server is already up on port 5432 — create the scratch database inside it
+once (a different database name, same server/user, so it can never collide
+with your real data):
+
+```sh
+docker exec -it <db-container-name> psql -U chef -d postgres -c "CREATE DATABASE recipe_vault_test;"
+```
+
+Then point tests at it:
 
 ```sh
 TEST_DATABASE_URL=postgres://chef:changeme@localhost:5432/recipe_vault_test npm test

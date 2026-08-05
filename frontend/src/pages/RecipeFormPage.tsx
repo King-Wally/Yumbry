@@ -51,7 +51,9 @@ export default function RecipeFormPage() {
   const [tagInput, setTagInput] = useState('');
   const [aiDraftApplied, setAiDraftApplied] = useState(false);
 
-  const aiDraft = (location.state as { aiDraft?: RecipeInput } | null)?.aiDraft ?? null;
+  const draftState = location.state as { aiDraft?: RecipeInput; draftSource?: 'ai' | 'url' } | null;
+  const aiDraft = draftState?.aiDraft ?? null;
+  const draftSource = draftState?.draftSource ?? 'ai';
 
   const { data: existingRecipe } = useQuery({
     queryKey: queryKeys.recipe(id!),
@@ -171,7 +173,9 @@ export default function RecipeFormPage() {
 
       {aiDraft && (
         <p className="rounded-md border border-clay/25 bg-clay/10 px-3 py-2 text-sm text-clay">
-          Reviewing an AI-generated draft — check it carefully before saving.
+          {draftSource === 'url'
+            ? 'Reviewing a recipe imported from a URL — check it carefully before saving.'
+            : 'Reviewing an AI-generated draft — check it carefully before saving.'}
         </p>
       )}
 

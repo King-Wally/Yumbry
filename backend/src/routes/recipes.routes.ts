@@ -4,6 +4,7 @@ import {
   getRecipe,
   getRecipes,
   importRecipe,
+  importRecipeFromUrl,
   postRecipe,
   putRecipe,
   removeRecipe,
@@ -11,11 +12,13 @@ import {
 } from '../controllers/recipes.controller.js';
 import { uploadJsonFile, uploadPhoto } from '../middleware/upload.js';
 import { requireRecipeOwner } from '../middleware/require-recipe-owner.js';
+import { urlImportRateLimiter } from '../middleware/rate-limit.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
 export const recipesRouter = Router();
 
 recipesRouter.post('/import', uploadJsonFile.single('file'), asyncHandler(importRecipe));
+recipesRouter.post('/import-url', urlImportRateLimiter, asyncHandler(importRecipeFromUrl));
 recipesRouter.get('/', asyncHandler(getRecipes));
 recipesRouter.get('/:id', asyncHandler(getRecipe));
 recipesRouter.get('/:id/export', asyncHandler(exportRecipe));

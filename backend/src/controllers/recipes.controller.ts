@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { ZodError } from 'zod';
 import { parseRecipeFromJsonLd } from '../services/jsonld-import.service.js';
 import { recipeToJsonLd } from '../services/jsonld-export.service.js';
+import { scrapeRecipeFromUrl } from '../services/url-recipe-import.service.js';
 import { parseIngredientLine } from '../services/ingredient-parser.js';
 import {
   createRecipe,
@@ -14,6 +15,8 @@ import {
 import type { IngredientInput } from '../services/recipe.types.js';
 import { publicUploadPath } from '../middleware/upload.js';
 import { RecipeBodySchema, type RecipeBody } from '../schemas/recipe.schema.js';
+import { UrlImportBodySchema } from '../schemas/url-import.schema.js';
+import { sendUrlImportError } from '../utils/url-import-error.js';
 
 /** Manually-entered ingredients are given as raw text lines; parse them the same
  * way JSON-LD import does, so scaling works regardless of entry route. */
@@ -55,6 +58,23 @@ export async function importRecipe(req: Request, res: Response) {
         .json({ error: isErrorWithMessage(err) ? err.message : 'Invalid JSON-LD.' });
     }
     throw err;
+  }
+}
+
+/** Fetches `url`, extracts its schema.org Recipe JSON-LD, and returns an
+ * unsaved draft — unlike importRecipe (JSON-LD paste/upload), nothing is
+ * persisted here; the frontend hands the response to the recipe form for
+ * review, the same way the AI-create draft hand-off works. */
+export async function importRecipeFromUrl(req: Request, res: Response) {
+  try {
+    const { url } = UrlImportBodySchema.parse(req.body);
+    const draft = await scrapeRecipeFromUrl(url);
+    res.status(200).json(draft);
+  } catch (err) {
+    if (err instanceof ZodError) {
+      return res.status(400).json({ error: 'Provide a valid recipe page URL.' });
+    }
+    sendUrlImportError(res, err);
   }
 }
 

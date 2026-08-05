@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import pg from 'pg';
 import type { Express } from 'express';
@@ -6,6 +6,17 @@ import { registerTestUser } from './helpers/auth.js';
 import { resetTestDatabase } from './helpers/db.js';
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
+
+// POST /import-url's controller wiring/validation/error-mapping is what's
+// worth covering here (it never touches the DB) — mocked the same way
+// ai.api.test.ts mocks chatWithAi, so these tests stay fast and hermetic.
+const { scrapeRecipeFromUrl } = vi.hoisted(() => ({ scrapeRecipeFromUrl: vi.fn() }));
+
+vi.mock('../src/services/url-recipe-import.service.js', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../src/services/url-recipe-import.service.js')>();
+  return { ...actual, scrapeRecipeFromUrl };
+});
 
 // These integration tests need a real, disposable Postgres database. Set
 // TEST_DATABASE_URL (see README) to run them; otherwise they're skipped.
@@ -137,6 +148,101 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
   it('rejects import with no JSON-LD provided', async () => {
     const res = await agent.post('/api/recipes/import').send({});
     expect(res.status).toBe(400);
+  });
+
+  describe('POST /api/recipes/import-url', () => {
+    afterEach(() => {
+      scrapeRecipeFromUrl.mockReset();
+    });
+
+    it('returns a scraped draft without persisting a recipe', async () => {
+      scrapeRecipeFromUrl.mockResolvedValue({
+        title: 'Scraped Recipe',
+        description: null,
+        image_path: null,
+        prep_time_minutes: null,
+        cook_time_minutes: null,
+        total_time_minutes: null,
+        servings: 4,
+        ingredients: ['1 cup rice'],
+        instructions: [{ step_number: 1, text: 'Boil rice.' }],
+        tags: [],
+        category: null,
+      });
+
+      const before = await pool.query('SELECT count(*) FROM recipes');
+
+      const res = await agent
+        .post('/api/recipes/import-url')
+        .send({ url: 'https://example.com/recipe' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.title).toBe('Scraped Recipe');
+      expect(scrapeRecipeFromUrl).toHaveBeenCalledWith('https://example.com/recipe');
+
+      const after = await pool.query('SELECT count(*) FROM recipes');
+      expect(after.rows[0].count).toBe(before.rows[0].count);
+    });
+
+    it('rejects an invalid URL without calling the scraper', async () => {
+      const res = await agent.post('/api/recipes/import-url').send({ url: 'not-a-url' });
+      expect(res.status).toBe(400);
+      expect(scrapeRecipeFromUrl).not.toHaveBeenCalled();
+    });
+
+    it('maps a no_recipe_found scrape error to 400', async () => {
+      const { UrlImportError } = await import('../src/utils/url-import-error.js');
+      scrapeRecipeFromUrl.mockRejectedValue(
+        new UrlImportError('No schema.org Recipe was found on that page.', 'no_recipe_found')
+      );
+
+      const res = await agent
+        .post('/api/recipes/import-url')
+        .send({ url: 'https://example.com/recipe' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.kind).toBe('no_recipe_found');
+    });
+
+    it('maps a blocked_url scrape error to 400', async () => {
+      const { UrlImportError } = await import('../src/utils/url-import-error.js');
+      scrapeRecipeFromUrl.mockRejectedValue(
+        new UrlImportError(
+          "That URL points to a private or internal network address, which isn't allowed.",
+          'blocked_url'
+        )
+      );
+
+      const res = await agent.post('/api/recipes/import-url').send({ url: 'http://localhost' });
+      expect(res.status).toBe(400);
+      expect(res.body.kind).toBe('blocked_url');
+    });
+
+    it('maps a timeout scrape error to 502', async () => {
+      const { UrlImportError } = await import('../src/utils/url-import-error.js');
+      scrapeRecipeFromUrl.mockRejectedValue(
+        new UrlImportError(
+          'The page took too long to respond. Try again or check the URL.',
+          'timeout'
+        )
+      );
+
+      const res = await agent
+        .post('/api/recipes/import-url')
+        .send({ url: 'https://example.com/recipe' });
+
+      expect(res.status).toBe(502);
+      expect(res.body.kind).toBe('timeout');
+    });
+
+    it('rejects unauthenticated requests with 401', async () => {
+      const res = await request(app)
+        .post('/api/recipes/import-url')
+        .send({ url: 'https://example.com/recipe' });
+
+      expect(res.status).toBe(401);
+      expect(scrapeRecipeFromUrl).not.toHaveBeenCalled();
+    });
   });
 
   it('exports a recipe as schema.org Recipe JSON-LD', async () => {

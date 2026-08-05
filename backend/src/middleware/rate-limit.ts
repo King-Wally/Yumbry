@@ -31,3 +31,16 @@ export const apiRateLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many requests. Slow down.' },
 });
+
+/** Applied to POST /api/recipes/import-url only — each hit triggers a real
+ * outbound HTTP request to an arbitrary user-supplied URL (SSRF surface and
+ * a potential request-proxy/amplification vector), so it gets its own
+ * tighter budget than apiRateLimiter, same reasoning as forgotPasswordRateLimiter
+ * for its own outbound-side-effect endpoint. */
+export const urlImportRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many import attempts. Try again later.' },
+});
