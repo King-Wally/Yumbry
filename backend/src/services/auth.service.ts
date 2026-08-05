@@ -110,10 +110,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
 /** Verifies a raw reset token and, if valid/unused/unexpired, updates the
  * user's password and marks the token used, atomically. Returns the userId
  * on success, or null if the token is missing, already used, or expired. */
-export async function resetPassword(
-  rawToken: string,
-  newPassword: string,
-): Promise<number | null> {
+export async function resetPassword(rawToken: string, newPassword: string): Promise<number | null> {
   const tokenHash = hashResetToken(rawToken);
   const passwordHash = await hashPassword(newPassword);
 
