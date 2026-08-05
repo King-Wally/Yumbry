@@ -1,21 +1,18 @@
 import OpenAI, { APIConnectionError, APIError } from 'openai';
-import type { AiChatMessage } from 'yumbry-shared';
+import {
+  AiProviderError,
+  DEFAULT_OLLAMA_BASE_URL,
+  badStatusMessage,
+  malformedModelListMessage,
+  malformedResponseMessage,
+  unreachableMessage,
+  type AiChatMessage,
+  type AiProvider,
+  type AiProviderErrorKind,
+} from 'yumbry-shared';
 
-export type { AiChatMessage };
-
-export type AiProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'custom';
-
-export type AiProviderErrorKind = 'unreachable' | 'bad_status' | 'malformed_response';
-
-export class AiProviderError extends Error {
-  readonly kind: AiProviderErrorKind;
-
-  constructor(message: string, kind: AiProviderErrorKind, cause?: unknown) {
-    super(message, cause !== undefined ? { cause } : undefined);
-    this.name = 'AiProviderError';
-    this.kind = kind;
-  }
-}
+export type { AiChatMessage, AiProvider, AiProviderErrorKind };
+export { AiProviderError };
 
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/+$/, '');
@@ -25,7 +22,7 @@ const DEFAULT_BASE_URLS: Record<Exclude<AiProvider, 'custom'>, string> = {
   openai: 'https://api.openai.com/v1',
   anthropic: 'https://api.anthropic.com/v1',
   gemini: 'https://generativelanguage.googleapis.com/v1beta/openai',
-  ollama: 'http://localhost:11434/v1',
+  ollama: DEFAULT_OLLAMA_BASE_URL,
 };
 
 /** Resolves the base URL to actually call: the user's stored override if
@@ -56,24 +53,16 @@ function createClient(options: {
 
 function toAiProviderError(err: unknown): AiProviderError {
   if (err instanceof APIConnectionError) {
-    return new AiProviderError(
-      `Could not reach the AI provider. Check the address and connection on the Settings page.`,
-      'unreachable',
-      err
-    );
+    return new AiProviderError(unreachableMessage(), 'unreachable', err);
   }
   if (err instanceof APIError) {
     return new AiProviderError(
-      `The AI provider responded with HTTP ${err.status ?? '???'}. ${err.message}`,
+      badStatusMessage(err.status ?? '???', err.message),
       'bad_status',
       err
     );
   }
-  return new AiProviderError(
-    'Could not reach the AI provider. Check the address and connection on the Settings page.',
-    'unreachable',
-    err
-  );
+  return new AiProviderError(unreachableMessage(), 'unreachable', err);
 }
 
 /** Calls the provider's non-streaming chat-completions endpoint and returns
@@ -104,10 +93,7 @@ export async function chatWithAi(
 
   const content = response.choices[0]?.message?.content;
   if (typeof content !== 'string') {
-    throw new AiProviderError(
-      'The AI provider response did not include an assistant message.',
-      'malformed_response'
-    );
+    throw new AiProviderError(malformedResponseMessage, 'malformed_response');
   }
   return content;
 }
@@ -132,10 +118,7 @@ export async function listAiModels(options: {
 
   const models = response.data;
   if (!Array.isArray(models)) {
-    throw new AiProviderError(
-      'The AI provider returned an unexpected model list response.',
-      'malformed_response'
-    );
+    throw new AiProviderError(malformedModelListMessage, 'malformed_response');
   }
 
   return models.filter((m) => typeof m?.id === 'string').map((m) => ({ name: m.id }));

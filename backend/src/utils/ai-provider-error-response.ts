@@ -1,5 +1,5 @@
 import type { Response } from 'express';
-import { AiProviderError, type AiProviderErrorKind } from '../services/ai-provider.service.js';
+import { AiProviderError, type AiProviderErrorKind } from 'yumbry-shared';
 
 const STATUS_BY_KIND: Record<AiProviderErrorKind, number> = {
   unreachable: 502,

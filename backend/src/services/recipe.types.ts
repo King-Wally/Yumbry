@@ -1,15 +1,13 @@
+import type { Tag, Category, Ingredient, Instruction } from 'yumbry-shared';
 import type { RecipeBody, InstructionInput } from '../schemas/recipe.schema.js';
 import type { ParsedIngredient } from './ingredient-parser.js';
 
-export interface TagRef {
-  id: number;
-  name: string;
-}
-
-export interface CategoryRef {
-  id: number;
-  name: string;
-}
+/** Local aliases for yumbry-shared's wire DTOs — kept under these names since
+ * that's what recipe.service.ts/tag-category.service.ts already call them. */
+export type TagRef = Tag;
+export type CategoryRef = Category;
+export type IngredientRow = Ingredient;
+export type InstructionRow = Instruction;
 
 export interface RecipeRow {
   id: number;
@@ -23,24 +21,6 @@ export interface RecipeRow {
   category_id: number | null;
   created_at: Date;
   updated_at: Date;
-}
-
-export interface IngredientRow {
-  id: number;
-  recipe_id: number;
-  raw_text: string;
-  amount: string | null;
-  unit: string | null;
-  name: string;
-  is_scalable: boolean;
-  sort_order: number;
-}
-
-export interface InstructionRow {
-  id: number;
-  recipe_id: number;
-  step_number: number;
-  text: string;
 }
 
 export interface RecipeWithRelations extends RecipeRow {

@@ -1,7 +1,13 @@
 import type { AiChatMessage, RecipeInput } from '../types';
 import {
+  AiProviderError,
+  DEFAULT_OLLAMA_BASE_URL,
+  badStatusMessage,
   buildChatMessages,
+  malformedModelListMessage,
+  malformedResponseMessage,
   parseChatEnvelope,
+  unreachableMessage,
   type AiChatEnvelope,
   type AiRecipeDraft,
 } from 'yumbry-shared';
@@ -13,32 +19,19 @@ import {
  * from the backend. Every other provider still goes through
  * POST /api/ai/chat as normal.
  *
- * The prompt-building/envelope-parsing logic comes from `yumbry-shared`
- * (see shared/src/ai-recipe-draft.ts) — the same single source of truth the
- * backend's `/api/ai/chat` proxy uses, so a recipe drafted via direct Ollama
- * looks identical in quality/shape to one drafted through the backend.
+ * The prompt-building/envelope-parsing logic, the AiProviderError vocabulary,
+ * and the error-message wording all come from `yumbry-shared` (see
+ * shared/src/ai-recipe-draft.ts and shared/src/ai-provider-error.ts) — the
+ * same single source of truth the backend's `/api/ai/chat` proxy uses, so a
+ * recipe drafted via direct Ollama looks identical in quality/shape to one
+ * drafted through the backend, and <AiErrorBanner> reads the same regardless
+ * of which path failed.
  *
  * Deliberately plain `fetch` here, not the `openai` SDK the backend uses —
  * the request/response shapes needed from Ollama's OpenAI-compatible
  * endpoint are trivial, and pulling in the SDK just for this one
- * browser-side path isn't worth the bundle weight. Error wording mirrors
- * backend/src/services/ai-provider.service.ts's toAiProviderError, so
- * <AiErrorBanner> reads the same regardless of which path failed.
+ * browser-side path isn't worth the bundle weight.
  */
-
-export const DEFAULT_OLLAMA_BASE_URL = 'http://localhost:11434/v1'; // must match backend's DEFAULT_BASE_URLS.ollama
-
-export type AiProviderErrorKind = 'unreachable' | 'bad_status' | 'malformed_response';
-
-export class AiProviderError extends Error {
-  readonly kind: AiProviderErrorKind;
-
-  constructor(message: string, kind: AiProviderErrorKind) {
-    super(message);
-    this.name = 'AiProviderError';
-    this.kind = kind;
-  }
-}
 
 function resolveBaseUrl(baseUrl: string | null): string {
   return baseUrl ? baseUrl.replace(/\/+$/, '') : DEFAULT_OLLAMA_BASE_URL;
@@ -57,27 +50,18 @@ async function postChatCompletion(
       body: JSON.stringify({ model, messages, response_format: { type: 'json_object' } }),
     });
   } catch {
-    throw new AiProviderError(
-      'Could not reach the AI provider. Check the address and connection on the Settings page.',
-      'unreachable'
-    );
+    throw new AiProviderError(unreachableMessage(), 'unreachable');
   }
 
   if (!res.ok) {
     const bodyText = await res.text().catch(() => '');
-    throw new AiProviderError(
-      `The AI provider responded with HTTP ${res.status}. ${bodyText}`.trim(),
-      'bad_status'
-    );
+    throw new AiProviderError(badStatusMessage(res.status, bodyText), 'bad_status');
   }
 
   const json = await res.json().catch(() => null);
   const content = json?.choices?.[0]?.message?.content;
   if (typeof content !== 'string') {
-    throw new AiProviderError(
-      'The AI provider response did not include an assistant message.',
-      'malformed_response'
-    );
+    throw new AiProviderError(malformedResponseMessage, 'malformed_response');
   }
   return content;
 }
@@ -112,22 +96,16 @@ export async function listOllamaModelsDirect(
   try {
     res = await fetch(`${resolveBaseUrl(baseUrl)}/models`);
   } catch {
-    throw new AiProviderError(
-      'Could not reach the AI provider. Check the address and connection on the Settings page.',
-      'unreachable'
-    );
+    throw new AiProviderError(unreachableMessage(), 'unreachable');
   }
 
   if (!res.ok) {
-    throw new AiProviderError(`The AI provider responded with HTTP ${res.status}.`, 'bad_status');
+    throw new AiProviderError(badStatusMessage(res.status, ''), 'bad_status');
   }
 
   const json = await res.json().catch(() => null);
   if (!Array.isArray(json?.data)) {
-    throw new AiProviderError(
-      'The AI provider returned an unexpected model list response.',
-      'malformed_response'
-    );
+    throw new AiProviderError(malformedModelListMessage, 'malformed_response');
   }
 
   return {
