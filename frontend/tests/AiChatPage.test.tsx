@@ -3,10 +3,19 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AiChatPage from '../src/pages/AiChatPage';
+import { queryKeys } from '../src/api/queryKeys';
 import * as apiClient from '../src/api/client';
-import type { Recipe, RecipeInput } from '../src/types';
+import type { AiSettings, Recipe, RecipeInput } from '../src/types';
 
 vi.mock('../src/api/client');
+
+const aiSettings: AiSettings = {
+  provider: 'openai',
+  base_url: null,
+  model: 'gpt-4o-mini',
+  has_api_key: true,
+  updated_at: '2026-01-01T00:00:00.000Z',
+};
 
 const recipe: Recipe = {
   id: 1,
@@ -44,6 +53,10 @@ function LocationProbe() {
 
 function renderCreate() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  // Seed the AI settings query directly, rather than relying on the mocked
+  // getAiSettings resolving before a test interacts with the page — avoids a
+  // race against AiChatPage's "no model configured" guard.
+  queryClient.setQueryData(queryKeys.aiSettings, aiSettings);
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter
@@ -61,6 +74,7 @@ function renderCreate() {
 
 function renderImprove() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  queryClient.setQueryData(queryKeys.aiSettings, aiSettings);
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter
@@ -79,6 +93,7 @@ function renderImprove() {
 describe('AiChatPage create mode', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(apiClient.getAiSettings).mockResolvedValue(aiSettings);
   });
 
   it('sends a message and updates both the transcript and the preview from the envelope response', async () => {
@@ -142,6 +157,7 @@ describe('AiChatPage create mode', () => {
 describe('AiChatPage improve mode', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(apiClient.getAiSettings).mockResolvedValue(aiSettings);
   });
 
   it('seeds the initial preview from the fetched recipe with no chat call', async () => {

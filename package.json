@@ -1,0 +1,16 @@
+{
+  "name": "recipe-vault",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend",
+    "shared"
+  ],
+  "devDependencies": {
+    "jsdom": "^24.1.1"
+  },
+  "allowScripts": {
+    "fsevents@2.3.3": true,
+    "esbuild@0.21.5": true
+  }
+}

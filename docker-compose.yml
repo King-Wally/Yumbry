@@ -14,7 +14,7 @@ services:
       EMAIL_FROM: ${EMAIL_FROM}
       APP_BASE_URL: ${APP_BASE_URL}
     volumes:
-      - uploads_data:/app/uploads
+      - uploads_data:/app/backend/uploads
     depends_on:
       db:
         condition: service_healthy

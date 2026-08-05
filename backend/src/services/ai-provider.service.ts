@@ -1,9 +1,7 @@
 import OpenAI, { APIConnectionError, APIError } from 'openai';
+import type { AiChatMessage } from 'recipe-vault-shared';
 
-export interface AiChatMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
+export type { AiChatMessage };
 
 export type AiProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'custom';
 

@@ -4,19 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-Recipe Vault is a self-hosted, multi-user recipe manager: manual entry or JSON-LD import from recipe sites, tag/category filtering, serving-size scaling, photo uploads, and optional AI-assisted recipe creation/improvement. It's two independent npm packages — `backend/` (Express + Prisma + Postgres) and `frontend/` (React + Vite + Tailwind, PWA-enabled) — with no root `package.json`; all commands run from inside one of those two directories. Every recipe, tag, category, and AI-settings row belongs to exactly one user (open self-registration, no admin/roles, no cross-user sharing).
+Recipe Vault is a self-hosted, multi-user recipe manager: manual entry or JSON-LD import from recipe sites, tag/category filtering, serving-size scaling, photo uploads, and optional AI-assisted recipe creation/improvement. It's an npm workspaces monorepo of three packages — `backend/` (Express + Prisma + Postgres), `frontend/` (React + Vite + Tailwind, PWA-enabled), and `shared/` (the AI chat prompt/envelope-parsing logic both of them import as the real npm package `recipe-vault-shared`) — with a root `package.json` declaring the workspace, but each package still has its own scripts and can be worked on from inside its own directory. Every recipe, tag, category, and AI-settings row belongs to exactly one user (open self-registration, no admin/roles, no cross-user sharing).
 
 ## Commands
 
 ```sh
-# from backend/ or frontend/
+# from the repo root — installs all three workspaces into one hoisted node_modules
 npm install
+
+# from backend/ or frontend/ (or `npm run <script> --workspace=<name>` from the root)
 npm run dev            # backend: tsx watch src/index.ts, :3000 — frontend: vite, :5173, proxies /api and /uploads to :3000
 npm run typecheck       # tsc --noEmit
 npm run lint            # eslint .
 npm run format          # prettier --write .   (format:check for CI-style verification)
 npm test                # vitest run
-npm run build           # backend: tsc -> dist/. frontend: tsc --noEmit && vite build
+npm run build           # backend: tsc -> dist/. frontend: tsc --noEmit && vite build. shared: tsc -> dist/ (+ .d.ts)
 
 # single test file / by name
 npx vitest run tests/ingredient-parser.test.ts
@@ -27,6 +29,8 @@ npm run db:migrate:dev      # prisma migrate dev: generate + apply a new migrati
 npm run db:migrate          # prisma migrate deploy: apply pending migrations
 npm run db:migrate:status
 ```
+
+`backend/` and `frontend/` both import `recipe-vault-shared` from `node_modules` like any other dependency — i.e. its **compiled** `dist/`, not its TypeScript source. Neither `tsx watch` (backend) nor Vite (frontend) rebuilds it automatically, so after editing anything in `shared/src/`, run `npm run build --workspace=shared` (or `cd shared && npm run dev` to `tsc --watch` it continuously) before the change is visible to either package.
 
 Backend integration tests (files matching `*.api.test.ts`, plus `ai-settings.service.test.ts`) hit a real Postgres instance and drop/recreate the `public` schema on every run. They're skipped automatically unless `TEST_DATABASE_URL` (or `DATABASE_URL`) is set — always point this at a disposable database:
 
@@ -43,7 +47,7 @@ cp .env.example .env
 docker compose up --build     # app (Express + built frontend) + db (postgres:16-alpine)
 ```
 
-CI (`.github/workflows/ci.yml`) runs, per package: `typecheck`, `lint`, `format:check`, `test`, `build`; the backend job runs against a real `postgres:16-alpine` service container. A third job does `docker build .`. Match this locally before considering a change done.
+CI (`.github/workflows/ci.yml`) has four jobs: `shared`, `backend`, `frontend` (each running `npm ci` at the repo root, then `typecheck`/`lint`/`format:check`/`test`/`build` scoped with `--workspace=<name>` — `backend`/`frontend` also `needs: [shared]` and rebuild `shared` themselves first, since both import its compiled output; the `backend` job runs against a real `postgres:16-alpine` service container), and `docker` (`docker build .`, `needs: [backend, frontend]`). Match this locally before considering a change done.
 
 ## Architecture
 
@@ -85,6 +89,8 @@ AI settings are per-user and DB-configured (`ai_settings` table: `provider`/`bas
 
 Create and Improve are the same backend endpoint, `POST /api/ai/chat`, distinguished only by what `current_draft` the frontend starts from. The chat contract is stateless — `{messages, current_draft}` in, `{reply, recipe}` out every turn, no conversation or draft persisted server-side. `pages/AiChatPage.tsx` is mounted at both `/create-with-ai` and `/recipes/:id/ai-improve`; whether a route `:id` param is present is the only branch between the two modes. Saving a draft navigates to the existing manual recipe form with the draft in router state, rather than saving directly from the chat page.
 
+The system prompt and JSON-envelope parsing (`buildChatMessages`/`parseChatEnvelope`) live in `shared/src/ai-recipe-draft.ts` (package `recipe-vault-shared`), not in `backend/` — both `ai.controller.ts`'s `/api/ai/chat` proxy and the frontend's direct-Ollama client import the same compiled logic, so there's exactly one copy of the prompt to edit. The `ollama` provider is the one exception to the backend-proxy model: `frontend/src/services/ollama-direct.ts` always calls a local Ollama instance straight from the browser (plain `fetch`, no API key, same error wording as the backend's `AiProviderError`), unconditionally — never through `/api/ai/chat` — since reaching a user's own local Ollama is only ever possible from their browser, not from wherever the backend happens to be hosted. Every other provider (openai/anthropic/gemini/custom) still goes through the backend proxy, encrypted key and all; `SettingsPage.tsx` hides the API key field entirely when `provider === 'ollama'` and shows an `OLLAMA_ORIGINS` CORS reminder instead.
+
 ### Frontend conventions
 
 State that depends on an async query result (e.g. seeding form state once a recipe loads) is synchronized during render — `if (data && trackedId !== data.id) { setTrackedId(...); setState(...) }` in the component body — rather than via a `useEffect`. Shared list-editing UI (`components/ReorderableListEditor.tsx`) backs both the ingredient and instruction editors as thin wrappers; `Chip.tsx`/`FilterChips.tsx` back both the recipe-list filters and the category picker. React Query keys/fetches for tags, categories, and AI settings are centralized in `api/queryKeys.ts` plus one hook per resource — don't hand-write a raw query key array at a new call site.
@@ -93,7 +99,7 @@ Tag/category names are stored lowercase (normalized only in `tag-category.servic
 
 ### Build and deploy
 
-The root `Dockerfile` is a three-stage build: build the frontend, build the backend (including `prisma generate` and compiling with `tsc`), then assemble a slim runtime image running as the non-root `node` user. `docker-entrypoint.sh` runs `prisma migrate deploy` before starting the server on every container start, so migrations apply automatically in Docker but must be run manually (`npm run db:migrate`) in local dev after pulling new ones. `docker-compose.yml` defines only `app` and `db`, with photo uploads and the Postgres data directory in separate named volumes — the Docker `uploads_data` volume is a different location from `backend/uploads/` used by local `npm run dev`.
+The root `Dockerfile` builds each workspace in its own stage (`shared-build`, `frontend-build`, `backend-build`, including `prisma generate` and compiling with `tsc`), then assembles a slim runtime image running as the non-root `node` user. Because `npm ci` needs the root `package-lock.json`, the runtime image's internal layout mirrors the monorepo shape — `/app/backend/{dist,node_modules,public,uploads,...}` — rather than the old flat single-package `/app/{dist,node_modules,...}`; `UPLOADS_DIR` is `/app/backend/uploads` accordingly, and `WORKDIR`/`ENTRYPOINT` run from `/app/backend`. `docker-entrypoint.sh` runs `prisma migrate deploy` before starting the server on every container start, so migrations apply automatically in Docker but must be run manually (`npm run db:migrate`) in local dev after pulling new ones. `docker-compose.yml` defines only `app` and `db`, with photo uploads and the Postgres data directory in separate named volumes, mounted at `/app/backend/uploads` — a different location from `backend/uploads/` used by local `npm run dev`.
 
 The frontend is a PWA (`vite-plugin-pwa`): `/api/*` is excluded from the service worker's cache (`NetworkOnly`), `/uploads/*` uses `StaleWhileRevalidate`. The service worker is registered manually in `main.tsx`, not via the plugin's auto-injection.
 
@@ -104,3 +110,5 @@ The frontend is a PWA (`vite-plugin-pwa`): `/api/*` is excluded from the service
 - Any test file that imports `auth.service.ts` transitively imports `email.service.ts`, which throws at import time without `RESEND_API_KEY`/`EMAIL_FROM`/`APP_BASE_URL` — already handled globally in `vitest.config.ts`, but worth knowing if a new test file mocks environment differently.
 - `uuid`'s own types only ship from v10+; don't add `@types/uuid` (it's an empty stub) on top of `uuid@^11`.
 - A stale Tailwind `content` glob in `tailwind.config.js` silently drops utility classes only from the production build, not from `npm run dev` — if styling looks fine locally but breaks after `npm run build`, check that first.
+- `npm ci --workspace=backend` (used in the Dockerfile's production install) installs most of backend's own dependencies straight into `backend/node_modules` rather than hoisting them to the repo root, but still hoists a handful of shared transitive deps (plus the `recipe-vault-shared` workspace symlink itself) to the root `node_modules` — which package ends up where isn't worth hand-reasoning about; the Dockerfile copies both locations into the runtime image, nested exactly as npm left them, and lets Node's normal node_modules walk-up resolution sort it out.
+- `jsdom` is a devDependency of `frontend/` only, but `vitest` (hoisted to the repo root since all three workspaces depend on it) resolves it relative to its own install location — if `jsdom` isn't *also* hoisted to the root, `npm run test --workspace=frontend` fails with `Cannot find package 'jsdom'`. It's listed as a root-level `devDependency` in the top-level `package.json` specifically to force that hoist; don't remove it even though `frontend/package.json` also lists it.

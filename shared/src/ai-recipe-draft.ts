@@ -1,12 +1,24 @@
-import type { AiChatMessage } from './ai-provider.service.js';
+/** Single source of truth for the AI-chat prompt and JSON-envelope parsing
+ * shared by every caller of an OpenAI-compatible chat-completions endpoint —
+ * the backend's `/api/ai/chat` proxy (backend/src/controllers/ai.controller.ts)
+ * for hosted providers, and the frontend's browser-direct Ollama client
+ * (frontend/src/services/ollama-direct.ts). Living in its own workspace
+ * package means both consume the exact same compiled logic — there is no
+ * second hand-copied version of this prompt or its parsing to drift out of
+ * sync. */
 
-/** The shape every /api/ai/chat turn returns. Deliberately matches the
- * frontend's RecipeInput exactly (raw ingredient line strings,
- * {step_number,text} instructions, servings:number) — NOT this backend's
- * recipe.types.ts RecipeInput (which has parsed IngredientInput[] objects).
- * The draft flows straight into RecipeFormPage for review, which re-parses
- * ingredient text through the normal save path (normalizeIngredients)
- * exactly like manual entry. */
+export interface AiChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+/** The shape every AI chat turn returns. Deliberately matches the frontend's
+ * RecipeInput exactly (raw ingredient line strings, {step_number,text}
+ * instructions, servings:number) — NOT the backend's recipe.types.ts
+ * RecipeInput (which has parsed IngredientInput[] objects). The draft flows
+ * straight into RecipeFormPage for review, which re-parses ingredient text
+ * through the normal save path (normalizeIngredients) exactly like manual
+ * entry. */
 export interface AiRecipeDraft {
   title: string;
   description: string | null;
@@ -21,10 +33,10 @@ export interface AiRecipeDraft {
   category: string | null;
 }
 
-/** The full response shape for every /api/ai/chat turn: a conversational
- * reply plus the model's current best-guess full recipe, every time —
- * there is no separate "finalize" step, the live preview panel on the
- * frontend just always reflects the latest `recipe`. */
+/** The full response shape for every AI chat turn: a conversational reply
+ * plus the model's current best-guess full recipe, every time — there is no
+ * separate "finalize" step, the live preview panel on the frontend just
+ * always reflects the latest `recipe`. */
 export interface AiChatEnvelope {
   reply: string;
   recipe: AiRecipeDraft;
@@ -94,10 +106,10 @@ function buildChatSystemPrompt(): AiChatMessage {
   };
 }
 
-/** Builds the full message array for one /api/ai/chat turn. The current
- * draft is injected as its own system message (rather than folded into the
- * static instructions) since it changes every turn while the instructions
- * don't — keeps buildChatSystemPrompt a pure, argument-free function. */
+/** Builds the full message array for one AI chat turn. The current draft is
+ * injected as its own system message (rather than folded into the static
+ * instructions) since it changes every turn while the instructions don't —
+ * keeps buildChatSystemPrompt a pure, argument-free function. */
 export function buildChatMessages(
   conversation: AiChatMessage[],
   currentDraft: AiRecipeDraft | null

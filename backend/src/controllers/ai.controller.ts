@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import { ZodError } from 'zod';
 import { getAiSettingsForCall } from '../services/ai-settings.service.js';
 import { chatWithAi, type AiProvider } from '../services/ai-provider.service.js';
-import { buildChatMessages, parseChatEnvelope } from '../services/ai-recipe-draft.service.js';
+import { buildChatMessages, parseChatEnvelope } from 'recipe-vault-shared';
 import { AiChatTurnRequestSchema } from '../schemas/ai-chat.schema.js';
 import { sendAiProviderError } from '../utils/ai-provider-error-response.js';
 

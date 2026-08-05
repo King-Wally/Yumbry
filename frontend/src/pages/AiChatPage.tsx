@@ -6,6 +6,8 @@ import { queryKeys } from '../api/queryKeys';
 import AiErrorBanner from '../components/AiErrorBanner';
 import RecipePreview from '../components/RecipePreview';
 import { toRecipeInput } from '../utils/recipe-mapping';
+import { useAiSettings } from '../hooks/useAiSettings';
+import { chatWithOllamaDirect } from '../services/ollama-direct';
 import type { AiChatMessage, RecipeInput } from '../types';
 
 export default function AiChatPage() {
@@ -18,6 +20,8 @@ export default function AiChatPage() {
     queryFn: () => getRecipe(id!),
     enabled: isImproving,
   });
+
+  const { data: aiSettings } = useAiSettings();
 
   const [messages, setMessages] = useState<AiChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -33,8 +37,22 @@ export default function AiChatPage() {
   }
 
   const chatMutation = useMutation({
-    mutationFn: (nextMessages: AiChatMessage[]) =>
-      chatAboutRecipe({ messages: nextMessages, current_draft: draft }),
+    mutationFn: (nextMessages: AiChatMessage[]) => {
+      if (!aiSettings?.model || !aiSettings?.provider) {
+        // Same wording as the backend's requireModel 409, so this reads
+        // identically whether the model check happens here or server-side.
+        return Promise.reject(
+          new Error('No AI model is configured yet. Visit Settings to choose one.')
+        );
+      }
+      if (aiSettings.provider === 'ollama') {
+        return chatWithOllamaDirect(nextMessages, draft, {
+          baseUrl: aiSettings.base_url,
+          model: aiSettings.model,
+        });
+      }
+      return chatAboutRecipe({ messages: nextMessages, current_draft: draft });
+    },
     onSuccess: (res) => {
       setMessages((m) => [...m, { role: 'assistant', content: res.reply }]);
       setDraft(res.recipe);

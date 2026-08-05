@@ -4,6 +4,7 @@ import { deleteAccount, listAiModels, updateAiSettings } from '../api/client';
 import { queryKeys } from '../api/queryKeys';
 import { useAiSettings } from '../hooks/useAiSettings';
 import { useAuth } from '../hooks/useAuth';
+import { listOllamaModelsDirect } from '../services/ollama-direct';
 import Dialog from '../components/Dialog';
 import type { AiProvider } from '../types';
 
@@ -50,7 +51,10 @@ export default function SettingsPage() {
   }
 
   const checkConnectionMutation = useMutation({
-    mutationFn: () => listAiModels(baseUrl || undefined, provider || undefined),
+    mutationFn: () =>
+      provider === 'ollama'
+        ? listOllamaModelsDirect(baseUrl || null)
+        : listAiModels(baseUrl || undefined, provider || undefined),
     onSuccess: (res) => setAvailableModels(res.models.map((m) => m.name)),
     onError: () => setAvailableModels(null),
   });
@@ -141,33 +145,43 @@ export default function SettingsPage() {
             />
           </label>
 
-          <label className="block text-sm font-medium text-stone-700">
-            API key{provider === 'ollama' || provider === 'custom' ? ' (optional)' : ''}
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(e) => {
-                setApiKey(e.target.value);
-                setClearApiKey(false);
-              }}
-              placeholder={
-                hasApiKey && !clearApiKey ? '•••• (saved — leave blank to keep)' : 'sk-...'
-              }
-              className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none"
-            />
-          </label>
-          {hasApiKey && (
-            <label className="flex items-center gap-2 text-sm text-stone-600">
-              <input
-                type="checkbox"
-                checked={clearApiKey}
-                onChange={(e) => {
-                  setClearApiKey(e.target.checked);
-                  if (e.target.checked) setApiKey('');
-                }}
-              />
-              Clear the saved API key
-            </label>
+          {provider === 'ollama' ? (
+            <p className="text-xs text-stone-500">
+              No API key is sent. If your Ollama instance requires authentication (e.g. behind a
+              reverse proxy), use the Custom provider instead, which stays routed through the
+              server.
+            </p>
+          ) : (
+            <>
+              <label className="block text-sm font-medium text-stone-700">
+                API key{provider === 'custom' ? ' (optional)' : ''}
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => {
+                    setApiKey(e.target.value);
+                    setClearApiKey(false);
+                  }}
+                  placeholder={
+                    hasApiKey && !clearApiKey ? '•••• (saved — leave blank to keep)' : 'sk-...'
+                  }
+                  className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none"
+                />
+              </label>
+              {hasApiKey && (
+                <label className="flex items-center gap-2 text-sm text-stone-600">
+                  <input
+                    type="checkbox"
+                    checked={clearApiKey}
+                    onChange={(e) => {
+                      setClearApiKey(e.target.checked);
+                      if (e.target.checked) setApiKey('');
+                    }}
+                  />
+                  Clear the saved API key
+                </label>
+              )}
+            </>
           )}
 
           <button

@@ -3,7 +3,7 @@ import {
   buildChatMessages,
   parseChatEnvelope,
   type AiRecipeDraft,
-} from '../src/services/ai-recipe-draft.service.js';
+} from '../src/ai-recipe-draft.js';
 
 describe('parseChatEnvelope', () => {
   const wellFormedRecipe = {
