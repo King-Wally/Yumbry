@@ -16,7 +16,7 @@ export const authRouter = Router();
 
 authRouter.post('/register', loginRateLimiter, asyncHandler(postRegister));
 authRouter.post('/login', loginRateLimiter, asyncHandler(postLogin));
-authRouter.post('/logout', asyncHandler(postLogout));
+authRouter.post('/logout', loginRateLimiter, asyncHandler(postLogout));
 authRouter.get('/me', requireAuth, asyncHandler(getMe));
 authRouter.delete('/me', requireAuth, loginRateLimiter, asyncHandler(deleteAccount));
 authRouter.post('/forgot-password', forgotPasswordRateLimiter, asyncHandler(postForgotPassword));

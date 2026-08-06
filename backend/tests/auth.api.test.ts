@@ -111,6 +111,29 @@ describe.skipIf(!TEST_DATABASE_URL)('auth API', () => {
     expect(me.status).toBe(401);
   });
 
+  it('invalidates the JWT itself on logout, not just the client-side cookie', async () => {
+    const ip = '10.0.0.8';
+    const agent = request.agent(app);
+    const register = await agent
+      .post('/api/auth/register')
+      .set('X-Forwarded-For', ip)
+      .send({ email: 'nolan@example.com', password: 'password123' });
+
+    const rawCookie = (register.headers['set-cookie'] as unknown as string[])?.find((c) =>
+      c.startsWith('token=')
+    );
+    expect(rawCookie).toBeDefined();
+
+    const logout = await agent.post('/api/auth/logout').set('X-Forwarded-For', ip);
+    expect(logout.status).toBe(204);
+
+    const replay = await request(app)
+      .get('/api/auth/me')
+      .set('Cookie', rawCookie as string)
+      .set('X-Forwarded-For', ip);
+    expect(replay.status).toBe(401);
+  });
+
   it('returns 401 from /api/auth/me without a session', async () => {
     const res = await request(app).get('/api/auth/me');
     expect(res.status).toBe(401);

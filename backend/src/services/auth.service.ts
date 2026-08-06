@@ -11,6 +11,7 @@ export interface UserRow {
   id: number;
   email: string;
   password_hash: string;
+  token_version: number;
   created_at: Date;
 }
 
@@ -23,12 +24,14 @@ function toUserRow(user: {
   id: number;
   email: string;
   passwordHash: string;
+  tokenVersion: number;
   createdAt: Date;
 }): UserRow {
   return {
     id: user.id,
     email: user.email,
     password_hash: user.passwordHash,
+    token_version: user.tokenVersion,
     created_at: user.createdAt,
   };
 }
@@ -55,6 +58,15 @@ export async function findUserById(id: number): Promise<UserRow | null> {
  * categories, and ai_settings. */
 export async function deleteUser(id: number): Promise<void> {
   await prisma.user.delete({ where: { id } });
+}
+
+export async function revokeAuthSessions(userId: number): Promise<number> {
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { tokenVersion: { increment: 1 } },
+    select: { tokenVersion: true },
+  });
+  return user.tokenVersion;
 }
 
 /** Creates a user and their placeholder ai_settings row in one transaction.
@@ -107,10 +119,10 @@ export async function requestPasswordReset(email: string): Promise<void> {
   await sendPasswordResetEmail(user.email, rawToken);
 }
 
-/** Verifies a raw reset token and, if valid/unused/unexpired, updates the
- * user's password and marks the token used, atomically. Returns the userId
- * on success, or null if the token is missing, already used, or expired. */
-export async function resetPassword(rawToken: string, newPassword: string): Promise<number | null> {
+export async function resetPassword(
+  rawToken: string,
+  newPassword: string
+): Promise<{ userId: number; tokenVersion: number } | null> {
   const tokenHash = hashResetToken(rawToken);
   const passwordHash = await hashPassword(newPassword);
 
@@ -126,11 +138,12 @@ export async function resetPassword(rawToken: string, newPassword: string): Prom
       data: { usedAt: new Date() },
     });
 
-    await tx.user.update({
+    const user = await tx.user.update({
       where: { id: resetToken.userId },
-      data: { passwordHash },
+      data: { passwordHash, tokenVersion: { increment: 1 } },
+      select: { tokenVersion: true },
     });
 
-    return resetToken.userId;
+    return { userId: resetToken.userId, tokenVersion: user.tokenVersion };
   });
 }

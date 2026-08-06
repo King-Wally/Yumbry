@@ -13,18 +13,27 @@ export const AUTH_COOKIE_NAME = 'token';
 
 interface AuthTokenPayload {
   userId: number;
+  tokenVersion: number;
 }
 
-export function signAuthToken(userId: number): string {
-  return jwt.sign({ userId } satisfies AuthTokenPayload, JWT_SECRET, { expiresIn: '30d' });
+export interface VerifiedAuthToken {
+  userId: number;
+  tokenVersion: number;
 }
 
-/** Verifies and decodes the token, returning the userId or null on any
- * failure (expired/invalid/malformed) rather than throwing. */
-export function verifyAuthToken(token: string): number | null {
+export function signAuthToken(userId: number, tokenVersion: number): string {
+  return jwt.sign({ userId, tokenVersion } satisfies AuthTokenPayload, JWT_SECRET, {
+    expiresIn: '30d',
+  });
+}
+
+export function verifyAuthToken(token: string): VerifiedAuthToken | null {
   try {
     const payload = jwt.verify(token, JWT_SECRET) as AuthTokenPayload;
-    return payload.userId;
+    if (typeof payload.userId !== 'number' || typeof payload.tokenVersion !== 'number') {
+      return null;
+    }
+    return { userId: payload.userId, tokenVersion: payload.tokenVersion };
   } catch {
     return null;
   }

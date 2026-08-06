@@ -1,13 +1,25 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { Request } from 'express';
+import { prisma } from '../db/prisma.js';
+import { asyncHandler } from '../utils/async-handler.js';
 import { AUTH_COOKIE_NAME, verifyAuthToken } from '../utils/jwt.js';
 
-export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+export const requireAuth = asyncHandler(async (req: Request, res, next) => {
   const token = req.cookies?.[AUTH_COOKIE_NAME] as string | undefined;
-  const userId = token ? verifyAuthToken(token) : null;
-  if (!userId) {
+  const verified = token ? verifyAuthToken(token) : null;
+  if (!verified) {
     res.status(401).json({ error: 'Authentication required.' });
     return;
   }
-  req.userId = userId;
+
+  const user = await prisma.user.findUnique({
+    where: { id: verified.userId },
+    select: { tokenVersion: true },
+  });
+  if (!user || user.tokenVersion !== verified.tokenVersion) {
+    res.status(401).json({ error: 'Authentication required.' });
+    return;
+  }
+
+  req.userId = verified.userId;
   next();
-}
+});

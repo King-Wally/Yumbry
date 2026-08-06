@@ -6,7 +6,7 @@ import {
   ForgotPasswordBodySchema,
   ResetPasswordBodySchema,
 } from '../schemas/auth.schema.js';
-import { AUTH_COOKIE_NAME, signAuthToken } from '../utils/jwt.js';
+import { AUTH_COOKIE_NAME, signAuthToken, verifyAuthToken } from '../utils/jwt.js';
 import {
   deleteUser,
   findUserByEmail,
@@ -14,14 +14,15 @@ import {
   registerUser,
   requestPasswordReset,
   resetPassword,
+  revokeAuthSessions,
   verifyPassword,
 } from '../services/auth.service.js';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const COOKIE_SECURE = process.env.COOKIE_SECURE === 'true';
 
-function setAuthCookie(res: Response, userId: number): void {
-  res.cookie(AUTH_COOKIE_NAME, signAuthToken(userId), {
+function setAuthCookie(res: Response, userId: number, tokenVersion: number): void {
+  res.cookie(AUTH_COOKIE_NAME, signAuthToken(userId, tokenVersion), {
     httpOnly: true,
     secure: COOKIE_SECURE,
     sameSite: 'lax',
@@ -35,7 +36,7 @@ export async function postRegister(req: Request, res: Response) {
     const user = await registerUser(email, password);
     if (!user) return res.status(409).json({ error: 'Email is already registered.' });
 
-    setAuthCookie(res, user.id);
+    setAuthCookie(res, user.id, user.token_version);
     res.status(201).json({ id: user.id, email: user.email });
   } catch (err) {
     if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
@@ -50,7 +51,7 @@ export async function postLogin(req: Request, res: Response) {
     const valid = await verifyPassword(password, user?.password_hash);
     if (!user || !valid) return res.status(401).json({ error: 'Invalid email or password.' });
 
-    setAuthCookie(res, user.id);
+    setAuthCookie(res, user.id, user.token_version);
     res.json({ id: user.id, email: user.email });
   } catch (err) {
     if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
@@ -58,7 +59,12 @@ export async function postLogin(req: Request, res: Response) {
   }
 }
 
-export async function postLogout(_req: Request, res: Response) {
+export async function postLogout(req: Request, res: Response) {
+  const token = req.cookies?.[AUTH_COOKIE_NAME] as string | undefined;
+  const verified = token ? verifyAuthToken(token) : null;
+  if (verified) {
+    await revokeAuthSessions(verified.userId);
+  }
   res.clearCookie(AUTH_COOKIE_NAME);
   res.status(204).end();
 }
@@ -85,11 +91,11 @@ export async function postForgotPassword(req: Request, res: Response) {
 export async function postResetPassword(req: Request, res: Response) {
   try {
     const { token, password } = ResetPasswordBodySchema.parse(req.body);
-    const userId = await resetPassword(token, password);
-    if (!userId) return res.status(400).json({ error: 'Invalid or expired reset link.' });
+    const result = await resetPassword(token, password);
+    if (!result) return res.status(400).json({ error: 'Invalid or expired reset link.' });
 
-    setAuthCookie(res, userId);
-    res.status(200).json({ id: userId });
+    setAuthCookie(res, result.userId, result.tokenVersion);
+    res.status(200).json({ id: result.userId });
   } catch (err) {
     if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
     throw err;

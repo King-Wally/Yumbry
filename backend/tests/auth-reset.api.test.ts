@@ -123,6 +123,43 @@ describe.skipIf(!TEST_DATABASE_URL)('password reset API', () => {
     expect(newPasswordLogin.status).toBe(200);
   });
 
+  it('invalidates the pre-reset JWT after a password reset', async () => {
+    const ip = nextIp();
+    const register = await request(app)
+      .post('/api/auth/register')
+      .set('X-Forwarded-For', ip)
+      .send({ email: 'mia@example.com', password: 'password123' });
+
+    const rawCookie = (register.headers['set-cookie'] as unknown as string[])?.find((c) =>
+      c.startsWith('token=')
+    );
+    expect(rawCookie).toBeDefined();
+
+    const token = await getResetToken('mia@example.com', ip);
+
+    const reset = await request(app)
+      .post('/api/auth/reset-password')
+      .set('X-Forwarded-For', ip)
+      .send({ token, password: 'newpassword456' });
+    expect(reset.status).toBe(200);
+
+    const replayOld = await request(app)
+      .get('/api/auth/me')
+      .set('Cookie', rawCookie as string)
+      .set('X-Forwarded-For', ip);
+    expect(replayOld.status).toBe(401);
+
+    const newCookie = (reset.headers['set-cookie'] as unknown as string[])?.find((c) =>
+      c.startsWith('token=')
+    );
+    expect(newCookie).toBeDefined();
+    const replayNew = await request(app)
+      .get('/api/auth/me')
+      .set('Cookie', newCookie as string)
+      .set('X-Forwarded-For', ip);
+    expect(replayNew.status).toBe(200);
+  });
+
   it('rejects an unknown reset token', async () => {
     const res = await request(app)
       .post('/api/auth/reset-password')
