@@ -1,4 +1,5 @@
 import { Link, Route, Routes } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import RecipeListPage from './pages/RecipeListPage';
 import RecipeDetailPage from './pages/RecipeDetailPage';
 import RecipeFormPage from './pages/RecipeFormPage';
@@ -16,6 +17,7 @@ import { useAiSettings } from './hooks/useAiSettings';
 import { version } from '../package.json';
 
 export default function App() {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const { data: aiSettings } = useAiSettings({ enabled: Boolean(user) });
 
@@ -38,27 +40,27 @@ export default function App() {
                     to="/recipes/new"
                     className="rounded-md bg-clay px-3 py-1.5 text-white shadow-sm transition hover:bg-clay/90 hover:shadow"
                   >
-                    Add recipe
+                    {t('nav.addRecipe')}
                   </Link>
                 }
               >
                 <Link to="/import" className="transition-colors hover:text-clay">
-                  Import
+                  {t('nav.import')}
                 </Link>
                 {aiSettings?.model && (
                   <Link to="/create-with-ai" className="transition-colors hover:text-clay">
-                    Create with AI
+                    {t('nav.createWithAi')}
                   </Link>
                 )}
                 <Link to="/settings" className="transition-colors hover:text-clay">
-                  Settings
+                  {t('nav.settings')}
                 </Link>
                 <button
                   type="button"
                   onClick={() => logout()}
                   className="text-left transition-colors hover:text-clay"
                 >
-                  Log out
+                  {t('nav.logOut')}
                 </button>
               </CollapsibleActions>
             )}

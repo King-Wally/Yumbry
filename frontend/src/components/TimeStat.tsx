@@ -1,4 +1,5 @@
 import { Clock, Flame, Timer } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 type TimeStatIcon = 'clock' | 'flame' | 'timer';
 
@@ -17,6 +18,7 @@ function StatIcon({ icon }: { icon: TimeStatIcon }) {
 }
 
 export default function TimeStat({ icon, label, minutes }: TimeStatProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-2 text-stone-600">
       <span className="flex h-9 w-9 items-center justify-center rounded-full bg-clay/10 text-clay">
@@ -24,7 +26,9 @@ export default function TimeStat({ icon, label, minutes }: TimeStatProps) {
       </span>
       <div className="leading-tight">
         <div className="text-xs text-stone-400">{label}</div>
-        <div className="text-sm font-medium text-stone-700">{minutes} min</div>
+        <div className="text-sm font-medium text-stone-700">
+          {t('common.minutes', { count: minutes })}
+        </div>
       </div>
     </div>
   );

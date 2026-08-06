@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { deleteRecipe, getRecipe, getRecipeExportUrl } from '../api/client';
 import { queryKeys } from '../api/queryKeys';
 import RecipeHero from '../components/RecipeHero';
@@ -14,6 +15,7 @@ import CollapsibleActions from '../components/CollapsibleActions';
 import ConfirmDialog from '../components/ConfirmDialog';
 
 export default function RecipeDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -48,8 +50,8 @@ export default function RecipeDetailPage() {
     },
   });
 
-  if (isLoading) return <p className="text-stone-500">Loading recipe...</p>;
-  if (!recipe) return <p className="text-stone-500">Recipe not found.</p>;
+  if (isLoading) return <p className="text-stone-500">{t('recipes.detail.loading')}</p>;
+  if (!recipe) return <p className="text-stone-500">{t('recipes.detail.notFound')}</p>;
 
   return (
     <article className="space-y-8">
@@ -59,7 +61,7 @@ export default function RecipeDetailPage() {
           className="flex items-center gap-1 rounded-md px-2 py-1.5 text-sm text-stone-600 transition-colors hover:text-stone-900"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back
+          {t('common.back')}
         </Link>
         <CollapsibleActions>
           <a
@@ -67,20 +69,20 @@ export default function RecipeDetailPage() {
             download
             className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
           >
-            Export
+            {t('recipes.detail.export')}
           </a>
           <Link
             to={`/recipes/${id}/edit`}
             className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
           >
-            Edit
+            {t('recipes.detail.edit')}
           </Link>
           {aiSettings?.model && (
             <Link
               to={`/recipes/${id}/ai-improve`}
               className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
             >
-              Improve with AI
+              {t('recipes.detail.improveWithAi')}
             </Link>
           )}
           <button
@@ -88,7 +90,7 @@ export default function RecipeDetailPage() {
             onClick={() => setConfirmDeleteOpen(true)}
             className="rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-600 transition-colors hover:border-red-300 hover:bg-red-50"
           >
-            Delete
+            {t('common.delete')}
           </button>
         </CollapsibleActions>
       </div>
@@ -96,9 +98,9 @@ export default function RecipeDetailPage() {
       <ConfirmDialog
         open={confirmDeleteOpen}
         onOpenChange={setConfirmDeleteOpen}
-        title="Delete this recipe?"
-        description="This cannot be undone."
-        confirmLabel="Delete"
+        title={t('recipes.detail.deleteDialogTitle')}
+        description={t('recipes.detail.deleteDialogDescription')}
+        confirmLabel={t('common.delete')}
         isDanger
         isPending={deleteMutation.isPending}
         onConfirm={() => deleteMutation.mutate()}
@@ -131,13 +133,25 @@ export default function RecipeDetailPage() {
 
           <div className="flex flex-wrap gap-3 lg:flex-col">
             {recipe.prep_time_minutes != null && (
-              <TimeStat icon="clock" label="Prep" minutes={recipe.prep_time_minutes} />
+              <TimeStat
+                icon="clock"
+                label={t('recipes.detail.prep')}
+                minutes={recipe.prep_time_minutes}
+              />
             )}
             {recipe.cook_time_minutes != null && (
-              <TimeStat icon="flame" label="Cook" minutes={recipe.cook_time_minutes} />
+              <TimeStat
+                icon="flame"
+                label={t('recipes.detail.cook')}
+                minutes={recipe.cook_time_minutes}
+              />
             )}
             {recipe.total_time_minutes != null && (
-              <TimeStat icon="timer" label="Total" minutes={recipe.total_time_minutes} />
+              <TimeStat
+                icon="timer"
+                label={t('recipes.detail.total')}
+                minutes={recipe.total_time_minutes}
+              />
             )}
           </div>
         </div>
@@ -150,7 +164,7 @@ export default function RecipeDetailPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <section className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm lg:col-span-1">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-serif text-xl text-stone-900">Ingredients</h2>
+            <h2 className="font-serif text-xl text-stone-900">{t('recipes.detail.ingredients')}</h2>
           </div>
           <ServingsStepper value={servings} onChange={setServings} />
           <ul className="mt-4 divide-y divide-stone-100">
@@ -164,7 +178,9 @@ export default function RecipeDetailPage() {
         </section>
 
         <section className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm lg:col-span-2">
-          <h2 className="mb-3 font-serif text-xl text-stone-900">Instructions</h2>
+          <h2 className="mb-3 font-serif text-xl text-stone-900">
+            {t('recipes.detail.instructions')}
+          </h2>
           <ol className="space-y-5">
             {recipe.instructions?.map((step) => (
               <li key={step.id} className="flex gap-4">

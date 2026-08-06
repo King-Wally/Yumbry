@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ImageOff } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { RecipeSummary } from '../types';
 
 interface RecipeCardProps {
@@ -7,6 +8,7 @@ interface RecipeCardProps {
 }
 
 export default function RecipeCard({ recipe }: RecipeCardProps) {
+  const { t } = useTranslation();
   return (
     <Link
       to={`/recipes/${recipe.id}`}
@@ -24,7 +26,7 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-stone-300">
             <ImageOff className="h-10 w-10" strokeWidth={1.5} />
-            <span className="text-xs">No photo</span>
+            <span className="text-xs">{t('recipes.card.noPhoto')}</span>
           </div>
         )}
       </div>

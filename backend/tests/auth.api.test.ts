@@ -187,6 +187,42 @@ describe.skipIf(!TEST_DATABASE_URL)('auth API', () => {
     expect(recipeRows).toHaveLength(0);
   });
 
+  it('defaults locale to en and updates it via PATCH /api/auth/me', async () => {
+    const agent = request.agent(app);
+    await agent
+      .post('/api/auth/register')
+      .set('X-Forwarded-For', '10.0.0.9')
+      .send({ email: 'giulia@example.com', password: 'password123' });
+
+    const me = await agent.get('/api/auth/me');
+    expect(me.status).toBe(200);
+    expect(me.body).toMatchObject({ locale: 'en' });
+
+    const patch = await agent.patch('/api/auth/me').send({ locale: 'fr' });
+    expect(patch.status).toBe(200);
+    expect(patch.body).toMatchObject({ locale: 'fr' });
+
+    const meAfter = await agent.get('/api/auth/me');
+    expect(meAfter.status).toBe(200);
+    expect(meAfter.body).toMatchObject({ locale: 'fr' });
+  });
+
+  it('rejects an invalid locale on PATCH /api/auth/me', async () => {
+    const agent = request.agent(app);
+    await agent
+      .post('/api/auth/register')
+      .set('X-Forwarded-For', '10.0.0.10')
+      .send({ email: 'henri@example.com', password: 'password123' });
+
+    const patch = await agent.patch('/api/auth/me').send({ locale: 'de' });
+    expect(patch.status).toBe(400);
+  });
+
+  it('returns 401 from PATCH /api/auth/me without a session', async () => {
+    const res = await request(app).patch('/api/auth/me').send({ locale: 'nl' });
+    expect(res.status).toBe(401);
+  });
+
   it('rate-limits repeated login attempts', async () => {
     const setupAgent = request.agent(app);
     await setupAgent

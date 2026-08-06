@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { createRecipe, getRecipe, updateRecipe, uploadRecipePhoto } from '../api/client';
 import { queryKeys } from '../api/queryKeys';
 import CategoryPicker from '../components/CategoryPicker';
@@ -40,6 +41,7 @@ const emptyForm: FormState = {
 };
 
 export default function RecipeFormPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const isEditing = Boolean(id);
   const navigate = useNavigate();
@@ -81,7 +83,7 @@ export default function RecipeFormPage() {
       instructions: existingRecipe.instructions?.length
         ? existingRecipe.instructions.map((i) => ({ id: i.id, text: i.text }))
         : [{ text: '' }],
-      tags: existingRecipe.tags?.map((t) => t.name) ?? [],
+      tags: existingRecipe.tags?.map((tag) => tag.name) ?? [],
       category: existingRecipe.category?.name ?? null,
     });
   }
@@ -130,7 +132,7 @@ export default function RecipeFormPage() {
 
   function addTag() {
     const name = tagInput.trim();
-    if (name && !form.tags.some((t) => t.toLowerCase() === name.toLowerCase())) {
+    if (name && !form.tags.some((tag) => tag.toLowerCase() === name.toLowerCase())) {
       setForm((f) => ({ ...f, tags: [...f.tags, name] }));
     }
     setTagInput('');
@@ -162,14 +164,14 @@ export default function RecipeFormPage() {
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
       <h1 className="font-serif text-2xl text-stone-900">
-        {isEditing ? 'Edit recipe' : 'Add a recipe'}
+        {isEditing ? t('recipeForm.editTitle') : t('recipeForm.addTitle')}
       </h1>
 
       {aiDraft && (
         <p className="rounded-md border border-clay/25 bg-clay/10 px-3 py-2 text-sm text-clay">
           {draftSource === 'url'
-            ? 'Reviewing a recipe imported from a URL — check it carefully before saving.'
-            : 'Reviewing an AI-generated draft — check it carefully before saving.'}
+            ? t('recipeForm.reviewingUrlDraft')
+            : t('recipeForm.reviewingAiDraft')}
         </p>
       )}
 
@@ -179,13 +181,13 @@ export default function RecipeFormPage() {
           required
           value={form.title}
           onChange={(e) => updateField('title', e.target.value)}
-          placeholder="Title"
+          placeholder={t('recipeForm.titlePlaceholder')}
           className="w-full rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none"
         />
         <textarea
           value={form.description}
           onChange={(e) => updateField('description', e.target.value)}
-          placeholder="Description"
+          placeholder={t('recipeForm.descriptionPlaceholder')}
           rows={2}
           className="w-full rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none"
         />
@@ -193,14 +195,14 @@ export default function RecipeFormPage() {
         {isEditing && (
           <ImageUpload
             currentUrl={form.image_path}
-            label="Recipe photo"
+            label={t('recipeForm.photoLabel')}
             onUpload={(file) => photoMutation.mutate(file)}
           />
         )}
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <label className="text-sm text-stone-600">
-            Prep (min)
+            {t('recipeForm.prepMinutes')}
             <input
               type="number"
               min="0"
@@ -210,7 +212,7 @@ export default function RecipeFormPage() {
             />
           </label>
           <label className="text-sm text-stone-600">
-            Cook (min)
+            {t('recipeForm.cookMinutes')}
             <input
               type="number"
               min="0"
@@ -220,7 +222,7 @@ export default function RecipeFormPage() {
             />
           </label>
           <label className="text-sm text-stone-600">
-            Total (min)
+            {t('recipeForm.totalMinutes')}
             <input
               type="number"
               min="0"
@@ -230,7 +232,7 @@ export default function RecipeFormPage() {
             />
           </label>
           <label className="text-sm text-stone-600">
-            Servings
+            {t('recipeForm.servings')}
             <input
               type="number"
               min="1"
@@ -243,7 +245,9 @@ export default function RecipeFormPage() {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-stone-700">Category</label>
+          <label className="mb-1 block text-sm font-medium text-stone-700">
+            {t('recipeForm.category')}
+          </label>
           <CategoryPicker
             categories={categories}
             value={form.category}
@@ -252,7 +256,9 @@ export default function RecipeFormPage() {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-stone-700">Tags</label>
+          <label className="mb-1 block text-sm font-medium text-stone-700">
+            {t('recipeForm.tags')}
+          </label>
           <div className="mb-2 flex flex-wrap gap-1.5">
             {form.tags.map((tag) => (
               <span
@@ -264,6 +270,7 @@ export default function RecipeFormPage() {
                   type="button"
                   onClick={() => removeTag(tag)}
                   className="text-stone-400 hover:text-red-600"
+                  aria-label={t('recipeForm.removeTag')}
                 >
                   ✕
                 </button>
@@ -281,7 +288,7 @@ export default function RecipeFormPage() {
                   addTag();
                 }
               }}
-              placeholder="Add a tag and press Enter"
+              placeholder={t('recipeForm.addTagPlaceholder')}
               className="flex-1 rounded-md border border-stone-300 px-3 py-1.5"
             />
             <button
@@ -289,7 +296,7 @@ export default function RecipeFormPage() {
               onClick={addTag}
               className="rounded-md border border-stone-300 px-3 py-1.5 text-sm"
             >
-              Add
+              {t('common.add')}
             </button>
           </div>
         </div>
@@ -312,7 +319,7 @@ export default function RecipeFormPage() {
         disabled={saveMutation.isPending}
         className="rounded-md bg-clay px-4 py-2 text-white disabled:opacity-50"
       >
-        {saveMutation.isPending ? 'Saving...' : 'Save recipe'}
+        {saveMutation.isPending ? t('recipeForm.saving') : t('recipeForm.saveButton')}
       </button>
     </form>
   );

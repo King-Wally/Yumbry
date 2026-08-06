@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from 'react';
 import { Menu, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useClickOutside } from '../hooks/useClickOutside';
 
 interface CollapsibleActionsProps {
@@ -13,6 +14,7 @@ export default function CollapsibleActions({
   children,
   rowClassName = 'gap-2',
 }: CollapsibleActionsProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useClickOutside<HTMLDivElement>(() => setOpen(false));
 
@@ -26,7 +28,7 @@ export default function CollapsibleActions({
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        aria-label="Menu"
+        aria-label={t('common.menu')}
         className="rounded-md border border-stone-300 p-1.5 text-stone-600 transition-colors hover:border-stone-400 hover:bg-stone-100 md:hidden"
       >
         {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}

@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { deleteAccount, listAiModels, updateAiSettings } from '../api/client';
+import { useTranslation } from 'react-i18next';
+import { deleteAccount, listAiModels, updateAiSettings, updateProfile } from '../api/client';
 import { queryKeys } from '../api/queryKeys';
 import { useAiSettings } from '../hooks/useAiSettings';
 import { useAuth } from '../hooks/useAuth';
 import { listOllamaModelsDirect } from '../services/ollama-direct';
 import Dialog from '../components/Dialog';
 import type { AiProvider } from '../types';
+import type { SupportedLocale } from 'yumbry-shared';
 
 const PROVIDER_LABELS: Record<AiProvider, string> = {
   openai: 'OpenAI',
@@ -24,9 +26,18 @@ const BASE_URL_REQUIRED: Record<AiProvider, boolean> = {
   custom: true,
 };
 
+// Native-language names — always shown as-is, regardless of the active UI language.
+const LOCALE_LABELS: Record<SupportedLocale, string> = {
+  en: 'English',
+  nl: 'Nederlands',
+  fr: 'Français',
+  es: 'Español',
+};
+
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { clearSession } = useAuth();
+  const { clearSession, user } = useAuth();
 
   const { data: settings } = useAiSettings();
 
@@ -93,19 +104,53 @@ export default function SettingsPage() {
     deleteAccountMutation.mutate();
   }
 
+  const localeMutation = useMutation({
+    mutationFn: (locale: SupportedLocale) => updateProfile({ locale }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+    },
+  });
+
   return (
     <div className="max-w-xl space-y-10">
+      <div className="space-y-3">
+        <div>
+          <h1 className="font-serif text-2xl text-stone-900">{t('settings.language.title')}</h1>
+          <p className="mt-1 text-sm text-stone-500">{t('settings.language.description')}</p>
+        </div>
+
+        <label className="block text-sm font-medium text-stone-700">
+          {t('settings.language.label')}
+          <select
+            value={user?.locale ?? 'en'}
+            onChange={(e) => localeMutation.mutate(e.target.value as SupportedLocale)}
+            disabled={localeMutation.isPending}
+            className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none disabled:opacity-50"
+          >
+            {(Object.keys(LOCALE_LABELS) as SupportedLocale[]).map((key) => (
+              <option key={key} value={key}>
+                {LOCALE_LABELS[key]}
+              </option>
+            ))}
+          </select>
+        </label>
+        {localeMutation.isSuccess && (
+          <p className="text-sm text-green-700">{t('settings.language.saved')}</p>
+        )}
+        {localeMutation.isError && (
+          <p className="text-sm text-red-600">{localeMutation.error?.message}</p>
+        )}
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <h1 className="font-serif text-2xl text-stone-900">AI settings</h1>
-          <p className="mt-1 text-sm text-stone-500">
-            Choose the AI provider used by the AI assistant features, and configure how to reach it.
-          </p>
+          <h1 className="font-serif text-2xl text-stone-900">{t('settings.ai.title')}</h1>
+          <p className="mt-1 text-sm text-stone-500">{t('settings.ai.description')}</p>
         </div>
 
         <div className="space-y-3">
           <label className="block text-sm font-medium text-stone-700">
-            Provider
+            {t('settings.ai.provider')}
             <select
               required
               value={provider}
@@ -115,7 +160,7 @@ export default function SettingsPage() {
               }}
               className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none"
             >
-              <option value="">Select a provider...</option>
+              <option value="">{t('settings.ai.selectProvider')}</option>
               {(Object.keys(PROVIDER_LABELS) as AiProvider[]).map((key) => (
                 <option key={key} value={key}>
                   {PROVIDER_LABELS[key]}
@@ -125,7 +170,8 @@ export default function SettingsPage() {
           </label>
 
           <label className="block text-sm font-medium text-stone-700">
-            Base URL{baseUrlRequired ? '' : ' (optional — overrides the provider default)'}
+            {t('settings.ai.baseUrl')}
+            {baseUrlRequired ? '' : ` ${t('settings.ai.baseUrlOptional')}`}
             <input
               type="text"
               required={baseUrlRequired}
@@ -142,15 +188,12 @@ export default function SettingsPage() {
           </label>
 
           {provider === 'ollama' ? (
-            <p className="text-xs text-stone-500">
-              No API key is sent. If your Ollama instance requires authentication (e.g. behind a
-              reverse proxy), use the Custom provider instead, which stays routed through the
-              server.
-            </p>
+            <p className="text-xs text-stone-500">{t('settings.ai.ollamaNote')}</p>
           ) : (
             <>
               <label className="block text-sm font-medium text-stone-700">
-                API key{provider === 'custom' ? ' (optional)' : ''}
+                {t('settings.ai.apiKey')}
+                {provider === 'custom' ? ` ${t('settings.ai.optional')}` : ''}
                 <input
                   type="password"
                   value={apiKey}
@@ -159,7 +202,7 @@ export default function SettingsPage() {
                     setClearApiKey(false);
                   }}
                   placeholder={
-                    hasApiKey && !clearApiKey ? '•••• (saved — leave blank to keep)' : 'sk-...'
+                    hasApiKey && !clearApiKey ? t('settings.ai.apiKeySavedPlaceholder') : 'sk-...'
                   }
                   className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none"
                 />
@@ -174,7 +217,7 @@ export default function SettingsPage() {
                       if (e.target.checked) setApiKey('');
                     }}
                   />
-                  Clear the saved API key
+                  {t('settings.ai.clearApiKey')}
                 </label>
               )}
             </>
@@ -186,24 +229,24 @@ export default function SettingsPage() {
             disabled={checkConnectionMutation.isPending}
             className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100 disabled:opacity-50"
           >
-            {checkConnectionMutation.isPending ? 'Checking...' : 'Check connection / load models'}
+            {checkConnectionMutation.isPending
+              ? t('settings.ai.checking')
+              : t('settings.ai.checkConnection')}
           </button>
 
           {checkConnectionMutation.isError && (
-            <p className="text-sm text-red-600">
-              Couldn't reach that provider — you can still type a model name manually below.
-            </p>
+            <p className="text-sm text-red-600">{t('settings.ai.connectionError')}</p>
           )}
 
           <label className="block text-sm font-medium text-stone-700">
-            Model
+            {t('settings.ai.model')}
             {availableModels && availableModels.length > 0 ? (
               <select
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
                 className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none"
               >
-                <option value="">Select a model...</option>
+                <option value="">{t('settings.ai.selectModel')}</option>
                 {availableModels.map((name) => (
                   <option key={name} value={name}>
                     {name}
@@ -223,30 +266,29 @@ export default function SettingsPage() {
         </div>
 
         {saveMutation.isError && <p className="text-red-600">{saveMutation.error?.message}</p>}
-        {saveMutation.isSuccess && <p className="text-sm text-green-700">Settings saved.</p>}
+        {saveMutation.isSuccess && (
+          <p className="text-sm text-green-700">{t('settings.ai.saved')}</p>
+        )}
 
         <button
           type="submit"
           disabled={saveMutation.isPending}
           className="rounded-md bg-clay px-4 py-2 text-white disabled:opacity-50"
         >
-          {saveMutation.isPending ? 'Saving...' : 'Save settings'}
+          {saveMutation.isPending ? t('settings.ai.saving') : t('settings.ai.saveSettings')}
         </button>
       </form>
 
       <div className="space-y-3 rounded-md border border-red-300 p-4">
-        <h2 className="font-serif text-xl text-red-900">Danger zone</h2>
-        <p className="text-sm text-stone-600">
-          Permanently delete your account and everything in it — recipes, tags, categories, and
-          settings. This cannot be undone.
-        </p>
+        <h2 className="font-serif text-xl text-red-900">{t('settings.dangerZone.title')}</h2>
+        <p className="text-sm text-stone-600">{t('settings.dangerZone.description')}</p>
 
         <button
           type="button"
           onClick={() => setShowDeleteConfirm(true)}
           className="rounded-md border border-red-600 px-3 py-1.5 text-sm text-red-700 transition-colors hover:bg-red-50"
         >
-          Delete account
+          {t('settings.dangerZone.deleteAccount')}
         </button>
       </div>
 
@@ -256,12 +298,12 @@ export default function SettingsPage() {
           setShowDeleteConfirm(open);
           if (!open) setDeletePassword('');
         }}
-        title="Delete account?"
-        description="Permanently delete your account and everything in it — recipes, tags, categories, and settings. This cannot be undone."
+        title={t('settings.dangerZone.dialogTitle')}
+        description={t('settings.dangerZone.description')}
       >
         <form onSubmit={handleDeleteSubmit} className="space-y-3">
           <label className="block text-sm font-medium text-stone-700">
-            Confirm your password
+            {t('settings.dangerZone.confirmPassword')}
             <input
               type="password"
               required
@@ -282,7 +324,9 @@ export default function SettingsPage() {
               disabled={deleteAccountMutation.isPending}
               className="rounded-md bg-red-700 px-4 py-2 text-white disabled:opacity-50"
             >
-              {deleteAccountMutation.isPending ? 'Deleting...' : 'Permanently delete account'}
+              {deleteAccountMutation.isPending
+                ? t('settings.dangerZone.deleting')
+                : t('settings.dangerZone.permanentlyDelete')}
             </button>
             <button
               type="button"
@@ -292,7 +336,7 @@ export default function SettingsPage() {
               }}
               className="rounded-md border border-stone-300 px-4 py-2 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </form>

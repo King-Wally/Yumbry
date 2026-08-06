@@ -12,6 +12,7 @@ export interface UserRow {
   email: string;
   password_hash: string;
   token_version: number;
+  locale: string;
   created_at: Date;
 }
 
@@ -23,6 +24,7 @@ function toUserRow(user: {
   email: string;
   passwordHash: string;
   tokenVersion: number;
+  locale: string;
   createdAt: Date;
 }): UserRow {
   return {
@@ -30,6 +32,7 @@ function toUserRow(user: {
     email: user.email,
     password_hash: user.passwordHash,
     token_version: user.tokenVersion,
+    locale: user.locale,
     created_at: user.createdAt,
   };
 }
@@ -54,6 +57,14 @@ export async function findUserById(id: number): Promise<UserRow | null> {
 
 export async function deleteUser(id: number): Promise<void> {
   await prisma.user.delete({ where: { id } });
+}
+
+export async function updateUserLocale(userId: number, locale: string): Promise<UserRow> {
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { locale },
+  });
+  return toUserRow(user);
 }
 
 export async function revokeAuthSessions(userId: number): Promise<number> {

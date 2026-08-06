@@ -10,6 +10,7 @@ import {
   unreachableMessage,
   type AiChatEnvelope,
   type AiRecipeDraft,
+  type SupportedLocale,
 } from 'yumbry-shared';
 
 /**
@@ -69,13 +70,13 @@ async function postChatCompletion(
 export async function chatWithOllamaDirect(
   messages: AiChatMessage[],
   currentDraft: RecipeInput | null,
-  options: { baseUrl: string | null; model: string }
+  options: { baseUrl: string | null; model: string; locale: SupportedLocale }
 ): Promise<AiChatEnvelope> {
   const draft = currentDraft as AiRecipeDraft | null;
   const raw = await postChatCompletion(
     options.baseUrl,
     options.model,
-    buildChatMessages(messages, draft)
+    buildChatMessages(messages, draft, options.locale)
   );
   return parseChatEnvelope(raw, draft);
 }

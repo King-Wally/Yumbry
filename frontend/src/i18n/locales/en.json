@@ -1,0 +1,210 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "loading": "Loading...",
+    "back": "Back",
+    "delete": "Delete",
+    "add": "Add",
+    "all": "All",
+    "or": "or",
+    "menu": "Menu",
+    "working": "Working...",
+    "confirm": "Confirm",
+    "minutes": "{{count}} min",
+    "somethingWentWrong": "Something went wrong."
+  },
+  "nav": {
+    "addRecipe": "Add recipe",
+    "import": "Import",
+    "createWithAi": "Create with AI",
+    "settings": "Settings",
+    "logOut": "Log out"
+  },
+  "settings": {
+    "language": {
+      "title": "Language",
+      "description": "Choose the language used across the app and by the AI assistant.",
+      "label": "Language",
+      "saved": "Language saved."
+    },
+    "ai": {
+      "title": "AI settings",
+      "description": "Choose the AI provider used by the AI assistant features, and configure how to reach it.",
+      "provider": "Provider",
+      "selectProvider": "Select a provider...",
+      "baseUrl": "Base URL",
+      "baseUrlOptional": "(optional — overrides the provider default)",
+      "ollamaNote": "No API key is sent. If your Ollama instance requires authentication (e.g. behind a reverse proxy), use the Custom provider instead, which stays routed through the server.",
+      "apiKey": "API key",
+      "optional": "(optional)",
+      "apiKeySavedPlaceholder": "•••• (saved — leave blank to keep)",
+      "clearApiKey": "Clear the saved API key",
+      "checking": "Checking...",
+      "checkConnection": "Check connection / load models",
+      "connectionError": "Couldn't reach that provider — you can still type a model name manually below.",
+      "model": "Model",
+      "selectModel": "Select a model...",
+      "saved": "Settings saved.",
+      "saving": "Saving...",
+      "saveSettings": "Save settings"
+    },
+    "dangerZone": {
+      "title": "Danger zone",
+      "description": "Permanently delete your account and everything in it — recipes, tags, categories, and settings. This cannot be undone.",
+      "deleteAccount": "Delete account",
+      "dialogTitle": "Delete account?",
+      "confirmPassword": "Confirm your password",
+      "deleting": "Deleting...",
+      "permanentlyDelete": "Permanently delete account"
+    }
+  },
+  "auth": {
+    "emailPlaceholder": "Email",
+    "passwordPlaceholder": "Password",
+    "login": {
+      "title": "Log in",
+      "error": "Login failed.",
+      "submitting": "Logging in…",
+      "submit": "Log in",
+      "noAccount": "No account?",
+      "registerLink": "Register"
+    },
+    "register": {
+      "title": "Create an account",
+      "error": "Registration failed.",
+      "passwordPlaceholder": "Password (min. 8 characters)",
+      "submitting": "Creating account…",
+      "submit": "Register",
+      "hasAccount": "Already have an account?",
+      "loginLink": "Log in"
+    },
+    "forgotPassword": {
+      "title": "Forgot password",
+      "submitting": "Sending…",
+      "submit": "Send reset link",
+      "checkEmailTitle": "Check your email",
+      "checkEmailBody": "If that email is registered, we've sent a link to reset your password.",
+      "backToLogin": "Back to log in"
+    },
+    "resetPassword": {
+      "title": "Choose a new password",
+      "error": "Reset failed.",
+      "passwordPlaceholder": "New password (min. 8 characters)",
+      "submitting": "Resetting…",
+      "submit": "Reset password",
+      "invalidLinkTitle": "Invalid link",
+      "invalidLinkBody": "This reset link is missing its token. Request a new one.",
+      "requestNewLink": "Request a new link"
+    }
+  },
+  "recipes": {
+    "list": {
+      "loading": "Loading recipes...",
+      "loadError": "Couldn't load recipes.",
+      "empty": "No recipes yet. Try importing or adding one.",
+      "searchPlaceholder": "Search recipes..."
+    },
+    "detail": {
+      "loading": "Loading recipe...",
+      "notFound": "Recipe not found.",
+      "export": "Export",
+      "edit": "Edit",
+      "improveWithAi": "Improve with AI",
+      "deleteDialogTitle": "Delete this recipe?",
+      "deleteDialogDescription": "This cannot be undone.",
+      "ingredients": "Ingredients",
+      "instructions": "Instructions",
+      "prep": "Prep",
+      "cook": "Cook",
+      "total": "Total",
+      "servings": "Servings"
+    },
+    "card": {
+      "noPhoto": "No photo"
+    },
+    "hero": {
+      "noPhotoYet": "No photo yet"
+    }
+  },
+  "recipeForm": {
+    "editTitle": "Edit recipe",
+    "addTitle": "Add a recipe",
+    "reviewingUrlDraft": "Reviewing a recipe imported from a URL — check it carefully before saving.",
+    "reviewingAiDraft": "Reviewing an AI-generated draft — check it carefully before saving.",
+    "titlePlaceholder": "Title",
+    "descriptionPlaceholder": "Description",
+    "photoLabel": "Recipe photo",
+    "prepMinutes": "Prep (min)",
+    "cookMinutes": "Cook (min)",
+    "totalMinutes": "Total (min)",
+    "servings": "Servings",
+    "category": "Category",
+    "tags": "Tags",
+    "removeTag": "Remove tag",
+    "addTagPlaceholder": "Add a tag and press Enter",
+    "saving": "Saving...",
+    "saveButton": "Save recipe",
+    "ingredients": {
+      "label": "Ingredients",
+      "addButton": "+ Add ingredient",
+      "placeholder": "e.g. 1 1/2 cups flour"
+    },
+    "instructions": {
+      "label": "Instructions",
+      "addButton": "+ Add step",
+      "placeholder": "Describe this step"
+    }
+  },
+  "import": {
+    "title": "Import a recipe",
+    "description": "Paste the JSON-LD from a recipe site's <0>application/ld+json</0> script tag, upload a <1>.json</1> file, or paste the page's URL and we'll fetch it for you.",
+    "importingText": "Importing...",
+    "importFromText": "Import from text",
+    "uploadJsonFile": "Click to upload a .json file",
+    "urlDescription": "Paste a recipe page URL — we'll fetch it and pull out the recipe.",
+    "fetching": "Fetching...",
+    "importFromUrl": "Import from URL"
+  },
+  "aiChat": {
+    "noModelConfigured": "No AI model is configured yet. Visit Settings to choose one.",
+    "loadingRecipe": "Loading recipe...",
+    "improveTitle": "Improve \"{{title}}\" with AI",
+    "createTitle": "Create with AI",
+    "improveDescription": "Describe what you'd like to change — the preview always shows the current recipe.",
+    "createDescription": "Describe the dish you'd like to make — a live preview builds as you chat.",
+    "improveExample": "e.g. \"make it spicier\" or \"swap the chicken for tofu\".",
+    "createExample": "e.g. \"a spicy vegetarian curry, serves 4\" — say as much or as little as you like.",
+    "thinking": "Thinking...",
+    "changePlaceholder": "Tell the AI what to change",
+    "cookPlaceholder": "Tell the AI what you'd like to cook",
+    "send": "Send",
+    "saveAndReview": "Save and review",
+    "checkSettings": "Check your AI settings"
+  },
+  "categoryPicker": {
+    "newCategoryPlaceholder": "Or type a new category",
+    "set": "Set",
+    "selected": "Selected:",
+    "clear": "✕ clear"
+  },
+  "imageUpload": {
+    "photo": "Photo",
+    "replace": "Replace {{label}}",
+    "upload": "Upload {{label}}"
+  },
+  "servingsStepper": {
+    "decrease": "Decrease servings",
+    "increase": "Increase servings"
+  },
+  "recipePreview": {
+    "empty": "Your recipe will appear here once you start chatting.",
+    "untitled": "Untitled recipe",
+    "prep": "Prep: {{minutes}} min",
+    "cook": "Cook: {{minutes}} min",
+    "total": "Total: {{minutes}} min",
+    "servings": "Servings: {{count}}",
+    "ingredients": "Ingredients",
+    "instructions": "Instructions"
+  }
+}

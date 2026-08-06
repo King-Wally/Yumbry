@@ -1,4 +1,5 @@
 import { useRef, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface ImageUploadProps {
   currentUrl?: string | null;
@@ -6,7 +7,9 @@ interface ImageUploadProps {
   label?: string;
 }
 
-export default function ImageUpload({ currentUrl, onUpload, label = 'Photo' }: ImageUploadProps) {
+export default function ImageUpload({ currentUrl, onUpload, label }: ImageUploadProps) {
+  const { t } = useTranslation();
+  const resolvedLabel = label ?? t('imageUpload.photo');
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handleChange(e: ChangeEvent<HTMLInputElement>) {
@@ -20,7 +23,7 @@ export default function ImageUpload({ currentUrl, onUpload, label = 'Photo' }: I
       {currentUrl && (
         <img
           src={currentUrl}
-          alt={label}
+          alt={resolvedLabel}
           loading="lazy"
           decoding="async"
           className="h-16 w-16 rounded object-cover"
@@ -31,7 +34,9 @@ export default function ImageUpload({ currentUrl, onUpload, label = 'Photo' }: I
         onClick={() => inputRef.current?.click()}
         className="rounded-md border border-stone-300 px-3 py-1.5 text-sm text-stone-600 hover:bg-stone-100"
       >
-        {currentUrl ? `Replace ${label.toLowerCase()}` : `Upload ${label.toLowerCase()}`}
+        {currentUrl
+          ? t('imageUpload.replace', { label: resolvedLabel.toLowerCase() })
+          : t('imageUpload.upload', { label: resolvedLabel.toLowerCase() })}
       </button>
       <input
         ref={inputRef}

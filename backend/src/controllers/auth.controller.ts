@@ -5,6 +5,7 @@ import {
   DeleteAccountBodySchema,
   ForgotPasswordBodySchema,
   ResetPasswordBodySchema,
+  UpdateProfileBodySchema,
 } from '../schemas/auth.schema.js';
 import { AUTH_COOKIE_NAME, signAuthToken, verifyAuthToken } from '../utils/jwt.js';
 import {
@@ -15,6 +16,7 @@ import {
   requestPasswordReset,
   resetPassword,
   revokeAuthSessions,
+  updateUserLocale,
   verifyPassword,
 } from '../services/auth.service.js';
 
@@ -72,7 +74,18 @@ export async function postLogout(req: Request, res: Response) {
 export async function getMe(req: Request, res: Response) {
   const user = await findUserById(req.userId as number);
   if (!user) return res.status(401).json({ error: 'Not authenticated.' });
-  res.json({ id: user.id, email: user.email });
+  res.json({ id: user.id, email: user.email, locale: user.locale });
+}
+
+export async function patchMe(req: Request, res: Response) {
+  try {
+    const { locale } = UpdateProfileBodySchema.parse(req.body);
+    const user = await updateUserLocale(req.userId as number, locale);
+    res.json({ id: user.id, email: user.email, locale: user.locale });
+  } catch (err) {
+    if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
+    throw err;
+  }
 }
 
 export async function postForgotPassword(req: Request, res: Response) {

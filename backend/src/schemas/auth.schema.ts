@@ -25,3 +25,11 @@ export const ResetPasswordBodySchema = z.object({
 });
 
 export type ResetPasswordBody = z.infer<typeof ResetPasswordBodySchema>;
+
+export const LocaleSchema = z.enum(['en', 'nl', 'fr', 'es']);
+
+export const UpdateProfileBodySchema = z.object({
+  locale: LocaleSchema,
+});
+
+export type UpdateProfileBody = z.infer<typeof UpdateProfileBodySchema>;

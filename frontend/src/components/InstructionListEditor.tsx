@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import ReorderableListEditor from './ReorderableListEditor';
 
 export interface InstructionDraft {
@@ -14,13 +15,14 @@ export default function InstructionListEditor({
   instructions,
   onChange,
 }: InstructionListEditorProps) {
+  const { t } = useTranslation();
   return (
     <ReorderableListEditor
       items={instructions}
       onChange={onChange}
       createItem={() => ({ text: '' })}
-      label="Instructions"
-      addLabel="+ Add step"
+      label={t('recipeForm.instructions.label')}
+      addLabel={t('recipeForm.instructions.addButton')}
       rowClassName="flex items-start gap-2"
       controlsClassName="mt-2 flex items-center gap-2"
       renderItem={(step, update, index) => (
@@ -31,7 +33,7 @@ export default function InstructionListEditor({
               value={step.text}
               onChange={(e) => update({ ...step, text: e.target.value })}
               rows={2}
-              placeholder="Describe this step"
+              placeholder={t('recipeForm.instructions.placeholder')}
               className="w-full rounded-md border border-stone-300 px-3 py-1.5 focus:border-clay focus:outline-none"
             />
           </div>

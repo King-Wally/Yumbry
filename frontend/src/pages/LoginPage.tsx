@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +20,7 @@ export default function LoginPage() {
       await login(email, password);
       navigate('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed.');
+      setError(err instanceof Error ? err.message : t('auth.login.error'));
     } finally {
       setIsSubmitting(false);
     }
@@ -26,14 +28,14 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto max-w-sm space-y-6">
-      <h1 className="font-serif text-2xl text-stone-900">Log in</h1>
+      <h1 className="font-serif text-2xl text-stone-900">{t('auth.login.title')}</h1>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <input
           type="email"
           required
           autoComplete="email"
-          placeholder="Email"
+          placeholder={t('auth.emailPlaceholder')}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-clay focus:outline-none"
@@ -42,7 +44,7 @@ export default function LoginPage() {
           type="password"
           required
           autoComplete="current-password"
-          placeholder="Password"
+          placeholder={t('auth.passwordPlaceholder')}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-clay focus:outline-none"
@@ -52,7 +54,7 @@ export default function LoginPage() {
           disabled={isSubmitting}
           className="w-full rounded-md bg-clay px-4 py-2 text-white disabled:opacity-50"
         >
-          {isSubmitting ? 'Logging in…' : 'Log in'}
+          {isSubmitting ? t('auth.login.submitting') : t('auth.login.submit')}
         </button>
       </form>
 
@@ -61,9 +63,9 @@ export default function LoginPage() {
       {/* Forgot password link hidden until Resend domain is configured */}
 
       <p className="text-sm text-stone-500">
-        No account?{' '}
+        {t('auth.login.noAccount')}{' '}
         <Link to="/register" className="text-clay hover:underline">
-          Register
+          {t('auth.login.registerLink')}
         </Link>
       </p>
     </div>

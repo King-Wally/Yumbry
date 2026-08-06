@@ -1,0 +1,210 @@
+{
+  "common": {
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "loading": "Chargement...",
+    "back": "Retour",
+    "delete": "Supprimer",
+    "add": "Ajouter",
+    "all": "Tout",
+    "or": "ou",
+    "menu": "Menu",
+    "working": "En cours...",
+    "confirm": "Confirmer",
+    "minutes": "{{count}} min",
+    "somethingWentWrong": "Une erreur est survenue."
+  },
+  "nav": {
+    "addRecipe": "Ajouter une recette",
+    "import": "Importer",
+    "createWithAi": "Créer avec l'IA",
+    "settings": "Paramètres",
+    "logOut": "Se déconnecter"
+  },
+  "settings": {
+    "language": {
+      "title": "Langue",
+      "description": "Choisissez la langue utilisée dans l'application et par l'assistant IA.",
+      "label": "Langue",
+      "saved": "Langue enregistrée."
+    },
+    "ai": {
+      "title": "Paramètres IA",
+      "description": "Choisissez le fournisseur d'IA utilisé par les fonctionnalités de l'assistant IA et configurez comment le contacter.",
+      "provider": "Fournisseur",
+      "selectProvider": "Sélectionnez un fournisseur...",
+      "baseUrl": "URL de base",
+      "baseUrlOptional": "(facultatif — remplace la valeur par défaut du fournisseur)",
+      "ollamaNote": "Aucune clé API n'est envoyée. Si votre instance Ollama nécessite une authentification (par exemple derrière un reverse proxy), utilisez plutôt le fournisseur personnalisé, qui reste acheminé via le serveur.",
+      "apiKey": "Clé API",
+      "optional": "(facultatif)",
+      "apiKeySavedPlaceholder": "•••• (enregistrée — laissez vide pour conserver)",
+      "clearApiKey": "Effacer la clé API enregistrée",
+      "checking": "Vérification...",
+      "checkConnection": "Vérifier la connexion / charger les modèles",
+      "connectionError": "Impossible de contacter ce fournisseur — vous pouvez encore saisir un nom de modèle manuellement ci-dessous.",
+      "model": "Modèle",
+      "selectModel": "Sélectionnez un modèle...",
+      "saved": "Paramètres enregistrés.",
+      "saving": "Enregistrement...",
+      "saveSettings": "Enregistrer les paramètres"
+    },
+    "dangerZone": {
+      "title": "Zone de danger",
+      "description": "Supprimez définitivement votre compte et tout son contenu — recettes, tags, catégories et paramètres. Cette action est irréversible.",
+      "deleteAccount": "Supprimer le compte",
+      "dialogTitle": "Supprimer le compte ?",
+      "confirmPassword": "Confirmez votre mot de passe",
+      "deleting": "Suppression...",
+      "permanentlyDelete": "Supprimer définitivement le compte"
+    }
+  },
+  "auth": {
+    "emailPlaceholder": "E-mail",
+    "passwordPlaceholder": "Mot de passe",
+    "login": {
+      "title": "Se connecter",
+      "error": "Échec de la connexion.",
+      "submitting": "Connexion en cours…",
+      "submit": "Se connecter",
+      "noAccount": "Pas de compte ?",
+      "registerLink": "S'inscrire"
+    },
+    "register": {
+      "title": "Créer un compte",
+      "error": "Échec de l'inscription.",
+      "passwordPlaceholder": "Mot de passe (min. 8 caractères)",
+      "submitting": "Création du compte…",
+      "submit": "S'inscrire",
+      "hasAccount": "Vous avez déjà un compte ?",
+      "loginLink": "Se connecter"
+    },
+    "forgotPassword": {
+      "title": "Mot de passe oublié",
+      "submitting": "Envoi en cours…",
+      "submit": "Envoyer le lien de réinitialisation",
+      "checkEmailTitle": "Consultez votre e-mail",
+      "checkEmailBody": "Si cet e-mail est enregistré, nous avons envoyé un lien pour réinitialiser votre mot de passe.",
+      "backToLogin": "Retour à la connexion"
+    },
+    "resetPassword": {
+      "title": "Choisissez un nouveau mot de passe",
+      "error": "Échec de la réinitialisation.",
+      "passwordPlaceholder": "Nouveau mot de passe (min. 8 caractères)",
+      "submitting": "Réinitialisation en cours…",
+      "submit": "Réinitialiser le mot de passe",
+      "invalidLinkTitle": "Lien invalide",
+      "invalidLinkBody": "Ce lien de réinitialisation n'a pas de jeton. Demandez-en un nouveau.",
+      "requestNewLink": "Demander un nouveau lien"
+    }
+  },
+  "recipes": {
+    "list": {
+      "loading": "Chargement des recettes...",
+      "loadError": "Impossible de charger les recettes.",
+      "empty": "Pas encore de recettes. Essayez d'en importer ou d'en ajouter une.",
+      "searchPlaceholder": "Rechercher des recettes..."
+    },
+    "detail": {
+      "loading": "Chargement de la recette...",
+      "notFound": "Recette introuvable.",
+      "export": "Exporter",
+      "edit": "Modifier",
+      "improveWithAi": "Améliorer avec l'IA",
+      "deleteDialogTitle": "Supprimer cette recette ?",
+      "deleteDialogDescription": "Cette action est irréversible.",
+      "ingredients": "Ingrédients",
+      "instructions": "Préparation",
+      "prep": "Préparation",
+      "cook": "Cuisson",
+      "total": "Total",
+      "servings": "Portions"
+    },
+    "card": {
+      "noPhoto": "Aucune photo"
+    },
+    "hero": {
+      "noPhotoYet": "Pas encore de photo"
+    }
+  },
+  "recipeForm": {
+    "editTitle": "Modifier la recette",
+    "addTitle": "Ajouter une recette",
+    "reviewingUrlDraft": "Vous examinez une recette importée depuis une URL — vérifiez-la attentivement avant d'enregistrer.",
+    "reviewingAiDraft": "Vous examinez un brouillon généré par l'IA — vérifiez-le attentivement avant d'enregistrer.",
+    "titlePlaceholder": "Titre",
+    "descriptionPlaceholder": "Description",
+    "photoLabel": "Photo de la recette",
+    "prepMinutes": "Préparation (min)",
+    "cookMinutes": "Cuisson (min)",
+    "totalMinutes": "Total (min)",
+    "servings": "Portions",
+    "category": "Catégorie",
+    "tags": "Tags",
+    "removeTag": "Supprimer le tag",
+    "addTagPlaceholder": "Ajoutez un tag et appuyez sur Entrée",
+    "saving": "Enregistrement...",
+    "saveButton": "Enregistrer la recette",
+    "ingredients": {
+      "label": "Ingrédients",
+      "addButton": "+ Ajouter un ingrédient",
+      "placeholder": "ex. 1 1/2 tasse de farine"
+    },
+    "instructions": {
+      "label": "Préparation",
+      "addButton": "+ Ajouter une étape",
+      "placeholder": "Décrivez cette étape"
+    }
+  },
+  "import": {
+    "title": "Importer une recette",
+    "description": "Collez le JSON-LD depuis la balise de script <0>application/ld+json</0> d'un site de recettes, téléversez un fichier <1>.json</1>, ou collez l'URL de la page et nous la récupérerons pour vous.",
+    "importingText": "Importation...",
+    "importFromText": "Importer depuis le texte",
+    "uploadJsonFile": "Cliquez pour téléverser un fichier .json",
+    "urlDescription": "Collez l'URL d'une page de recette — nous la récupérerons et en extrairons la recette.",
+    "fetching": "Récupération...",
+    "importFromUrl": "Importer depuis une URL"
+  },
+  "aiChat": {
+    "noModelConfigured": "Aucun modèle d'IA n'est encore configuré. Rendez-vous dans les Paramètres pour en choisir un.",
+    "loadingRecipe": "Chargement de la recette...",
+    "improveTitle": "Améliorer « {{title}} » avec l'IA",
+    "createTitle": "Créer avec l'IA",
+    "improveDescription": "Décrivez ce que vous souhaitez changer — l'aperçu affiche toujours la recette actuelle.",
+    "createDescription": "Décrivez le plat que vous souhaitez préparer — un aperçu en direct se construit au fil de la conversation.",
+    "improveExample": "ex. « rendez-la plus épicée » ou « remplacez le poulet par du tofu ».",
+    "createExample": "ex. « un curry végétarien épicé, pour 4 personnes » — donnez autant ou aussi peu de détails que vous voulez.",
+    "thinking": "Réflexion en cours...",
+    "changePlaceholder": "Dites à l'IA ce qu'il faut changer",
+    "cookPlaceholder": "Dites à l'IA ce que vous voulez cuisiner",
+    "send": "Envoyer",
+    "saveAndReview": "Enregistrer et vérifier",
+    "checkSettings": "Vérifiez vos paramètres IA"
+  },
+  "categoryPicker": {
+    "newCategoryPlaceholder": "Ou saisissez une nouvelle catégorie",
+    "set": "Définir",
+    "selected": "Sélectionné :",
+    "clear": "✕ effacer"
+  },
+  "imageUpload": {
+    "photo": "Photo",
+    "replace": "Remplacer {{label}}",
+    "upload": "Téléverser {{label}}"
+  },
+  "servingsStepper": {
+    "decrease": "Réduire le nombre de portions",
+    "increase": "Augmenter le nombre de portions"
+  },
+  "recipePreview": {
+    "empty": "Votre recette apparaîtra ici dès que vous commencerez à discuter.",
+    "untitled": "Recette sans titre",
+    "prep": "Préparation : {{minutes}} min",
+    "cook": "Cuisson : {{minutes}} min",
+    "total": "Total : {{minutes}} min",
+    "servings": "Portions : {{count}}",
+    "ingredients": "Ingrédients",
+    "instructions": "Préparation"
+  }
+}

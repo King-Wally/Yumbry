@@ -1,16 +1,19 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { chatAboutRecipe, getRecipe } from '../api/client';
 import { queryKeys } from '../api/queryKeys';
 import AiErrorBanner from '../components/AiErrorBanner';
 import RecipePreview from '../components/RecipePreview';
 import { toRecipeInput } from '../utils/recipe-mapping';
 import { useAiSettings } from '../hooks/useAiSettings';
+import { useAuth } from '../hooks/useAuth';
 import { chatWithOllamaDirect } from '../services/ollama-direct';
 import type { AiChatMessage, RecipeInput } from '../types';
 
 export default function AiChatPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id?: string }>();
   const isImproving = Boolean(id);
   const navigate = useNavigate();
@@ -22,6 +25,7 @@ export default function AiChatPage() {
   });
 
   const { data: aiSettings } = useAiSettings();
+  const { user } = useAuth();
 
   const [messages, setMessages] = useState<AiChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -37,14 +41,13 @@ export default function AiChatPage() {
   const chatMutation = useMutation({
     mutationFn: (nextMessages: AiChatMessage[]) => {
       if (!aiSettings?.model || !aiSettings?.provider) {
-        return Promise.reject(
-          new Error('No AI model is configured yet. Visit Settings to choose one.')
-        );
+        return Promise.reject(new Error(t('aiChat.noModelConfigured')));
       }
       if (aiSettings.provider === 'ollama') {
         return chatWithOllamaDirect(nextMessages, draft, {
           baseUrl: aiSettings.base_url,
           model: aiSettings.model,
+          locale: user?.locale ?? 'en',
         });
       }
       return chatAboutRecipe({ messages: nextMessages, current_draft: draft });
@@ -74,18 +77,18 @@ export default function AiChatPage() {
     }
   }
 
-  if (isImproving && !recipe) return <p className="text-stone-500">Loading recipe...</p>;
+  if (isImproving && !recipe) return <p className="text-stone-500">{t('aiChat.loadingRecipe')}</p>;
 
   return (
     <div className="space-y-4">
       <div>
         <h1 className="font-serif text-2xl text-stone-900">
-          {isImproving ? `Improve "${recipe!.title}" with AI` : 'Create with AI'}
+          {isImproving
+            ? t('aiChat.improveTitle', { title: recipe!.title })
+            : t('aiChat.createTitle')}
         </h1>
         <p className="mt-1 text-sm text-stone-500">
-          {isImproving
-            ? "Describe what you'd like to change — the preview always shows the current recipe."
-            : "Describe the dish you'd like to make — a live preview builds as you chat."}
+          {isImproving ? t('aiChat.improveDescription') : t('aiChat.createDescription')}
         </p>
       </div>
 
@@ -95,9 +98,7 @@ export default function AiChatPage() {
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
             {messages.length === 0 && (
               <p className="text-sm text-stone-400">
-                {isImproving
-                  ? 'e.g. "make it spicier" or "swap the chicken for tofu".'
-                  : 'e.g. "a spicy vegetarian curry, serves 4" — say as much or as little as you like.'}
+                {isImproving ? t('aiChat.improveExample') : t('aiChat.createExample')}
               </p>
             )}
             {messages.map((message, index) => (
@@ -112,7 +113,9 @@ export default function AiChatPage() {
                 {message.content}
               </div>
             ))}
-            {chatMutation.isPending && <p className="text-sm text-stone-400">Thinking...</p>}
+            {chatMutation.isPending && (
+              <p className="text-sm text-stone-400">{t('aiChat.thinking')}</p>
+            )}
           </div>
 
           <div className="border-t border-stone-200 p-3">
@@ -122,7 +125,7 @@ export default function AiChatPage() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={
-                  isImproving ? 'Tell the AI what to change' : "Tell the AI what you'd like to cook"
+                  isImproving ? t('aiChat.changePlaceholder') : t('aiChat.cookPlaceholder')
                 }
                 disabled={chatMutation.isPending}
                 className="flex-1 rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none disabled:opacity-50"
@@ -132,7 +135,7 @@ export default function AiChatPage() {
                 disabled={!input.trim() || chatMutation.isPending}
                 className="rounded-md border border-stone-300 px-4 py-2 text-sm disabled:opacity-50"
               >
-                Send
+                {t('aiChat.send')}
               </button>
             </form>
             {chatMutation.isError && <AiErrorBanner error={chatMutation.error} />}
@@ -152,7 +155,7 @@ export default function AiChatPage() {
           disabled={!draft}
           className="rounded-md bg-clay px-4 py-2 text-white disabled:opacity-50"
         >
-          Save and review
+          {t('aiChat.saveAndReview')}
         </button>
       </div>
     </div>

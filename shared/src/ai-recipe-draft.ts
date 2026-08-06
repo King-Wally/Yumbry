@@ -31,6 +31,15 @@ export interface AiChatEnvelope {
   recipe: AiRecipeDraft;
 }
 
+export type SupportedLocale = 'en' | 'nl' | 'fr' | 'es';
+
+const LANGUAGE_NAMES: Record<SupportedLocale, string> = {
+  en: 'English',
+  nl: 'Flemish Dutch',
+  fr: 'French',
+  es: 'Spanish',
+};
+
 const RECIPE_JSON_SHAPE = `{
   "title": string,
   "description": string | null,
@@ -95,9 +104,32 @@ function buildChatSystemPrompt(): AiChatMessage {
   };
 }
 
+function buildLanguageOverride(locale: SupportedLocale): AiChatMessage {
+  const languageName = LANGUAGE_NAMES[locale];
+  return {
+    role: 'system',
+    content:
+      `Language override: the user has configured ${languageName} as their preferred language. ` +
+      'This replaces two of the instructions above: ignore the instruction that "reply" should ' +
+      'match whatever language the user is typing in, and ignore "Flemish Dutch" as the fixed ' +
+      'target of stage 2 — instead, in both cases, use ' +
+      `${languageName} regardless of what language the user's messages are written in. ` +
+      'Stage 1 (the internal English/imperial draft) and all of your internal reasoning still ' +
+      'happen in English exactly as before and are never shown to the user — only the final ' +
+      `"reply" text and the final "recipe" fields (title, ingredients, instructions) must be in ` +
+      `${languageName}. Keep converting every measurement to metric units as already instructed, ` +
+      'regardless of language. ' +
+      (locale === 'nl'
+        ? 'For Flemish Dutch, follow the vocabulary guidance already given above (e.g. "ajuin" not ' +
+          '"ui", "kropsla" not "krop sla").'
+        : `Use standard, natural ${languageName} recipe vocabulary and phrasing.`),
+  };
+}
+
 export function buildChatMessages(
   conversation: AiChatMessage[],
-  currentDraft: AiRecipeDraft | null
+  currentDraft: AiRecipeDraft | null,
+  locale: SupportedLocale = 'en'
 ): AiChatMessage[] {
   const draftContext: AiChatMessage = {
     role: 'system',
@@ -105,7 +137,7 @@ export function buildChatMessages(
       ? `Current recipe draft (JSON):\n${JSON.stringify(currentDraft, null, 2)}`
       : 'There is no recipe draft yet — this is the start of a new recipe.',
   };
-  return [buildChatSystemPrompt(), draftContext, ...conversation];
+  return [buildChatSystemPrompt(), draftContext, buildLanguageOverride(locale), ...conversation];
 }
 
 function stripJsonFences(text: string): string {

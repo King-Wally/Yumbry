@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   deleteAccount,
   getMe,
+  patchMe,
   postForgotPassword,
   postLogin,
   postLogout,
@@ -18,6 +19,7 @@ authRouter.post('/register', loginRateLimiter, asyncHandler(postRegister));
 authRouter.post('/login', loginRateLimiter, asyncHandler(postLogin));
 authRouter.post('/logout', loginRateLimiter, asyncHandler(postLogout));
 authRouter.get('/me', requireAuth, asyncHandler(getMe));
+authRouter.patch('/me', requireAuth, asyncHandler(patchMe));
 authRouter.delete('/me', requireAuth, loginRateLimiter, asyncHandler(deleteAccount));
 authRouter.post('/forgot-password', forgotPasswordRateLimiter, asyncHandler(postForgotPassword));
 authRouter.post('/reset-password', loginRateLimiter, asyncHandler(postResetPassword));

@@ -1,0 +1,210 @@
+{
+  "common": {
+    "cancel": "Annuleren",
+    "save": "Opslaan",
+    "loading": "Laden...",
+    "back": "Terug",
+    "delete": "Verwijderen",
+    "add": "Toevoegen",
+    "all": "Alle",
+    "or": "of",
+    "menu": "Menu",
+    "working": "Bezig...",
+    "confirm": "Bevestigen",
+    "minutes": "{{count}} min",
+    "somethingWentWrong": "Er is iets misgegaan."
+  },
+  "nav": {
+    "addRecipe": "Recept toevoegen",
+    "import": "Importeren",
+    "createWithAi": "Maken met AI",
+    "settings": "Instellingen",
+    "logOut": "Uitloggen"
+  },
+  "settings": {
+    "language": {
+      "title": "Taal",
+      "description": "Kies de taal die in de app en door de AI-assistent wordt gebruikt.",
+      "label": "Taal",
+      "saved": "Taal opgeslagen."
+    },
+    "ai": {
+      "title": "AI-instellingen",
+      "description": "Kies de AI-provider die door de AI-assistentfuncties wordt gebruikt en configureer hoe deze te bereiken is.",
+      "provider": "Provider",
+      "selectProvider": "Kies een provider...",
+      "baseUrl": "Basis-URL",
+      "baseUrlOptional": "(optioneel — overschrijft de standaard van de provider)",
+      "ollamaNote": "Er wordt geen API-sleutel verzonden. Als je Ollama-instantie authenticatie vereist (bijvoorbeeld achter een reverse proxy), gebruik dan de aangepaste provider, die via de server blijft lopen.",
+      "apiKey": "API-sleutel",
+      "optional": "(optioneel)",
+      "apiKeySavedPlaceholder": "•••• (opgeslagen — laat leeg om te behouden)",
+      "clearApiKey": "Verwijder de opgeslagen API-sleutel",
+      "checking": "Controleren...",
+      "checkConnection": "Verbinding controleren / modellen laden",
+      "connectionError": "Kon die provider niet bereiken — je kunt hieronder nog steeds handmatig een modelnaam invoeren.",
+      "model": "Model",
+      "selectModel": "Kies een model...",
+      "saved": "Instellingen opgeslagen.",
+      "saving": "Opslaan...",
+      "saveSettings": "Instellingen opslaan"
+    },
+    "dangerZone": {
+      "title": "Gevarenzone",
+      "description": "Verwijder je account en alles erin permanent — recepten, tags, categorieën en instellingen. Dit kan niet ongedaan worden gemaakt.",
+      "deleteAccount": "Account verwijderen",
+      "dialogTitle": "Account verwijderen?",
+      "confirmPassword": "Bevestig je wachtwoord",
+      "deleting": "Verwijderen...",
+      "permanentlyDelete": "Account permanent verwijderen"
+    }
+  },
+  "auth": {
+    "emailPlaceholder": "E-mail",
+    "passwordPlaceholder": "Wachtwoord",
+    "login": {
+      "title": "Inloggen",
+      "error": "Inloggen mislukt.",
+      "submitting": "Bezig met inloggen…",
+      "submit": "Inloggen",
+      "noAccount": "Nog geen account?",
+      "registerLink": "Registreren"
+    },
+    "register": {
+      "title": "Account aanmaken",
+      "error": "Registratie mislukt.",
+      "passwordPlaceholder": "Wachtwoord (min. 8 tekens)",
+      "submitting": "Account aanmaken…",
+      "submit": "Registreren",
+      "hasAccount": "Heb je al een account?",
+      "loginLink": "Inloggen"
+    },
+    "forgotPassword": {
+      "title": "Wachtwoord vergeten",
+      "submitting": "Bezig met verzenden…",
+      "submit": "Reset-link versturen",
+      "checkEmailTitle": "Controleer je e-mail",
+      "checkEmailBody": "Als dat e-mailadres geregistreerd is, hebben we een link gestuurd om je wachtwoord opnieuw in te stellen.",
+      "backToLogin": "Terug naar inloggen"
+    },
+    "resetPassword": {
+      "title": "Kies een nieuw wachtwoord",
+      "error": "Opnieuw instellen mislukt.",
+      "passwordPlaceholder": "Nieuw wachtwoord (min. 8 tekens)",
+      "submitting": "Bezig met opnieuw instellen…",
+      "submit": "Wachtwoord opnieuw instellen",
+      "invalidLinkTitle": "Ongeldige link",
+      "invalidLinkBody": "Deze reset-link mist zijn token. Vraag een nieuwe aan.",
+      "requestNewLink": "Nieuwe link aanvragen"
+    }
+  },
+  "recipes": {
+    "list": {
+      "loading": "Recepten laden...",
+      "loadError": "Kon recepten niet laden.",
+      "empty": "Nog geen recepten. Probeer er een te importeren of toe te voegen.",
+      "searchPlaceholder": "Recepten zoeken..."
+    },
+    "detail": {
+      "loading": "Recept laden...",
+      "notFound": "Recept niet gevonden.",
+      "export": "Exporteren",
+      "edit": "Bewerken",
+      "improveWithAi": "Verbeteren met AI",
+      "deleteDialogTitle": "Dit recept verwijderen?",
+      "deleteDialogDescription": "Dit kan niet ongedaan worden gemaakt.",
+      "ingredients": "Ingrediënten",
+      "instructions": "Bereidingswijze",
+      "prep": "Voorbereiding",
+      "cook": "Bereiding",
+      "total": "Totaal",
+      "servings": "Porties"
+    },
+    "card": {
+      "noPhoto": "Geen foto"
+    },
+    "hero": {
+      "noPhotoYet": "Nog geen foto"
+    }
+  },
+  "recipeForm": {
+    "editTitle": "Recept bewerken",
+    "addTitle": "Recept toevoegen",
+    "reviewingUrlDraft": "Je bekijkt een recept dat vanaf een URL is geïmporteerd — controleer het zorgvuldig voordat je opslaat.",
+    "reviewingAiDraft": "Je bekijkt een door AI gegenereerd concept — controleer het zorgvuldig voordat je opslaat.",
+    "titlePlaceholder": "Titel",
+    "descriptionPlaceholder": "Beschrijving",
+    "photoLabel": "Receptfoto",
+    "prepMinutes": "Voorbereiding (min)",
+    "cookMinutes": "Bereiding (min)",
+    "totalMinutes": "Totaal (min)",
+    "servings": "Porties",
+    "category": "Categorie",
+    "tags": "Tags",
+    "removeTag": "Tag verwijderen",
+    "addTagPlaceholder": "Voeg een tag toe en druk op Enter",
+    "saving": "Opslaan...",
+    "saveButton": "Recept opslaan",
+    "ingredients": {
+      "label": "Ingrediënten",
+      "addButton": "+ Ingrediënt toevoegen",
+      "placeholder": "bijv. 1 1/2 kopjes bloem"
+    },
+    "instructions": {
+      "label": "Bereidingswijze",
+      "addButton": "+ Stap toevoegen",
+      "placeholder": "Beschrijf deze stap"
+    }
+  },
+  "import": {
+    "title": "Recept importeren",
+    "description": "Plak de JSON-LD uit het <0>application/ld+json</0>-scripttag van een receptensite, upload een <1>.json</1>-bestand, of plak de URL van de pagina en wij halen het recept op.",
+    "importingText": "Importeren...",
+    "importFromText": "Importeren vanuit tekst",
+    "uploadJsonFile": "Klik om een .json-bestand te uploaden",
+    "urlDescription": "Plak een URL van een receptpagina — wij halen deze op en filteren het recept eruit.",
+    "fetching": "Ophalen...",
+    "importFromUrl": "Importeren vanaf URL"
+  },
+  "aiChat": {
+    "noModelConfigured": "Er is nog geen AI-model geconfigureerd. Ga naar Instellingen om er een te kiezen.",
+    "loadingRecipe": "Recept laden...",
+    "improveTitle": "\"{{title}}\" verbeteren met AI",
+    "createTitle": "Maken met AI",
+    "improveDescription": "Beschrijf wat je wilt veranderen — de voorvertoning toont altijd het huidige recept.",
+    "createDescription": "Beschrijf het gerecht dat je wilt maken — een live voorvertoning wordt opgebouwd terwijl je chat.",
+    "improveExample": "bijv. \"maak het pittiger\" of \"vervang de kip door tofu\".",
+    "createExample": "bijv. \"een pittige vegetarische curry, voor 4 personen\" — zeg zoveel of zo weinig als je wilt.",
+    "thinking": "Aan het denken...",
+    "changePlaceholder": "Vertel de AI wat er moet veranderen",
+    "cookPlaceholder": "Vertel de AI wat je wilt koken",
+    "send": "Versturen",
+    "saveAndReview": "Opslaan en bekijken",
+    "checkSettings": "Controleer je AI-instellingen"
+  },
+  "categoryPicker": {
+    "newCategoryPlaceholder": "Of typ een nieuwe categorie",
+    "set": "Instellen",
+    "selected": "Geselecteerd:",
+    "clear": "✕ wissen"
+  },
+  "imageUpload": {
+    "photo": "Foto",
+    "replace": "{{label}} vervangen",
+    "upload": "{{label}} uploaden"
+  },
+  "servingsStepper": {
+    "decrease": "Minder porties",
+    "increase": "Meer porties"
+  },
+  "recipePreview": {
+    "empty": "Je recept verschijnt hier zodra je begint te chatten.",
+    "untitled": "Naamloos recept",
+    "prep": "Voorbereiding: {{minutes}} min",
+    "cook": "Bereiding: {{minutes}} min",
+    "total": "Totaal: {{minutes}} min",
+    "servings": "Porties: {{count}}",
+    "ingredients": "Ingrediënten",
+    "instructions": "Bereidingswijze"
+  }
+}

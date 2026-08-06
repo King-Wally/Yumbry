@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AiChatPage from '../src/pages/AiChatPage';
 import { queryKeys } from '../src/api/queryKeys';
 import * as apiClient from '../src/api/client';
+import { AuthProvider } from '../src/context/AuthContext';
 import type { AiSettings, Recipe, RecipeInput } from '../src/types';
 
 vi.mock('../src/api/client');
@@ -63,10 +64,12 @@ function renderCreate() {
         initialEntries={['/create-with-ai']}
         future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
       >
-        <Routes>
-          <Route path="/create-with-ai" element={<AiChatPage />} />
-          <Route path="/recipes/new" element={<LocationProbe />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/create-with-ai" element={<AiChatPage />} />
+            <Route path="/recipes/new" element={<LocationProbe />} />
+          </Routes>
+        </AuthProvider>
       </MemoryRouter>
     </QueryClientProvider>
   );
@@ -81,10 +84,12 @@ function renderImprove() {
         initialEntries={['/recipes/1/ai-improve']}
         future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
       >
-        <Routes>
-          <Route path="/recipes/:id/ai-improve" element={<AiChatPage />} />
-          <Route path="/recipes/:id/edit" element={<LocationProbe />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/recipes/:id/ai-improve" element={<AiChatPage />} />
+            <Route path="/recipes/:id/edit" element={<LocationProbe />} />
+          </Routes>
+        </AuthProvider>
       </MemoryRouter>
     </QueryClientProvider>
   );
@@ -94,6 +99,7 @@ describe('AiChatPage create mode', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(apiClient.getAiSettings).mockResolvedValue(aiSettings);
+    vi.mocked(apiClient.getCurrentUser).mockRejectedValue(new Error('not authenticated'));
   });
 
   it('sends a message and updates both the transcript and the preview from the envelope response', async () => {
@@ -158,6 +164,7 @@ describe('AiChatPage improve mode', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(apiClient.getAiSettings).mockResolvedValue(aiSettings);
+    vi.mocked(apiClient.getCurrentUser).mockRejectedValue(new Error('not authenticated'));
   });
 
   it('seeds the initial preview from the fetched recipe with no chat call', async () => {

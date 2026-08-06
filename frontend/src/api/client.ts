@@ -9,6 +9,7 @@ import type {
   RecipeSummary,
   Tag,
 } from '../types';
+import type { SupportedLocale } from 'yumbry-shared';
 
 interface ApiErrorBody {
   error?: string;
@@ -141,10 +142,15 @@ export function chatAboutRecipe(data: AiChatTurnRequest) {
 export interface CurrentUser {
   id: number;
   email: string;
+  locale: SupportedLocale;
 }
 
 export function getCurrentUser() {
   return request<CurrentUser>('/auth/me');
+}
+
+export function updateProfile(data: { locale: SupportedLocale }) {
+  return request<CurrentUser>('/auth/me', { method: 'PATCH', body: JSON.stringify(data) });
 }
 
 export function login(email: string, password: string) {

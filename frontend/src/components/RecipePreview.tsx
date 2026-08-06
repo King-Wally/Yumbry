@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { RecipeInput } from '../types';
 
 interface RecipePreviewProps {
@@ -5,18 +6,17 @@ interface RecipePreviewProps {
 }
 
 export default function RecipePreview({ draft }: RecipePreviewProps) {
+  const { t } = useTranslation();
   if (!draft) {
-    return (
-      <p className="text-sm text-stone-400">
-        Your recipe will appear here once you start chatting.
-      </p>
-    );
+    return <p className="text-sm text-stone-400">{t('recipePreview.empty')}</p>;
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl text-stone-900">{draft.title || 'Untitled recipe'}</h2>
+        <h2 className="font-serif text-2xl text-stone-900">
+          {draft.title || t('recipePreview.untitled')}
+        </h2>
         {draft.category && (
           <span className="mt-2 inline-block rounded-full bg-clay px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
             {draft.category}
@@ -39,14 +39,20 @@ export default function RecipePreview({ draft }: RecipePreviewProps) {
       )}
 
       <div className="flex flex-wrap gap-4 text-sm text-stone-600">
-        {draft.prep_time_minutes != null && <span>Prep: {draft.prep_time_minutes} min</span>}
-        {draft.cook_time_minutes != null && <span>Cook: {draft.cook_time_minutes} min</span>}
-        {draft.total_time_minutes != null && <span>Total: {draft.total_time_minutes} min</span>}
-        <span>Servings: {draft.servings}</span>
+        {draft.prep_time_minutes != null && (
+          <span>{t('recipePreview.prep', { minutes: draft.prep_time_minutes })}</span>
+        )}
+        {draft.cook_time_minutes != null && (
+          <span>{t('recipePreview.cook', { minutes: draft.cook_time_minutes })}</span>
+        )}
+        {draft.total_time_minutes != null && (
+          <span>{t('recipePreview.total', { minutes: draft.total_time_minutes })}</span>
+        )}
+        <span>{t('recipePreview.servings', { count: draft.servings })}</span>
       </div>
 
       <section>
-        <h3 className="mb-2 font-serif text-lg text-stone-900">Ingredients</h3>
+        <h3 className="mb-2 font-serif text-lg text-stone-900">{t('recipePreview.ingredients')}</h3>
         <ul className="divide-y divide-stone-100">
           {draft.ingredients.map((line, i) => (
             <li key={i} className="flex items-start gap-2.5 py-2 text-stone-700">
@@ -58,7 +64,9 @@ export default function RecipePreview({ draft }: RecipePreviewProps) {
       </section>
 
       <section>
-        <h3 className="mb-2 font-serif text-lg text-stone-900">Instructions</h3>
+        <h3 className="mb-2 font-serif text-lg text-stone-900">
+          {t('recipePreview.instructions')}
+        </h3>
         <ol className="space-y-4">
           {draft.instructions.map((step) => (
             <li key={step.step_number} className="flex gap-3">

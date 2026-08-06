@@ -3,7 +3,11 @@ import {
   buildChatMessages,
   parseChatEnvelope,
   type AiRecipeDraft,
+  type SupportedLocale,
 } from '../src/ai-recipe-draft.js';
+
+const SYSTEM_PROMPT_MARKER =
+  'You are a friendly recipe-development assistant, working with a home cook';
 
 describe('parseChatEnvelope', () => {
   const wellFormedRecipe = {
@@ -156,5 +160,55 @@ describe('buildChatMessages', () => {
     };
     const messages = buildChatMessages([{ role: 'user', content: 'make it spicier' }], draft);
     expect(JSON.stringify(messages)).toContain('Mild Curry');
+  });
+
+  it("leaves buildChatSystemPrompt's own message byte-identical regardless of locale", () => {
+    const withoutLocale = buildChatMessages([{ role: 'user', content: 'hi' }], null);
+    const withLocale = buildChatMessages([{ role: 'user', content: 'hi' }], null, 'fr');
+    expect(withoutLocale[0]).toEqual(withLocale[0]);
+    expect(withLocale[0].content).toContain(SYSTEM_PROMPT_MARKER);
+  });
+
+  it('defaults to English when no locale is passed', () => {
+    const messages = buildChatMessages([{ role: 'user', content: 'hi' }], null);
+    const override = messages.find((m) => m.content.startsWith('Language override:'));
+    expect(override?.content).toContain('English');
+  });
+
+  const locales: { locale: SupportedLocale; languageName: string }[] = [
+    { locale: 'en', languageName: 'English' },
+    { locale: 'nl', languageName: 'Flemish Dutch' },
+    { locale: 'fr', languageName: 'French' },
+    { locale: 'es', languageName: 'Spanish' },
+  ];
+
+  it.each(locales)(
+    'appends a language-override system message for locale $locale',
+    ({ locale, languageName }) => {
+      const messages = buildChatMessages([{ role: 'user', content: 'hi' }], null, locale);
+
+      // buildChatSystemPrompt(), draftContext, language override, ...conversation
+      expect(messages).toHaveLength(4);
+      expect(messages[0].content).toContain(SYSTEM_PROMPT_MARKER);
+      expect(messages[2].role).toBe('system');
+      expect(messages[2].content).toContain('Language override:');
+      expect(messages[2].content).toContain(languageName);
+      expect(messages[2].content).toContain('reply');
+      expect(messages[2].content).toContain('recipe');
+      expect(messages[2].content).toMatch(/internal reasoning still\s+happen in English/);
+      expect(messages[3]).toEqual({ role: 'user', content: 'hi' });
+    }
+  );
+
+  it('reuses the existing Flemish Dutch vocabulary guidance for locale nl', () => {
+    const messages = buildChatMessages([{ role: 'user', content: 'hi' }], null, 'nl');
+    const override = messages.find((m) => m.content.startsWith('Language override:'));
+    expect(override?.content).toContain('vocabulary guidance already given above');
+  });
+
+  it('instructs standard vocabulary for non-Dutch locales', () => {
+    const messages = buildChatMessages([{ role: 'user', content: 'hi' }], null, 'es');
+    const override = messages.find((m) => m.content.startsWith('Language override:'));
+    expect(override?.content).toContain('standard, natural Spanish recipe vocabulary');
   });
 });

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import Chip from './Chip';
 
 interface FilterChipItem {
@@ -12,12 +13,13 @@ interface FilterChipsProps {
 }
 
 export default function FilterChips({ items, activeValue, onSelect }: FilterChipsProps) {
+  const { t } = useTranslation();
   if (!items || items.length === 0) return null;
 
   return (
     <div className="flex flex-wrap gap-2">
       <Chip active={!activeValue} onClick={() => onSelect(null)}>
-        All
+        {t('common.all')}
       </Chip>
       {items.map((item) => (
         <Chip

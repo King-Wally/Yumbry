@@ -12,6 +12,7 @@ model User {
   email        String   @unique
   passwordHash String   @map("password_hash")
   tokenVersion Int      @default(0) @map("token_version")
+  locale       String   @default("en") @map("locale")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   recipes             Recipe[]

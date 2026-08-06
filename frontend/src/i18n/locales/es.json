@@ -1,0 +1,210 @@
+{
+  "common": {
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "loading": "Cargando...",
+    "back": "Atrás",
+    "delete": "Eliminar",
+    "add": "Añadir",
+    "all": "Todo",
+    "or": "o",
+    "menu": "Menú",
+    "working": "Procesando...",
+    "confirm": "Confirmar",
+    "minutes": "{{count}} min",
+    "somethingWentWrong": "Algo salió mal."
+  },
+  "nav": {
+    "addRecipe": "Añadir receta",
+    "import": "Importar",
+    "createWithAi": "Crear con IA",
+    "settings": "Ajustes",
+    "logOut": "Cerrar sesión"
+  },
+  "settings": {
+    "language": {
+      "title": "Idioma",
+      "description": "Elige el idioma utilizado en la aplicación y por el asistente de IA.",
+      "label": "Idioma",
+      "saved": "Idioma guardado."
+    },
+    "ai": {
+      "title": "Ajustes de IA",
+      "description": "Elige el proveedor de IA utilizado por las funciones del asistente de IA y configura cómo contactarlo.",
+      "provider": "Proveedor",
+      "selectProvider": "Selecciona un proveedor...",
+      "baseUrl": "URL base",
+      "baseUrlOptional": "(opcional — anula el valor predeterminado del proveedor)",
+      "ollamaNote": "No se envía ninguna clave de API. Si tu instancia de Ollama requiere autenticación (por ejemplo, detrás de un proxy inverso), usa el proveedor personalizado, que sigue enrutándose a través del servidor.",
+      "apiKey": "Clave de API",
+      "optional": "(opcional)",
+      "apiKeySavedPlaceholder": "•••• (guardada — deja en blanco para conservarla)",
+      "clearApiKey": "Borrar la clave de API guardada",
+      "checking": "Comprobando...",
+      "checkConnection": "Comprobar conexión / cargar modelos",
+      "connectionError": "No se pudo contactar con ese proveedor — aún puedes escribir un nombre de modelo manualmente a continuación.",
+      "model": "Modelo",
+      "selectModel": "Selecciona un modelo...",
+      "saved": "Ajustes guardados.",
+      "saving": "Guardando...",
+      "saveSettings": "Guardar ajustes"
+    },
+    "dangerZone": {
+      "title": "Zona de peligro",
+      "description": "Elimina permanentemente tu cuenta y todo su contenido — recetas, etiquetas, categorías y ajustes. Esta acción no se puede deshacer.",
+      "deleteAccount": "Eliminar cuenta",
+      "dialogTitle": "¿Eliminar cuenta?",
+      "confirmPassword": "Confirma tu contraseña",
+      "deleting": "Eliminando...",
+      "permanentlyDelete": "Eliminar cuenta permanentemente"
+    }
+  },
+  "auth": {
+    "emailPlaceholder": "Correo electrónico",
+    "passwordPlaceholder": "Contraseña",
+    "login": {
+      "title": "Iniciar sesión",
+      "error": "Error al iniciar sesión.",
+      "submitting": "Iniciando sesión…",
+      "submit": "Iniciar sesión",
+      "noAccount": "¿No tienes cuenta?",
+      "registerLink": "Regístrate"
+    },
+    "register": {
+      "title": "Crear una cuenta",
+      "error": "Error en el registro.",
+      "passwordPlaceholder": "Contraseña (mín. 8 caracteres)",
+      "submitting": "Creando cuenta…",
+      "submit": "Registrarse",
+      "hasAccount": "¿Ya tienes una cuenta?",
+      "loginLink": "Iniciar sesión"
+    },
+    "forgotPassword": {
+      "title": "Olvidé mi contraseña",
+      "submitting": "Enviando…",
+      "submit": "Enviar enlace de restablecimiento",
+      "checkEmailTitle": "Revisa tu correo",
+      "checkEmailBody": "Si ese correo está registrado, te hemos enviado un enlace para restablecer tu contraseña.",
+      "backToLogin": "Volver a iniciar sesión"
+    },
+    "resetPassword": {
+      "title": "Elige una nueva contraseña",
+      "error": "Error al restablecer la contraseña.",
+      "passwordPlaceholder": "Nueva contraseña (mín. 8 caracteres)",
+      "submitting": "Restableciendo…",
+      "submit": "Restablecer contraseña",
+      "invalidLinkTitle": "Enlace no válido",
+      "invalidLinkBody": "A este enlace de restablecimiento le falta el token. Solicita uno nuevo.",
+      "requestNewLink": "Solicitar un nuevo enlace"
+    }
+  },
+  "recipes": {
+    "list": {
+      "loading": "Cargando recetas...",
+      "loadError": "No se pudieron cargar las recetas.",
+      "empty": "Aún no hay recetas. Prueba a importar o añadir una.",
+      "searchPlaceholder": "Buscar recetas..."
+    },
+    "detail": {
+      "loading": "Cargando receta...",
+      "notFound": "Receta no encontrada.",
+      "export": "Exportar",
+      "edit": "Editar",
+      "improveWithAi": "Mejorar con IA",
+      "deleteDialogTitle": "¿Eliminar esta receta?",
+      "deleteDialogDescription": "Esta acción no se puede deshacer.",
+      "ingredients": "Ingredientes",
+      "instructions": "Preparación",
+      "prep": "Preparación",
+      "cook": "Cocción",
+      "total": "Total",
+      "servings": "Raciones"
+    },
+    "card": {
+      "noPhoto": "Sin foto"
+    },
+    "hero": {
+      "noPhotoYet": "Aún sin foto"
+    }
+  },
+  "recipeForm": {
+    "editTitle": "Editar receta",
+    "addTitle": "Añadir una receta",
+    "reviewingUrlDraft": "Estás revisando una receta importada desde una URL — revísala con cuidado antes de guardar.",
+    "reviewingAiDraft": "Estás revisando un borrador generado por IA — revísalo con cuidado antes de guardar.",
+    "titlePlaceholder": "Título",
+    "descriptionPlaceholder": "Descripción",
+    "photoLabel": "Foto de la receta",
+    "prepMinutes": "Preparación (min)",
+    "cookMinutes": "Cocción (min)",
+    "totalMinutes": "Total (min)",
+    "servings": "Raciones",
+    "category": "Categoría",
+    "tags": "Etiquetas",
+    "removeTag": "Eliminar etiqueta",
+    "addTagPlaceholder": "Añade una etiqueta y pulsa Intro",
+    "saving": "Guardando...",
+    "saveButton": "Guardar receta",
+    "ingredients": {
+      "label": "Ingredientes",
+      "addButton": "+ Añadir ingrediente",
+      "placeholder": "p. ej. 1 1/2 tazas de harina"
+    },
+    "instructions": {
+      "label": "Preparación",
+      "addButton": "+ Añadir paso",
+      "placeholder": "Describe este paso"
+    }
+  },
+  "import": {
+    "title": "Importar una receta",
+    "description": "Pega el JSON-LD de la etiqueta de script <0>application/ld+json</0> de un sitio de recetas, sube un archivo <1>.json</1>, o pega la URL de la página y la buscaremos por ti.",
+    "importingText": "Importando...",
+    "importFromText": "Importar desde texto",
+    "uploadJsonFile": "Haz clic para subir un archivo .json",
+    "urlDescription": "Pega la URL de una página de receta — la buscaremos y extraeremos la receta.",
+    "fetching": "Buscando...",
+    "importFromUrl": "Importar desde URL"
+  },
+  "aiChat": {
+    "noModelConfigured": "Todavía no hay un modelo de IA configurado. Ve a Ajustes para elegir uno.",
+    "loadingRecipe": "Cargando receta...",
+    "improveTitle": "Mejorar \"{{title}}\" con IA",
+    "createTitle": "Crear con IA",
+    "improveDescription": "Describe lo que te gustaría cambiar — la vista previa siempre muestra la receta actual.",
+    "createDescription": "Describe el plato que te gustaría preparar — se genera una vista previa en directo mientras chateas.",
+    "improveExample": "p. ej. \"hazlo más picante\" o \"cambia el pollo por tofu\".",
+    "createExample": "p. ej. \"un curry vegetariano picante, para 4 personas\" — di tanto o tan poco como quieras.",
+    "thinking": "Pensando...",
+    "changePlaceholder": "Dile a la IA qué cambiar",
+    "cookPlaceholder": "Dile a la IA qué te gustaría cocinar",
+    "send": "Enviar",
+    "saveAndReview": "Guardar y revisar",
+    "checkSettings": "Revisa tus ajustes de IA"
+  },
+  "categoryPicker": {
+    "newCategoryPlaceholder": "O escribe una nueva categoría",
+    "set": "Establecer",
+    "selected": "Seleccionado:",
+    "clear": "✕ borrar"
+  },
+  "imageUpload": {
+    "photo": "Foto",
+    "replace": "Reemplazar {{label}}",
+    "upload": "Subir {{label}}"
+  },
+  "servingsStepper": {
+    "decrease": "Reducir raciones",
+    "increase": "Aumentar raciones"
+  },
+  "recipePreview": {
+    "empty": "Tu receta aparecerá aquí en cuanto empieces a chatear.",
+    "untitled": "Receta sin título",
+    "prep": "Preparación: {{minutes}} min",
+    "cook": "Cocción: {{minutes}} min",
+    "total": "Total: {{minutes}} min",
+    "servings": "Raciones: {{count}}",
+    "ingredients": "Ingredientes",
+    "instructions": "Preparación"
+  }
+}
