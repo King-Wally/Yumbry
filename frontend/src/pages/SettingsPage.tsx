@@ -39,9 +39,7 @@ export default function SettingsPage() {
   const [loaded, setLoaded] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[] | null>(null);
 
-  // Populate the form during render when settings load, rather than in a
-  // useEffect — this is React's documented pattern for initializing editable
-  // state from async data without an extra render/flash of stale values.
+  // Form hydration in render (not useEffect) to avoid stale-value flash
   if (settings && !loaded) {
     setLoaded(true);
     setProvider(settings.provider ?? '');
@@ -60,8 +58,6 @@ export default function SettingsPage() {
   });
 
   const saveMutation = useMutation({
-    // The Provider <select> is `required`, so the browser blocks form
-    // submission (and this mutationFn never runs) until it's non-empty.
     mutationFn: () =>
       updateAiSettings({
         provider: provider as AiProvider,

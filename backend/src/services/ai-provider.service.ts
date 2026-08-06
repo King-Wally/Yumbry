@@ -25,10 +25,6 @@ const DEFAULT_BASE_URLS: Record<Exclude<AiProvider, 'custom'>, string> = {
   ollama: DEFAULT_OLLAMA_BASE_URL,
 };
 
-/** Resolves the base URL to actually call: the user's stored override if
- * present, otherwise each hosted provider's known OpenAI-compatible endpoint.
- * `custom` has no default — the caller must always supply a base_url for it
- * (enforced by AiSettingsBodySchema at the API boundary). */
 export function resolveBaseUrl(provider: AiProvider, baseUrl: string | null): string {
   if (baseUrl) return normalizeBaseUrl(baseUrl);
   if (provider === 'custom') {
@@ -45,8 +41,6 @@ function createClient(options: {
   return new OpenAI({
     baseURL: resolveBaseUrl(options.provider, options.baseUrl),
     apiKey: options.apiKey || 'unused',
-    // Fail fast rather than retrying with backoff — matches the old ollama-js
-    // client's behavior and keeps AiProviderError kinds predictable for callers.
     maxRetries: 0,
   });
 }
@@ -65,9 +59,6 @@ function toAiProviderError(err: unknown): AiProviderError {
   return new AiProviderError(unreachableMessage(), 'unreachable', err);
 }
 
-/** Calls the provider's non-streaming chat-completions endpoint and returns
- * the assistant's reply text. Throws AiProviderError with a `kind` the caller
- * can map to an HTTP status; never throws a bare openai-SDK error. */
 export async function chatWithAi(
   messages: AiChatMessage[],
   options: {
@@ -98,10 +89,6 @@ export async function chatWithAi(
   return content;
 }
 
-/** Lists available models, for the Settings page dropdown. Best-effort: works
- * for OpenAI/Ollama/custom endpoints that implement GET /v1/models. If a
- * provider doesn't support this, the caller falls back to a free-text model
- * input, so failures here don't need special-casing per provider. */
 export async function listAiModels(options: {
   provider: AiProvider;
   baseUrl: string | null;

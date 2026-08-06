@@ -18,8 +18,6 @@ import { RecipeBodySchema, type RecipeBody } from '../schemas/recipe.schema.js';
 import { UrlImportBodySchema } from '../schemas/url-import.schema.js';
 import { sendUrlImportError } from '../utils/url-import-error.js';
 
-/** Manually-entered ingredients are given as raw text lines; parse them the same
- * way JSON-LD import does, so scaling works regardless of entry route. */
 function normalizeIngredients(ingredients: RecipeBody['ingredients']): IngredientInput[] {
   if (!Array.isArray(ingredients)) return [];
   return ingredients.map((ingredient) => {
@@ -61,10 +59,6 @@ export async function importRecipe(req: Request, res: Response) {
   }
 }
 
-/** Fetches `url`, extracts its schema.org Recipe JSON-LD, and returns an
- * unsaved draft — unlike importRecipe (JSON-LD paste/upload), nothing is
- * persisted here; the frontend hands the response to the recipe form for
- * review, the same way the AI-create draft hand-off works. */
 export async function importRecipeFromUrl(req: Request, res: Response) {
   try {
     const { url } = UrlImportBodySchema.parse(req.body);

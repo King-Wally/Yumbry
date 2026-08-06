@@ -1,9 +1,6 @@
 import type { RecipeWithRelations } from './recipe.types.js';
 import { minutesToIsoDuration } from '../utils/iso-duration.js';
 
-/** Serializes a stored recipe as a schema.org Recipe JSON-LD document, the
- * inverse of parseRecipeFromJsonLd in jsonld-import.service.ts. Keys whose
- * source value is null/empty are omitted rather than emitted as null. */
 export function recipeToJsonLd(recipe: RecipeWithRelations): Record<string, unknown> {
   const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',

@@ -8,11 +8,6 @@ export interface ScaledIngredient extends Ingredient {
   scaledAmount?: number;
 }
 
-/**
- * Scales ingredient amounts from a recipe's base servings to the desired
- * servings. Non-scalable ingredients (amount === null or is_scalable === false)
- * are returned with their raw text unchanged.
- */
 export function useScaledIngredients(
   ingredients: Ingredient[] | undefined,
   baseServings: number,

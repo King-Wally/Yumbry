@@ -1,9 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { prisma } from '../db/prisma.js';
 
-/** Mounted before multer's disk storage for photo uploads, so a request for
- * a recipe id the caller doesn't own 404s before any file is written to
- * disk (multer's destination callback has no async ownership-check hook). */
 export async function requireRecipeOwner(
   req: Request,
   res: Response,

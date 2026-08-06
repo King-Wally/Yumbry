@@ -16,8 +16,6 @@ export interface UserRow {
 }
 
 const BCRYPT_COST_FACTOR = 12;
-// Used to compare against when the email doesn't exist, so login takes the
-// same amount of time either way and doesn't leak which emails are registered.
 const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', BCRYPT_COST_FACTOR);
 
 function toUserRow(user: {
@@ -54,8 +52,6 @@ export async function findUserById(id: number): Promise<UserRow | null> {
   return user ? toUserRow(user) : null;
 }
 
-/** Deletes the user row; cascading FKs remove all owned recipes, tags,
- * categories, and ai_settings. */
 export async function deleteUser(id: number): Promise<void> {
   await prisma.user.delete({ where: { id } });
 }
@@ -69,8 +65,6 @@ export async function revokeAuthSessions(userId: number): Promise<number> {
   return user.tokenVersion;
 }
 
-/** Creates a user and their placeholder ai_settings row in one transaction.
- * Returns null if the email is already registered. */
 export async function registerUser(email: string, password: string): Promise<UserRow | null> {
   const passwordHash = await hashPassword(password);
 
@@ -93,10 +87,6 @@ export async function registerUser(email: string, password: string): Promise<Use
   });
 }
 
-/** Sends a password reset email if the address belongs to a registered user.
- * Always resolves successfully regardless of whether the email exists, and
- * burns comparable time either way, so callers can return the same response
- * without leaking which emails are registered. */
 export async function requestPasswordReset(email: string): Promise<void> {
   const user = await prisma.user.findUnique({ where: { email } });
 

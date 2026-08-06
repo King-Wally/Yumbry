@@ -19,9 +19,7 @@ export default function ImportPage() {
     },
   });
 
-  // Unlike importRecipe above, nothing is saved here — the scrape returns a
-  // draft the user reviews/edits in the recipe form before saving, the same
-  // hand-off AiChatPage uses for AI-generated drafts.
+  // Returns draft for review (vs importRecipe which persists immediately)
   const urlMutation = useMutation({
     mutationFn: importRecipeFromUrl,
     onSuccess: (draft) => {

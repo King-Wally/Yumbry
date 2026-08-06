@@ -28,9 +28,7 @@ export default function AiChatPage() {
   const [draft, setDraft] = useState<RecipeInput | null>(null);
   const [seededForId, setSeededForId] = useState<number | null>(null);
 
-  // Render-time-init, same pattern as RecipeFormPage/RecipeDetailPage: seed
-  // the preview from the fetched recipe once, in improve mode, with no LLM
-  // call needed for the seed itself.
+  // Seed preview from recipe once, in improve mode only
   if (isImproving && recipe && seededForId !== recipe.id) {
     setSeededForId(recipe.id);
     setDraft(toRecipeInput(recipe));
@@ -39,8 +37,6 @@ export default function AiChatPage() {
   const chatMutation = useMutation({
     mutationFn: (nextMessages: AiChatMessage[]) => {
       if (!aiSettings?.model || !aiSettings?.provider) {
-        // Same wording as the backend's requireModel 409, so this reads
-        // identically whether the model check happens here or server-side.
         return Promise.reject(
           new Error('No AI model is configured yet. Visit Settings to choose one.')
         );

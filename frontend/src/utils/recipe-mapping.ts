@@ -1,9 +1,6 @@
 import { toNumber } from './numeric';
 import type { Recipe, RecipeInput } from '../types';
 
-/** Converts a fetched Recipe (detail-view shape) into the same flat
- * RecipeInput shape AI drafts arrive in — used to seed AiChatPage's initial
- * preview baseline in improve-mode, before any chat has happened. */
 export function toRecipeInput(recipe: Recipe): RecipeInput {
   return {
     title: recipe.title,

@@ -11,8 +11,6 @@ export type UrlImportErrorKind =
   | 'no_jsonld'
   | 'no_recipe_found';
 
-/** Thrown by safe-fetch.ts and url-recipe-import.service.ts for every way
- * fetching/parsing a user-supplied recipe URL can fail. */
 export class UrlImportError extends Error {
   readonly kind: UrlImportErrorKind;
 
@@ -23,9 +21,6 @@ export class UrlImportError extends Error {
   }
 }
 
-/** 502 for upstream-fetch failures (the page itself didn't respond in time
- * or at all); 400 for everything shaped like a problem with the user's
- * input or the page's content. */
 const STATUS_BY_KIND: Record<UrlImportErrorKind, number> = {
   invalid_url: 400,
   blocked_url: 400,
@@ -38,8 +33,6 @@ const STATUS_BY_KIND: Record<UrlImportErrorKind, number> = {
   no_recipe_found: 400,
 };
 
-/** Turns a UrlImportError into the right HTTP response; rethrows anything
- * else so asyncHandler forwards it to app.ts's generic 500 handler. */
 export function sendUrlImportError(res: Response, err: unknown): void {
   if (!(err instanceof UrlImportError)) throw err;
   res.status(STATUS_BY_KIND[err.kind]).json({ error: err.message, kind: err.kind });

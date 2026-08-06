@@ -3,11 +3,8 @@ import { Menu, X } from 'lucide-react';
 import { useClickOutside } from '../hooks/useClickOutside';
 
 interface CollapsibleActionsProps {
-  /** Always visible, even on mobile, rendered outside the collapsible area. */
   pinned?: ReactNode;
-  /** Rendered as a row on desktop; collapses into the dropdown menu below `md`. */
   children: ReactNode;
-  /** Classes for the desktop-only row wrapping `children` (e.g. gap, text size). */
   rowClassName?: string;
 }
 

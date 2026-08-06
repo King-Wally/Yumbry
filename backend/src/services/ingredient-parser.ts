@@ -6,11 +6,6 @@ export interface ParsedIngredient {
   is_scalable: boolean;
 }
 
-// Common cooking units, one entry per recognized spelling (short form, plural,
-// and common alternates), matched case-insensitively. `unit` is returned
-// exactly as written in the ingredient line and stored as free text
-// downstream (no DB enum/FK), so this table only needs to cover what recipe
-// text realistically uses — it doesn't need to normalize to a canonical form.
 const UNIT_WORDS = new Set([
   'cup',
   'cups',
@@ -90,8 +85,6 @@ const UNIT_WORDS = new Set([
   'bunches',
 ]);
 
-// Unicode vulgar fractions and the fraction-slash character, normalized to
-// ASCII "n/d" (or "/") before numeric parsing.
 const VULGAR_FRACTIONS: Record<string, string> = {
   '¼': '1/4',
   '½': '1/2',
@@ -122,9 +115,6 @@ function roundAmount(amount: number): number {
   return Math.round(amount * 1000) / 1000;
 }
 
-// Matches, at the start of a string: a mixed number ("1 1/2"), a plain
-// fraction ("1/2"), or a decimal/integer ("2" / "2.5"), followed by
-// whitespace or end-of-string.
 const LEADING_QUANTITY_REGEX = /^(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?)(?=\s|$)/;
 
 interface LeadingQuantity {
@@ -164,9 +154,6 @@ interface UnitMatch {
 
 function matchUnitPrefix(text: string): UnitMatch | null {
   const trimmed = text.trimStart();
-  // Allow an optional trailing period on the unit word itself (e.g. "lb.",
-  // "tbsp.") without absorbing it into the remainder, then also consume any
-  // punctuation/whitespace separating the unit from the rest of the line.
   const wordMatch = /^([A-Za-z]+)\.?\b/.exec(trimmed);
   if (!wordMatch) {
     return null;
@@ -185,11 +172,6 @@ function stripLeadingOf(text: string): string {
   return text.replace(/^[\s,.;]*of\s+/i, '');
 }
 
-/**
- * Parses a single raw ingredient line into structured amount/unit/name fields.
- * Never throws: unparseable lines fall back to the raw text with amount: null
- * and is_scalable: false, per the import spec.
- */
 export function parseIngredientLine(rawText: string): ParsedIngredient {
   const trimmed = rawText.trim();
 
@@ -206,8 +188,6 @@ export function parseIngredientLine(rawText: string): ParsedIngredient {
   const leading = parseLeadingQuantity(trimmed);
 
   if (!leading) {
-    // No leading quantity found (e.g. "For the icing:" or "salt to taste") —
-    // treated as unscalable free text, same as an unparseable line.
     return {
       raw_text: rawText,
       amount: null,

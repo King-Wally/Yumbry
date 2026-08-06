@@ -4,11 +4,6 @@ import { parseIngredientLine, type ParsedIngredient } from './ingredient-parser.
 
 type JsonLdNode = Record<string, unknown>;
 
-/**
- * Validates only that JSON.parse() produced an object or array (not a bare
- * scalar) — schema.org's Recipe shape itself is deliberately NOT modeled here;
- * see the field-extraction functions below for why.
- */
 const JsonLdDocumentSchema: z.ZodType<JsonLdNode | unknown[]> = z.union([
   z.record(z.string(), z.unknown()),
   z.array(z.unknown()),
@@ -35,7 +30,6 @@ function hasRecipeType(node: unknown): node is JsonLdNode {
   return type === 'Recipe';
 }
 
-/** Finds the Recipe node in a parsed JSON-LD document, handling @graph wrappers. */
 export function findRecipeNode(jsonLd: unknown): JsonLdNode | null {
   if (Array.isArray(jsonLd)) {
     for (const node of jsonLd) {
@@ -93,8 +87,6 @@ function extractTagNames(node: JsonLdNode): string[] {
   return [...new Set(names.map((name) => name.trim()).filter(Boolean))];
 }
 
-/** recipeCategory is single-valued in our model; schema.org allows a bare
- * string or an array, so take the first non-empty entry when it's an array. */
 function extractCategoryName(node: JsonLdNode): string | null {
   const category = node.recipeCategory;
   if (typeof category === 'string') {
@@ -109,7 +101,6 @@ function extractCategoryName(node: JsonLdNode): string | null {
   return null;
 }
 
-/** Flattens recipeInstructions (string | HowToStep[] | HowToSection[]) into ordered step strings. */
 function extractInstructionTexts(recipeInstructions: unknown): string[] {
   if (!recipeInstructions) return [];
 
@@ -140,11 +131,6 @@ function extractInstructionTexts(recipeInstructions: unknown): string[] {
   return [];
 }
 
-/**
- * Parses a raw JSON-LD string into a normalized recipe object ready for insertion.
- * Throws only when the input isn't valid JSON, isn't an object/array, or contains
- * no Recipe node.
- */
 export function parseRecipeFromJsonLd(rawJsonLdText: string): ParsedRecipeImport {
   const rawParsed: unknown = JSON.parse(rawJsonLdText);
   const parsed = JsonLdDocumentSchema.parse(rawParsed);

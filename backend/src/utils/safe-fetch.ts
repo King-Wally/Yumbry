@@ -31,13 +31,6 @@ function parseAllowedUrl(rawUrl: string): URL {
   return url;
 }
 
-/**
- * Resolves `hostname` and throws unless every address it resolves to is a
- * globally-routable unicast address — blocks loopback/private/link-local/
- * unique-local/multicast/etc. targets (IPv4 and IPv6) to prevent SSRF.
- * Called on the initial URL and again on every redirect hop, since a
- * redirect is just as capable of pointing at an internal address.
- */
 async function assertSafeTarget(url: URL): Promise<void> {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new UrlImportError('Enter a valid http or https URL.', 'invalid_url');
@@ -86,14 +79,6 @@ async function readBodyWithLimit(response: Response, maxBytes: number): Promise<
   return Buffer.concat(chunks).toString('utf-8');
 }
 
-/**
- * Fetches `rawUrl` and returns its HTML, having verified — for the initial
- * URL and every redirect hop — that it resolves only to a public,
- * globally-routable address. This is the one place in the backend that
- * fetches a user-supplied URL, so every SSRF-relevant check (scheme,
- * DNS/IP-range, redirect count, timeout, response size, content type)
- * lives here rather than at each call site.
- */
 export async function safeFetchHtml(
   rawUrl: string,
   options?: SafeFetchOptions

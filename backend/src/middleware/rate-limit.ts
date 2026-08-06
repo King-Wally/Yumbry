@@ -1,7 +1,5 @@
 import rateLimit from 'express-rate-limit';
 
-/** Applied to /api/auth/register and /api/auth/login only — brute-force
- * protection, keyed by IP since this app has no per-account lockout state. */
 export const loginRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
@@ -10,9 +8,6 @@ export const loginRateLimiter = rateLimit({
   message: { error: 'Too many attempts. Try again later.' },
 });
 
-/** Applied to /api/auth/forgot-password only — stricter than login/register
- * since each hit triggers an outbound email via Resend, and this endpoint is
- * a more attractive enumeration/abuse target. */
 export const forgotPasswordRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,
@@ -21,9 +16,6 @@ export const forgotPasswordRateLimiter = rateLimit({
   message: { error: 'Too many attempts. Try again later.' },
 });
 
-/** Applied to all of /api/* — a broad backstop so a buggy or abusive client
- * can't hammer the backend/Postgres through any endpoint, not just login.
- * Limits are generous relative to real single-household usage. */
 export const apiRateLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: 300,
@@ -32,11 +24,6 @@ export const apiRateLimiter = rateLimit({
   message: { error: 'Too many requests. Slow down.' },
 });
 
-/** Applied to POST /api/recipes/import-url only — each hit triggers a real
- * outbound HTTP request to an arbitrary user-supplied URL (SSRF surface and
- * a potential request-proxy/amplification vector), so it gets its own
- * tighter budget than apiRateLimiter, same reasoning as forgotPasswordRateLimiter
- * for its own outbound-side-effect endpoint. */
 export const urlImportRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 20,

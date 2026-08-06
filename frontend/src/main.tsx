@@ -10,9 +10,7 @@ import './index.css';
 
 registerSW({ immediate: true });
 
-// A 401 mid-session (expired/cleared cookie) means the user is no longer
-// logged in from the server's point of view — refetch the auth check so
-// AuthContext's `user` flips to null and ProtectedRoute redirects to /login.
+// 401: refetch auth status to clear user context and redirect to /login
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error) => {

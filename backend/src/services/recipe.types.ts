@@ -2,8 +2,6 @@ import type { Tag, Category, Ingredient, Instruction } from 'yumbry-shared';
 import type { RecipeBody, InstructionInput } from '../schemas/recipe.schema.js';
 import type { ParsedIngredient } from './ingredient-parser.js';
 
-/** Local aliases for yumbry-shared's wire DTOs — kept under these names since
- * that's what recipe.service.ts/tag-category.service.ts already call them. */
 export type TagRef = Tag;
 export type CategoryRef = Category;
 export type IngredientRow = Ingredient;
@@ -36,13 +34,6 @@ export interface IngredientInput extends ParsedIngredient {
 
 export type { InstructionInput };
 
-/**
- * Normalized recipe data ready for insertion, derived from RecipeBody (the
- * Zod-validated API request shape) so the two can't drift apart on their
- * shared scalar fields. Only `ingredients` differs: manual and JSON-LD entry
- * points both parse raw ingredient text into structured input before it
- * reaches the service layer (see ingredient-parser.ts).
- */
 export interface RecipeInput extends Omit<RecipeBody, 'ingredients' | 'instructions'> {
   ingredients?: IngredientInput[];
   instructions?: InstructionInput[];

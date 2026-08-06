@@ -28,9 +28,7 @@ export default function RecipeDetailPage() {
   const [servingsForRecipeId, setServingsForRecipeId] = useState<number | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
-  // Adjust `servings` during render when a new recipe loads, rather than in a
-  // useEffect — this is React's documented pattern for initializing editable
-  // state from async data without an extra render/flash of stale values.
+  // Form hydration in render (not useEffect) to avoid stale-value flash
   if (recipe && servingsForRecipeId !== recipe.id) {
     setServingsForRecipeId(recipe.id);
     setServings(toNumber(recipe.servings, 1));

@@ -86,9 +86,6 @@ export function importRecipe({ jsonLd, file }: { jsonLd?: string; file?: File })
   return request<Recipe>('/recipes/import', { method: 'POST', body: JSON.stringify({ jsonLd }) });
 }
 
-/** Scrapes a recipe page's schema.org JSON-LD and returns an unsaved draft —
- * unlike importRecipe, nothing is persisted; the caller hands the result to
- * the recipe form for review, the same as the AI-create draft hand-off. */
 export function importRecipeFromUrl(url: string) {
   return request<RecipeInput>('/recipes/import-url', {
     method: 'POST',

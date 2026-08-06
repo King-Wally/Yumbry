@@ -39,10 +39,6 @@ export interface Instruction {
   text: string;
 }
 
-/** Payload sent to POST/PUT /api/recipes from the manual create/edit form,
- * and the shape AI-generated drafts (POST /api/ai/chat's `recipe` field)
- * are typed as too — see shared/src/ai-recipe-draft.ts's AiRecipeDraft,
- * which deliberately matches this shape. */
 export interface RecipeInput {
   title: string;
   description?: string | null;
@@ -57,14 +53,11 @@ export interface RecipeInput {
   category: string | null;
 }
 
-/** Request body for POST /api/ai/chat. */
 export interface AiChatTurnRequest {
   messages: AiChatMessage[];
   current_draft: RecipeInput | null;
 }
 
-/** Response body for POST /api/ai/chat — the model's conversational reply
- * plus its full current best-guess recipe, every turn. */
 export interface AiChatTurnResponse {
   reply: string;
   recipe: RecipeInput;

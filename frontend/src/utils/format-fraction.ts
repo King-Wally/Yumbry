@@ -1,4 +1,3 @@
-/** Formats a decimal amount rounded to the nearest eighth as a comma-decimal string, e.g. 1.5 -> "1,5". */
 export function formatFraction(amount: number | null | undefined): string {
   if (amount === null || amount === undefined || Number.isNaN(amount)) return '';
 

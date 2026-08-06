@@ -58,8 +58,7 @@ export default function LoginPage() {
 
       {error && <p className="text-red-600">{error}</p>}
 
-      {/* "Forgot your password?" link hidden until a verified sending domain
-          is configured for Resend — see /forgot-password, /reset-password. */}
+      {/* Forgot password link hidden until Resend domain is configured */}
 
       <p className="text-sm text-stone-500">
         No account?{' '}

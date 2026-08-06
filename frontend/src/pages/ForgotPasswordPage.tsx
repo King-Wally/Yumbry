@@ -14,8 +14,7 @@ export default function ForgotPasswordPage() {
     setIsSubmitting(true);
     try {
       await forgotPassword(email);
-      // Always show the success state, regardless of whether the email is
-      // registered — avoids leaking which emails have accounts.
+      // Always show success to avoid leaking which emails exist
       setSubmitted(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');

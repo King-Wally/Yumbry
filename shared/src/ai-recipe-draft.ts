@@ -12,13 +12,6 @@ export interface AiChatMessage {
   content: string;
 }
 
-/** The shape every AI chat turn returns. Deliberately matches the frontend's
- * RecipeInput exactly (raw ingredient line strings, {step_number,text}
- * instructions, servings:number) — NOT the backend's recipe.types.ts
- * RecipeInput (which has parsed IngredientInput[] objects). The draft flows
- * straight into RecipeFormPage for review, which re-parses ingredient text
- * through the normal save path (normalizeIngredients) exactly like manual
- * entry. */
 export interface AiRecipeDraft {
   title: string;
   description: string | null;
@@ -33,10 +26,6 @@ export interface AiRecipeDraft {
   category: string | null;
 }
 
-/** The full response shape for every AI chat turn: a conversational reply
- * plus the model's current best-guess full recipe, every time — there is no
- * separate "finalize" step, the live preview panel on the frontend just
- * always reflects the latest `recipe`. */
 export interface AiChatEnvelope {
   reply: string;
   recipe: AiRecipeDraft;
@@ -106,10 +95,6 @@ function buildChatSystemPrompt(): AiChatMessage {
   };
 }
 
-/** Builds the full message array for one AI chat turn. The current draft is
- * injected as its own system message (rather than folded into the static
- * instructions) since it changes every turn while the instructions don't —
- * keeps buildChatSystemPrompt a pure, argument-free function. */
 export function buildChatMessages(
   conversation: AiChatMessage[],
   currentDraft: AiRecipeDraft | null
@@ -128,9 +113,6 @@ function stripJsonFences(text: string): string {
   return (fenced ? fenced[1] : text).trim();
 }
 
-/** Defensive per-field extraction of a recipe-shaped node into an
- * AiRecipeDraft — tolerates missing/malformed fields with sensible
- * defaults, modeled on jsonld-import.service.ts's extraction functions. */
 function extractRecipeDraft(
   node: Record<string, unknown>,
   currentImagePath: string | null
@@ -172,16 +154,7 @@ function extractRecipeDraft(
   };
 }
 
-/**
- * Parses the LLM's chat-completion content into an AiChatEnvelope. Defensive,
- * modeled directly on jsonld-import.service.ts's parseRecipeFromJsonLd:
- * strips markdown fences, tolerates missing/malformed fields with sensible
- * defaults, never throws except when no JSON object can be recovered at all.
- * The LLM is never asked to produce image_path (it has no way to generate or
- * reference an uploaded photo), so it's carried over from currentDraft
- * instead of the model's output — otherwise an existing recipe's photo
- * would silently disappear from the draft after the first chat turn.
- */
+// image_path carries forward from currentDraft since LLM can't generate it
 export function parseChatEnvelope(
   rawContent: string,
   currentDraft: AiRecipeDraft | null = null

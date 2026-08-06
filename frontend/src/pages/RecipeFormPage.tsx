@@ -63,9 +63,7 @@ export default function RecipeFormPage() {
 
   const { data: categories } = useCategories();
 
-  // Populate the form during render when a new recipe loads, rather than in a
-  // useEffect — this is React's documented pattern for initializing editable
-  // state from async data without an extra render/flash of stale values.
+  // Form hydration in render (not useEffect) to avoid stale-value flash
   if (existingRecipe && formForRecipeId !== existingRecipe.id && !aiDraft) {
     setFormForRecipeId(existingRecipe.id);
     setForm({
@@ -88,11 +86,7 @@ export default function RecipeFormPage() {
     });
   }
 
-  // Same render-time-init pattern: pre-fill the form (create OR edit) from
-  // an AI-generated draft handed off via router state (see AiChatPage),
-  // once. Takes priority over existingRecipe hydration above (guarded by
-  // `!aiDraft` there) since aiDraft is available synchronously while
-  // existingRecipe resolves later, and would otherwise clobber it.
+  // AI draft takes priority (available synchronously vs async existingRecipe)
   if (aiDraft && !aiDraftApplied) {
     setAiDraftApplied(true);
     setForm({

@@ -66,17 +66,11 @@ async function postChatCompletion(
   return content;
 }
 
-/** Runs one chat turn directly against a local Ollama instance and returns
- * the same {reply, recipe} shape POST /api/ai/chat resolves to. */
 export async function chatWithOllamaDirect(
   messages: AiChatMessage[],
   currentDraft: RecipeInput | null,
   options: { baseUrl: string | null; model: string }
 ): Promise<AiChatEnvelope> {
-  // RecipeInput's fields are optional where AiRecipeDraft's are required-but-
-  // nullable — a safe cast: buildChatMessages only JSON.stringifies this
-  // (undefined keys are simply omitted), and parseChatEnvelope only ever
-  // reads currentDraft.image_path off it.
   const draft = currentDraft as AiRecipeDraft | null;
   const raw = await postChatCompletion(
     options.baseUrl,
@@ -86,9 +80,6 @@ export async function chatWithOllamaDirect(
   return parseChatEnvelope(raw, draft);
 }
 
-/** Lists available models directly from a local Ollama instance, for the
- * Settings page's "check connection" button — same {models: {name}[]} shape
- * `listAiModels` (the backend-proxied version) resolves to. */
 export async function listOllamaModelsDirect(
   baseUrl: string | null
 ): Promise<{ models: { name: string }[] }> {
