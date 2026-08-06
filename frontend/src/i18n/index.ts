@@ -1,14 +1,12 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import type { SupportedLocale } from 'yumbry-shared';
+import { SUPPORTED_LOCALES, type SupportedLocale } from 'yumbry-shared';
 import en from './locales/en.json';
 import nl from './locales/nl.json';
 import fr from './locales/fr.json';
 import es from './locales/es.json';
 
 export const LOCALE_STORAGE_KEY = 'yumbry.locale';
-
-const SUPPORTED_LOCALES: SupportedLocale[] = ['en', 'nl', 'fr', 'es'];
 
 function isSupportedLocale(value: string | null | undefined): value is SupportedLocale {
   return Boolean(value) && SUPPORTED_LOCALES.includes(value as SupportedLocale);

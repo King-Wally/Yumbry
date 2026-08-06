@@ -1,4 +1,5 @@
 import { promises as dns } from 'node:dns';
+import { Agent } from 'undici';
 import ipaddr from 'ipaddr.js';
 import { UrlImportError } from './url-import-error.js';
 
@@ -31,12 +32,17 @@ function parseAllowedUrl(rawUrl: string): URL {
   return url;
 }
 
-async function assertSafeTarget(url: URL): Promise<void> {
+interface ResolvedAddress {
+  address: string;
+  family: number;
+}
+
+async function assertSafeTarget(url: URL): Promise<ResolvedAddress[]> {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new UrlImportError('Enter a valid http or https URL.', 'invalid_url');
   }
 
-  let addresses: { address: string }[];
+  let addresses: ResolvedAddress[];
   try {
     addresses = await dns.lookup(url.hostname, { all: true });
   } catch (err) {
@@ -56,6 +62,22 @@ async function assertSafeTarget(url: URL): Promise<void> {
       );
     }
   }
+
+  return addresses;
+}
+
+function createPinnedAgent(addresses: ResolvedAddress[]): Agent {
+  return new Agent({
+    connect: {
+      lookup: (_hostname, options, callback) => {
+        if (options?.all) {
+          callback(null, addresses);
+        } else {
+          callback(null, addresses[0].address, addresses[0].family);
+        }
+      },
+    },
+  });
 }
 
 async function readBodyWithLimit(response: Response, maxBytes: number): Promise<string> {
@@ -88,20 +110,25 @@ export async function safeFetchHtml(
   const maxRedirects = options?.maxRedirects ?? DEFAULT_MAX_REDIRECTS;
 
   let currentUrl = parseAllowedUrl(rawUrl);
-  await assertSafeTarget(currentUrl);
+  let addresses = await assertSafeTarget(currentUrl);
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const agents: Agent[] = [];
 
   try {
     for (let redirectCount = 0; ; redirectCount++) {
+      const agent = createPinnedAgent(addresses);
+      agents.push(agent);
+
       let response: Response;
       try {
         response = await fetch(currentUrl, {
           redirect: 'manual',
           signal: controller.signal,
+          dispatcher: agent as unknown as NonNullable<RequestInit['dispatcher']>,
           headers: { accept: 'text/html,application/xhtml+xml' },
-        });
+        } satisfies RequestInit);
       } catch (err) {
         if (controller.signal.aborted) {
           throw new UrlImportError(
@@ -123,7 +150,7 @@ export async function safeFetchHtml(
           throw new UrlImportError('That URL redirected too many times.', 'too_many_redirects');
         }
         currentUrl = new URL(location, currentUrl);
-        await assertSafeTarget(currentUrl);
+        addresses = await assertSafeTarget(currentUrl);
         continue;
       }
 
@@ -140,5 +167,6 @@ export async function safeFetchHtml(
     }
   } finally {
     clearTimeout(timeout);
+    await Promise.all(agents.map((agent) => agent.close()));
   }
 }

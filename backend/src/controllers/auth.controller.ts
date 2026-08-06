@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { ZodError } from 'zod';
+import { Prisma } from '../generated/prisma/client.js';
 import {
   AuthBodySchema,
   DeleteAccountBodySchema,
@@ -22,6 +23,10 @@ import {
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const COOKIE_SECURE = process.env.COOKIE_SECURE === 'true';
+
+function toPublicUser(user: { id: number; email: string; locale: string }) {
+  return { id: user.id, email: user.email, locale: user.locale };
+}
 
 function setAuthCookie(res: Response, userId: number, tokenVersion: number): void {
   res.cookie(AUTH_COOKIE_NAME, signAuthToken(userId, tokenVersion), {
@@ -65,23 +70,30 @@ export async function postLogout(req: Request, res: Response) {
   const token = req.cookies?.[AUTH_COOKIE_NAME] as string | undefined;
   const verified = token ? verifyAuthToken(token) : null;
   if (verified) {
-    await revokeAuthSessions(verified.userId);
+    try {
+      await revokeAuthSessions(verified.userId);
+    } catch (err) {
+      // If the account was already deleted (e.g. from another tab), there's
+      // no session left to revoke — the goal of logout already holds.
+      if (!(err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025')) {
+        throw err;
+      }
+    }
   }
   res.clearCookie(AUTH_COOKIE_NAME);
   res.status(204).end();
 }
 
 export async function getMe(req: Request, res: Response) {
-  const user = await findUserById(req.userId as number);
-  if (!user) return res.status(401).json({ error: 'Not authenticated.' });
-  res.json({ id: user.id, email: user.email, locale: user.locale });
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated.' });
+  res.json(toPublicUser(req.user));
 }
 
 export async function patchMe(req: Request, res: Response) {
   try {
     const { locale } = UpdateProfileBodySchema.parse(req.body);
     const user = await updateUserLocale(req.userId as number, locale);
-    res.json({ id: user.id, email: user.email, locale: user.locale });
+    res.json(toPublicUser(user));
   } catch (err) {
     if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
     throw err;

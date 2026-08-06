@@ -25,18 +25,18 @@ model User {
 }
 
 model Recipe {
-  id                Int      @id @default(autoincrement())
-  title             String
-  description       String?
-  imagePath         String?  @map("image_path")
-  prepTimeMinutes   Int?     @map("prep_time_minutes")
-  cookTimeMinutes   Int?     @map("cook_time_minutes")
-  totalTimeMinutes  Int?     @map("total_time_minutes")
-  servings          Decimal  @default(1)
-  categoryId        Int?     @map("category_id")
-  userId            Int      @map("user_id")
-  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt         DateTime @default(now()) @map("updated_at") @db.Timestamptz
+  id               Int      @id @default(autoincrement())
+  title            String
+  description      String?
+  imagePath        String?  @map("image_path")
+  prepTimeMinutes  Int?     @map("prep_time_minutes")
+  cookTimeMinutes  Int?     @map("cook_time_minutes")
+  totalTimeMinutes Int?     @map("total_time_minutes")
+  servings         Decimal  @default(1)
+  categoryId       Int?     @map("category_id")
+  userId           Int      @map("user_id")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @default(now()) @map("updated_at") @db.Timestamptz
 
   category     Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -50,14 +50,14 @@ model Recipe {
 }
 
 model Ingredient {
-  id         Int     @id @default(autoincrement())
-  recipeId   Int     @map("recipe_id")
-  rawText    String  @map("raw_text")
+  id         Int      @id @default(autoincrement())
+  recipeId   Int      @map("recipe_id")
+  rawText    String   @map("raw_text")
   amount     Decimal?
   unit       String?
   name       String
-  isScalable Boolean @default(true) @map("is_scalable")
-  sortOrder  Int     @map("sort_order")
+  isScalable Boolean  @default(true) @map("is_scalable")
+  sortOrder  Int      @map("sort_order")
 
   recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 

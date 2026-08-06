@@ -31,7 +31,9 @@ export interface AiChatEnvelope {
   recipe: AiRecipeDraft;
 }
 
-export type SupportedLocale = 'en' | 'nl' | 'fr' | 'es';
+export const SUPPORTED_LOCALES = ['en', 'nl', 'fr', 'es'] as const;
+
+export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 
 const LANGUAGE_NAMES: Record<SupportedLocale, string> = {
   en: 'English',
@@ -68,7 +70,8 @@ these two top-level keys:
   "recipe": ${RECIPE_JSON_SHAPE}
 }`.trim();
 
-function buildChatSystemPrompt(): AiChatMessage {
+function buildChatSystemPrompt(locale: SupportedLocale = 'en'): AiChatMessage {
+  const languageName = LANGUAGE_NAMES[locale];
   return {
     role: 'system',
     content:
@@ -80,49 +83,28 @@ function buildChatSystemPrompt(): AiChatMessage {
       '"reply" text while still attempting a reasonable draft. When a draft already exists, only change ' +
       'what the latest message is actually about and leave the rest as-is. Keep "reply" short — a ' +
       'brief summary of the recipe and what changed (or, on the first turn, what you assumed), not a ' +
-      'detailed walkthrough of every ingredient choice or technique; your "reply" text should match ' +
-      'the language the user is using. ' +
+      `detailed walkthrough of every ingredient choice or technique; write "reply" in ${languageName}. ` +
       'Each ingredient line must be ONLY the amount, unit, and ingredient name — never add prep ' +
-      'instructions ("fijngehakt", "in blokjes gesneden"), parenthetical asides, or alternatives to an ' +
-      'ingredient line; that kind of detail belongs in the corresponding instruction step instead ' +
-      '(e.g. "Hak de ui fijn." as its own step, not "ui, fijngehakt" in the ingredient list). ' +
+      'instructions, parenthetical asides, or alternatives to an ingredient line; that kind of detail ' +
+      'belongs in the corresponding instruction step instead. ' +
       'Each instruction step must be short and imperative — just the action itself, with no ' +
       'explanation of why it matters or background/technique commentary. ' +
       'Do the recipe itself (title, ingredients, instructions) as a two-stage process every turn: ' +
       '(1) First, draft or update the recipe in English, using whichever units are most natural for ' +
       'that recipe (cups, ounces, pounds, °F, tablespoons, etc. are all fine at this stage — pick ' +
       'whatever a native English-speaking recipe would normally use). (2) Then, as a final step before ' +
-      'responding, translate that English recipe into Flemish Dutch (Belgian Dutch as spoken in ' +
-      'Flanders — e.g. "ajuin" not "ui", "kropsla" not "krop sla", prefer Flemish everyday vocabulary ' +
-      'and phrasing over Netherlands Dutch terms where they differ) and convert every measurement to ' +
-      'metric units (grams, kilograms, milliliters, liters, °C) — never leave imperial/US units ' +
-      '(cups, ounces, pounds, °F, etc.) in the final result. Only the fully translated, metric version ' +
-      'of the recipe (title, ingredients, instructions) is what goes into the "recipe" field of your ' +
-      'response — the English/imperial draft from stage 1 is an internal step and must never be shown ' +
-      'to the user. ' +
-      ENVELOPE_JSON_INSTRUCTIONS,
-  };
-}
-
-function buildLanguageOverride(locale: SupportedLocale): AiChatMessage {
-  const languageName = LANGUAGE_NAMES[locale];
-  return {
-    role: 'system',
-    content:
-      `Language override: the user has configured ${languageName} as their preferred language. ` +
-      'This replaces two of the instructions above: ignore the instruction that "reply" should ' +
-      'match whatever language the user is typing in, and ignore "Flemish Dutch" as the fixed ' +
-      'target of stage 2 — instead, in both cases, use ' +
-      `${languageName} regardless of what language the user's messages are written in. ` +
-      'Stage 1 (the internal English/imperial draft) and all of your internal reasoning still ' +
-      'happen in English exactly as before and are never shown to the user — only the final ' +
-      `"reply" text and the final "recipe" fields (title, ingredients, instructions) must be in ` +
-      `${languageName}. Keep converting every measurement to metric units as already instructed, ` +
-      'regardless of language. ' +
+      `responding, translate that English recipe into ${languageName}` +
       (locale === 'nl'
-        ? 'For Flemish Dutch, follow the vocabulary guidance already given above (e.g. "ajuin" not ' +
-          '"ui", "kropsla" not "krop sla").'
-        : `Use standard, natural ${languageName} recipe vocabulary and phrasing.`),
+        ? ' (Flemish Dutch as spoken in Flanders — e.g. "ajuin" not "ui", "kropsla" not "krop sla", ' +
+          'prefer Flemish everyday vocabulary and phrasing over Netherlands Dutch terms where they ' +
+          'differ)'
+        : '') +
+      ' and convert every measurement to metric units (grams, kilograms, milliliters, liters, °C) — ' +
+      'never leave imperial/US units (cups, ounces, pounds, °F, etc.) in the final result. Only the ' +
+      'fully translated, metric version of the recipe (title, ingredients, instructions) is what goes ' +
+      'into the "recipe" field of your response — the English/imperial draft from stage 1 is an ' +
+      'internal step and must never be shown to the user. ' +
+      ENVELOPE_JSON_INSTRUCTIONS,
   };
 }
 
@@ -137,7 +119,7 @@ export function buildChatMessages(
       ? `Current recipe draft (JSON):\n${JSON.stringify(currentDraft, null, 2)}`
       : 'There is no recipe draft yet — this is the start of a new recipe.',
   };
-  return [buildChatSystemPrompt(), draftContext, buildLanguageOverride(locale), ...conversation];
+  return [buildChatSystemPrompt(locale), draftContext, ...conversation];
 }
 
 function stripJsonFences(text: string): string {

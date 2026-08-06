@@ -1,10 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { safeFetchHtml } from '../src/utils/safe-fetch.js';
 
-const { lookup } = vi.hoisted(() => ({ lookup: vi.fn() }));
+const { lookup, pinnedAgents } = vi.hoisted(() => ({
+  lookup: vi.fn(),
+  pinnedAgents: [] as {
+    connect: { lookup: (...args: unknown[]) => void };
+    close: ReturnType<typeof vi.fn>;
+  }[],
+}));
 
 vi.mock('node:dns', () => ({
   promises: { lookup },
+}));
+
+vi.mock('undici', () => ({
+  Agent: class MockAgent {
+    connect: { lookup: (...args: unknown[]) => void };
+    close = vi.fn(async () => {});
+    constructor(options: { connect: { lookup: (...args: unknown[]) => void } }) {
+      this.connect = options.connect;
+      pinnedAgents.push(this);
+    }
+  },
 }));
 
 interface MockResponseOptions {
@@ -49,6 +66,7 @@ function mockResponse({
 describe('safeFetchHtml', () => {
   beforeEach(() => {
     lookup.mockReset();
+    pinnedAgents.length = 0;
     vi.stubGlobal('fetch', vi.fn());
   });
 
@@ -174,6 +192,41 @@ describe('safeFetchHtml', () => {
     await expect(safeFetchHtml('http://example.com')).rejects.toMatchObject({
       kind: 'network_error',
     });
+  });
+
+  it('pins the fetch connection to the DNS-validated address, immune to a rebound lookup', async () => {
+    lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+    vi.mocked(fetch).mockResolvedValue(
+      mockResponse({ headers: { 'content-type': 'text/html' }, body: '<html>hi</html>' })
+    );
+
+    await safeFetchHtml('http://example.com');
+
+    expect(pinnedAgents).toHaveLength(1);
+    const lookupCallCountAfterValidation = lookup.mock.calls.length;
+
+    const callback = vi.fn();
+    pinnedAgents[0].connect.lookup('attacker-controlled-hostname', {}, callback);
+    expect(callback).toHaveBeenCalledWith(null, '93.184.216.34', 4);
+    expect(lookup.mock.calls.length).toBe(lookupCallCountAfterValidation);
+  });
+
+  it("closes every hop's pinned agent once the fetch completes", async () => {
+    lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        mockResponse({ status: 302, headers: { location: 'http://example.com/final' } })
+      )
+      .mockResolvedValueOnce(
+        mockResponse({ headers: { 'content-type': 'text/html' }, body: '<html>final</html>' })
+      );
+
+    await safeFetchHtml('http://example.com/start');
+
+    expect(pinnedAgents).toHaveLength(2);
+    for (const agent of pinnedAgents) {
+      expect(agent.close).toHaveBeenCalledTimes(1);
+    }
   });
 
   it('reports a timeout when the request is aborted', async () => {

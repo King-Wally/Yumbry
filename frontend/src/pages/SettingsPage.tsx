@@ -8,7 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { listOllamaModelsDirect } from '../services/ollama-direct';
 import Dialog from '../components/Dialog';
 import type { AiProvider } from '../types';
-import type { SupportedLocale } from 'yumbry-shared';
+import { SUPPORTED_LOCALES, type SupportedLocale } from 'yumbry-shared';
 
 const PROVIDER_LABELS: Record<AiProvider, string> = {
   openai: 'OpenAI',
@@ -107,7 +107,7 @@ export default function SettingsPage() {
   const localeMutation = useMutation({
     mutationFn: (locale: SupportedLocale) => updateProfile({ locale }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.authMe });
     },
   });
 
@@ -127,7 +127,7 @@ export default function SettingsPage() {
             disabled={localeMutation.isPending}
             className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none disabled:opacity-50"
           >
-            {(Object.keys(LOCALE_LABELS) as SupportedLocale[]).map((key) => (
+            {SUPPORTED_LOCALES.map((key) => (
               <option key={key} value={key}>
                 {LOCALE_LABELS[key]}
               </option>

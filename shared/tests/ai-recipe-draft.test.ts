@@ -162,17 +162,16 @@ describe('buildChatMessages', () => {
     expect(JSON.stringify(messages)).toContain('Mild Curry');
   });
 
-  it("leaves buildChatSystemPrompt's own message byte-identical regardless of locale", () => {
-    const withoutLocale = buildChatMessages([{ role: 'user', content: 'hi' }], null);
-    const withLocale = buildChatMessages([{ role: 'user', content: 'hi' }], null, 'fr');
-    expect(withoutLocale[0]).toEqual(withLocale[0]);
-    expect(withLocale[0].content).toContain(SYSTEM_PROMPT_MARKER);
-  });
-
-  it('defaults to English when no locale is passed', () => {
+  it('defaults to English when no locale is passed, with no separate override message', () => {
     const messages = buildChatMessages([{ role: 'user', content: 'hi' }], null);
-    const override = messages.find((m) => m.content.startsWith('Language override:'));
-    expect(override?.content).toContain('English');
+
+    // buildChatSystemPrompt(), draftContext, ...conversation — no third,
+    // contradicting "override" message.
+    expect(messages).toHaveLength(3);
+    expect(messages.some((m) => m.content.startsWith('Language override:'))).toBe(false);
+    expect(messages[0].content).toContain(SYSTEM_PROMPT_MARKER);
+    expect(messages[0].content).toContain('write "reply" in English');
+    expect(messages[0].content).toContain('translate that English recipe into English');
   });
 
   const locales: { locale: SupportedLocale; languageName: string }[] = [
@@ -183,32 +182,33 @@ describe('buildChatMessages', () => {
   ];
 
   it.each(locales)(
-    'appends a language-override system message for locale $locale',
+    'parameterizes the single system prompt with the target language for locale $locale',
     ({ locale, languageName }) => {
       const messages = buildChatMessages([{ role: 'user', content: 'hi' }], null, locale);
 
-      // buildChatSystemPrompt(), draftContext, language override, ...conversation
-      expect(messages).toHaveLength(4);
+      // buildChatSystemPrompt(), draftContext, ...conversation — still just
+      // one coherent system prompt, no separate override message.
+      expect(messages).toHaveLength(3);
+      expect(messages.some((m) => m.content.startsWith('Language override:'))).toBe(false);
+      expect(messages[0].role).toBe('system');
       expect(messages[0].content).toContain(SYSTEM_PROMPT_MARKER);
-      expect(messages[2].role).toBe('system');
-      expect(messages[2].content).toContain('Language override:');
-      expect(messages[2].content).toContain(languageName);
-      expect(messages[2].content).toContain('reply');
-      expect(messages[2].content).toContain('recipe');
-      expect(messages[2].content).toMatch(/internal reasoning still\s+happen in English/);
-      expect(messages[3]).toEqual({ role: 'user', content: 'hi' });
+      expect(messages[0].content).toContain(`write "reply" in ${languageName}`);
+      expect(messages[0].content).toContain(`translate that English recipe into ${languageName}`);
+      expect(messages[1]).toEqual({
+        role: 'system',
+        content: 'There is no recipe draft yet — this is the start of a new recipe.',
+      });
+      expect(messages[2]).toEqual({ role: 'user', content: 'hi' });
     }
   );
 
   it('reuses the existing Flemish Dutch vocabulary guidance for locale nl', () => {
     const messages = buildChatMessages([{ role: 'user', content: 'hi' }], null, 'nl');
-    const override = messages.find((m) => m.content.startsWith('Language override:'));
-    expect(override?.content).toContain('vocabulary guidance already given above');
+    expect(messages[0].content).toContain('"ajuin" not "ui"');
   });
 
-  it('instructs standard vocabulary for non-Dutch locales', () => {
+  it('does not add Flemish-specific vocabulary guidance for non-Dutch locales', () => {
     const messages = buildChatMessages([{ role: 'user', content: 'hi' }], null, 'es');
-    const override = messages.find((m) => m.content.startsWith('Language override:'));
-    expect(override?.content).toContain('standard, natural Spanish recipe vocabulary');
+    expect(messages[0].content).not.toContain('"ajuin" not "ui"');
   });
 });

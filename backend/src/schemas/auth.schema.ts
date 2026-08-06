@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SUPPORTED_LOCALES } from 'yumbry-shared';
 
 export const AuthBodySchema = z.object({
   email: z.string().trim().toLowerCase().email(),
@@ -26,7 +27,7 @@ export const ResetPasswordBodySchema = z.object({
 
 export type ResetPasswordBody = z.infer<typeof ResetPasswordBodySchema>;
 
-export const LocaleSchema = z.enum(['en', 'nl', 'fr', 'es']);
+export const LocaleSchema = z.enum(SUPPORTED_LOCALES);
 
 export const UpdateProfileBodySchema = z.object({
   locale: LocaleSchema,

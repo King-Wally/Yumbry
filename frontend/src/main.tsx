@@ -6,6 +6,7 @@ import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { ApiError } from './api/client';
+import { queryKeys } from './api/queryKeys';
 import './i18n';
 import './index.css';
 
@@ -16,7 +17,7 @@ const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error) => {
       if (error instanceof ApiError && error.kind === 'unauthenticated') {
-        queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.authMe });
       }
     },
   }),

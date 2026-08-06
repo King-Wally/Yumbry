@@ -46,6 +46,35 @@ describe('SettingsPage', () => {
     vi.mocked(apiClient.getCurrentUser).mockRejectedValue(new Error('not authenticated'));
   });
 
+  it('saving a language choice refetches the current user via queryKeys.authMe, not a hand-written key', async () => {
+    vi.mocked(apiClient.getCurrentUser).mockResolvedValueOnce({
+      id: 1,
+      email: 'a@example.com',
+      locale: 'en',
+    });
+    vi.mocked(apiClient.updateProfile).mockResolvedValue({
+      id: 1,
+      email: 'a@example.com',
+      locale: 'fr',
+    });
+    renderSettings();
+
+    await screen.findByDisplayValue('http://localhost:11434/v1');
+    const getCurrentUserCallsBefore = vi.mocked(apiClient.getCurrentUser).mock.calls.length;
+
+    fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'fr' } });
+
+    await waitFor(() => expect(apiClient.updateProfile).toHaveBeenCalledWith({ locale: 'fr' }));
+    // Saving invalidates queryKeys.authMe, which re-triggers AuthContext's
+    // own getCurrentUser query — proof the mutation and the query share the
+    // same key rather than two independently hand-written literals.
+    await waitFor(() =>
+      expect(vi.mocked(apiClient.getCurrentUser).mock.calls.length).toBeGreaterThan(
+        getCurrentUserCallsBefore
+      )
+    );
+  });
+
   it('hydrates the form from the fetched settings', async () => {
     renderSettings();
     expect(await screen.findByDisplayValue('http://localhost:11434/v1')).toBeInTheDocument();

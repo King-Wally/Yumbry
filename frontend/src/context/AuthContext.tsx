@@ -2,16 +2,17 @@ import { useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as api from '../api/client';
 import type { CurrentUser } from '../api/client';
+import { queryKeys } from '../api/queryKeys';
 import { AuthContext } from './auth-context';
 import { setActiveLocale } from '../i18n';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [user, setUser] = useState<CurrentUser | null | undefined>(undefined);
-  const [syncedLocaleFor, setSyncedLocaleFor] = useState<number | null>(null);
+  const [syncedLocale, setSyncedLocale] = useState<string | null>(null);
 
   const { isLoading } = useQuery({
-    queryKey: ['auth', 'me'],
+    queryKey: queryKeys.authMe,
     queryFn: async () => {
       try {
         const me = await api.getCurrentUser();
@@ -29,8 +30,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Sync the active UI language to the authenticated user's stored
   // preference — during render, not a useEffect, matching this app's
   // established convention for state derived from an async query result.
-  if (user && syncedLocaleFor !== user.id) {
-    setSyncedLocaleFor(user.id);
+  // Tracked by locale value (not user id) so a locale change made via
+  // Settings — which refetches this same user object with a new `locale` —
+  // re-applies immediately instead of only on the next login.
+  if (user && syncedLocale !== user.locale) {
+    setSyncedLocale(user.locale);
     setActiveLocale(user.locale);
   }
 

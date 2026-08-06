@@ -14,4 +14,5 @@ export const queryKeys = {
   categories: ['categories'] as const,
   aiSettings: ['ai-settings'] as const,
   aiModels: (baseUrl?: string) => ['ai-models', baseUrl ?? null] as const,
+  authMe: ['auth', 'me'] as const,
 };

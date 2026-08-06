@@ -139,6 +139,47 @@ describe.skipIf(!TEST_DATABASE_URL)('auth API', () => {
     expect(res.status).toBe(401);
   });
 
+  it('still clears the cookie and returns 204 on logout after the account was deleted from another session', async () => {
+    const ip = '10.0.0.11';
+    const agentA = request.agent(app);
+    await agentA
+      .post('/api/auth/register')
+      .set('X-Forwarded-For', ip)
+      .send({ email: 'olga@example.com', password: 'password123' });
+
+    // A second "tab" holding the same still-valid cookie.
+    const agentB = request.agent(app);
+    await agentB
+      .post('/api/auth/login')
+      .set('X-Forwarded-For', ip)
+      .send({ email: 'olga@example.com', password: 'password123' });
+
+    const del = await agentA.delete('/api/auth/me').set('X-Forwarded-For', ip).send({
+      password: 'password123',
+    });
+    expect(del.status).toBe(204);
+
+    // agentB's JWT is now orphaned — the user row it points at is gone.
+    const logout = await agentB.post('/api/auth/logout');
+    expect(logout.status).toBe(204);
+    expect(logout.headers['set-cookie']).toBeDefined();
+  });
+
+  it('does not rate-limit logout alongside login/register on the same IP', async () => {
+    const ip = '10.0.0.12';
+    const agent = request.agent(app);
+    await agent
+      .post('/api/auth/register')
+      .set('X-Forwarded-For', ip)
+      .send({ email: 'pablo@example.com', password: 'password123' });
+
+    // More than the 10/15min login-budget worth of logout calls.
+    for (let i = 0; i < 15; i++) {
+      const res = await agent.post('/api/auth/logout').set('X-Forwarded-For', ip);
+      expect(res.status).toBe(204);
+    }
+  });
+
   it('rejects account deletion with the wrong password, and still allows access', async () => {
     const agent = request.agent(app);
     await agent

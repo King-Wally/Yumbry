@@ -1,15 +1,15 @@
 import type { Request, Response } from 'express';
 import { ZodError } from 'zod';
 import { getAiSettingsForCall } from '../services/ai-settings.service.js';
-import { findUserById } from '../services/auth.service.js';
 import { chatWithAi, type AiProvider } from '../services/ai-provider.service.js';
-import { buildChatMessages, parseChatEnvelope, type SupportedLocale } from 'yumbry-shared';
+import {
+  buildChatMessages,
+  parseChatEnvelope,
+  SUPPORTED_LOCALES,
+  type SupportedLocale,
+} from 'yumbry-shared';
 import { AiChatTurnRequestSchema } from '../schemas/ai-chat.schema.js';
 import { sendAiProviderError } from '../utils/ai-provider-error-response.js';
-
-function isSupportedLocale(locale: string): locale is SupportedLocale {
-  return locale === 'en' || locale === 'nl' || locale === 'fr' || locale === 'es';
-}
 
 function isEnvelopeParseError(err: unknown): err is Error {
   return err instanceof Error && err.message.startsWith('The AI response');
@@ -43,8 +43,12 @@ export async function postAiChat(req: Request, res: Response) {
     const settings = await requireModel(res, req.userId as number);
     if (!settings) return;
 
-    const user = await findUserById(req.userId as number);
-    const locale = user && isSupportedLocale(user.locale) ? user.locale : 'en';
+    // Use the user's chosen locale, defaulting to English when they haven't
+    // set one (users.locale itself already defaults to 'en').
+    const locale: SupportedLocale =
+      req.user && SUPPORTED_LOCALES.includes(req.user.locale as SupportedLocale)
+        ? (req.user.locale as SupportedLocale)
+        : 'en';
 
     const raw = await chatWithAi(buildChatMessages(body.messages, body.current_draft, locale), {
       provider: settings.provider,

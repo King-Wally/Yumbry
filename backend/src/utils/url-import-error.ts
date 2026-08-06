@@ -1,4 +1,5 @@
 import type { Response } from 'express';
+import { sendKindedError } from './kinded-error-response.js';
 
 export type UrlImportErrorKind =
   | 'invalid_url'
@@ -34,6 +35,5 @@ const STATUS_BY_KIND: Record<UrlImportErrorKind, number> = {
 };
 
 export function sendUrlImportError(res: Response, err: unknown): void {
-  if (!(err instanceof UrlImportError)) throw err;
-  res.status(STATUS_BY_KIND[err.kind]).json({ error: err.message, kind: err.kind });
+  sendKindedError(res, err, UrlImportError, STATUS_BY_KIND);
 }

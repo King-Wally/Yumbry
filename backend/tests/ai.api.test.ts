@@ -288,6 +288,42 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
       expect(res.body.kind).toBe('bad_status');
     });
 
+    it('targets English in the prompt for a user who has never set a locale', async () => {
+      await agent
+        .put('/api/ai/settings')
+        .send({ provider: 'ollama', base_url: 'http://localhost:11434/v1', model: 'llama3.1' });
+      chatWithAi.mockResolvedValue(
+        JSON.stringify({ reply: 'Hi', recipe: { title: 'Untitled recipe' } })
+      );
+
+      await agent
+        .post('/api/ai/chat')
+        .send({ messages: [{ role: 'user', content: 'hi' }], current_draft: null });
+
+      const promptMessages = chatWithAi.mock.calls[0][0];
+      expect(promptMessages[0].content).toContain('write "reply" in English');
+    });
+
+    it('targets the locale set via PATCH /api/auth/me in the prompt', async () => {
+      await agent.patch('/api/auth/me').send({ locale: 'fr' });
+      await agent
+        .put('/api/ai/settings')
+        .send({ provider: 'ollama', base_url: 'http://localhost:11434/v1', model: 'llama3.1' });
+      chatWithAi.mockResolvedValue(
+        JSON.stringify({ reply: 'Bonjour', recipe: { title: 'Untitled recipe' } })
+      );
+
+      await agent
+        .post('/api/ai/chat')
+        .send({ messages: [{ role: 'user', content: 'hi' }], current_draft: null });
+
+      const promptMessages = chatWithAi.mock.calls[0][0];
+      expect(promptMessages[0].content).toContain('write "reply" in French');
+
+      // Reset for subsequent tests in this file that assume the default locale.
+      await agent.patch('/api/auth/me').send({ locale: 'en' });
+    });
+
     it('returns 400 on a malformed request body', async () => {
       const missingCurrentDraft = await agent
         .post('/api/ai/chat')
