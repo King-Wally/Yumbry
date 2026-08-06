@@ -111,6 +111,10 @@ function normalizeFractionChars(text: string): string {
   return text.replace(/[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞⁄]/g, (char) => VULGAR_FRACTIONS[char] ?? char);
 }
 
+function normalizeDecimalComma(text: string): string {
+  return text.replace(/^(\d+),(\d+)(?=\s|$)/, '$1.$2');
+}
+
 function roundAmount(amount: number): number {
   return Math.round(amount * 1000) / 1000;
 }
@@ -123,7 +127,7 @@ interface LeadingQuantity {
 }
 
 function parseLeadingQuantity(text: string): LeadingQuantity | null {
-  const normalized = normalizeFractionChars(text);
+  const normalized = normalizeDecimalComma(normalizeFractionChars(text));
   const match = LEADING_QUANTITY_REGEX.exec(normalized);
   if (!match) {
     return null;

@@ -97,4 +97,18 @@ describe('parseIngredientLine', () => {
     expect(result.unit).toBeNull();
     expect(result.name).toBe('eggs');
   });
+
+  it('parses a comma as a decimal separator', () => {
+    const result = parseIngredientLine('4,5 g suiker');
+    expect(result.amount).toBe(4.5);
+    expect(result.unit).toBe('g');
+    expect(result.name).toBe('suiker');
+    expect(result.is_scalable).toBe(true);
+  });
+
+  it('does not treat a comma later in the line as a decimal separator', () => {
+    const result = parseIngredientLine('2 eggs, beaten');
+    expect(result.amount).toBe(2);
+    expect(result.name).toBe('eggs, beaten');
+  });
 });
