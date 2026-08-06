@@ -38,4 +38,63 @@ describe('parseIngredientLine', () => {
     expect(result.is_scalable).toBe(false);
     expect(result.raw_text).toBe('salt to taste');
   });
+
+  it('strips a leading "of" from the name', () => {
+    const result = parseIngredientLine('1 cup of sugar');
+    expect(result.amount).toBe(1);
+    expect(result.unit).toBe('cup');
+    expect(result.name).toBe('sugar');
+  });
+
+  it('recognizes alternate unit spellings', () => {
+    const result = parseIngredientLine('3 tbsp olive oil');
+    expect(result.unit).toBe('tbsp');
+    expect(result.name).toBe('olive oil');
+  });
+
+  it('parses decimal quantities', () => {
+    const result = parseIngredientLine('2.5 kg potatoes');
+    expect(result.amount).toBe(2.5);
+    expect(result.unit).toBe('kg');
+    expect(result.name).toBe('potatoes');
+  });
+
+  it('rounds repeating-decimal fractions to 3 decimal places', () => {
+    const result = parseIngredientLine('1/3 cup water');
+    expect(result.amount).toBeCloseTo(0.333);
+  });
+
+  it('falls back to a null unit and keeps the word in the name when the unit is unrecognized', () => {
+    const result = parseIngredientLine('2 knobs butter');
+    expect(result.amount).toBe(2);
+    expect(result.unit).toBeNull();
+    expect(result.name).toBe('knobs butter');
+  });
+
+  it('strips a trailing period from an abbreviated unit', () => {
+    const result = parseIngredientLine('1 lb. butter');
+    expect(result.amount).toBe(1);
+    expect(result.unit).toBe('lb');
+    expect(result.name).toBe('butter');
+  });
+
+  it('strips a leading "of" after a period-abbreviated unit', () => {
+    const result = parseIngredientLine('1 lb. of butter');
+    expect(result.amount).toBe(1);
+    expect(result.unit).toBe('lb');
+    expect(result.name).toBe('butter');
+  });
+
+  it('strips a comma separating an abbreviated unit from the name', () => {
+    const result = parseIngredientLine('2 tbsp, packed');
+    expect(result.unit).toBe('tbsp');
+    expect(result.name).toBe('packed');
+  });
+
+  it('ignores surrounding whitespace', () => {
+    const result = parseIngredientLine('  2 eggs  ');
+    expect(result.amount).toBe(2);
+    expect(result.unit).toBeNull();
+    expect(result.name).toBe('eggs');
+  });
 });
