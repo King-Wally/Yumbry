@@ -3,6 +3,7 @@ import {
   deleteAccount,
   getMe,
   patchMe,
+  postChangePassword,
   postForgotPassword,
   postLogin,
   postLogout,
@@ -21,5 +22,11 @@ authRouter.post('/logout', asyncHandler(postLogout));
 authRouter.get('/me', requireAuth, asyncHandler(getMe));
 authRouter.patch('/me', requireAuth, asyncHandler(patchMe));
 authRouter.delete('/me', requireAuth, loginRateLimiter, asyncHandler(deleteAccount));
+authRouter.post(
+  '/change-password',
+  requireAuth,
+  loginRateLimiter,
+  asyncHandler(postChangePassword)
+);
 authRouter.post('/forgot-password', forgotPasswordRateLimiter, asyncHandler(postForgotPassword));
 authRouter.post('/reset-password', loginRateLimiter, asyncHandler(postResetPassword));

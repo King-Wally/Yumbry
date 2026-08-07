@@ -1,7 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { deleteAccount, listAiModels, updateAiSettings, updateProfile } from '../api/client';
+import {
+  changePassword,
+  deleteAccount,
+  listAiModels,
+  updateAiSettings,
+  updateProfile,
+} from '../api/client';
 import { queryKeys } from '../api/queryKeys';
 import { useAiSettings } from '../hooks/useAiSettings';
 import { useAuth } from '../hooks/useAuth';
@@ -110,6 +116,27 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: queryKeys.authMe });
     },
   });
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const passwordMismatch =
+    newPassword.length > 0 && confirmNewPassword.length > 0 && newPassword !== confirmNewPassword;
+
+  const changePasswordMutation = useMutation({
+    mutationFn: () => changePassword(currentPassword, newPassword),
+    onSuccess: () => {
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+    },
+  });
+
+  function handleChangePasswordSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (newPassword !== confirmNewPassword) return;
+    changePasswordMutation.mutate();
+  }
 
   return (
     <div className="max-w-xl space-y-10">
@@ -276,6 +303,71 @@ export default function SettingsPage() {
           className="rounded-md bg-clay px-4 py-2 text-white disabled:opacity-50"
         >
           {saveMutation.isPending ? t('settings.ai.saving') : t('settings.ai.saveSettings')}
+        </button>
+      </form>
+
+      <form onSubmit={handleChangePasswordSubmit} className="space-y-3">
+        <div>
+          <h1 className="font-serif text-2xl text-stone-900">{t('settings.password.title')}</h1>
+          <p className="mt-1 text-sm text-stone-500">{t('settings.password.description')}</p>
+        </div>
+
+        <label className="block text-sm font-medium text-stone-700">
+          {t('settings.password.currentPassword')}
+          <input
+            type="password"
+            required
+            autoComplete="current-password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none"
+          />
+        </label>
+
+        <label className="block text-sm font-medium text-stone-700">
+          {t('settings.password.newPassword')}
+          <input
+            type="password"
+            required
+            minLength={8}
+            autoComplete="new-password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none"
+          />
+        </label>
+
+        <label className="block text-sm font-medium text-stone-700">
+          {t('settings.password.confirmNewPassword')}
+          <input
+            type="password"
+            required
+            autoComplete="new-password"
+            value={confirmNewPassword}
+            onChange={(e) => setConfirmNewPassword(e.target.value)}
+            className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none"
+          />
+        </label>
+
+        {passwordMismatch && (
+          <p className="text-sm text-red-600">{t('settings.password.mismatch')}</p>
+        )}
+
+        {changePasswordMutation.isError && (
+          <p className="text-sm text-red-600">{changePasswordMutation.error?.message}</p>
+        )}
+        {changePasswordMutation.isSuccess && (
+          <p className="text-sm text-green-700">{t('settings.password.saved')}</p>
+        )}
+
+        <button
+          type="submit"
+          disabled={changePasswordMutation.isPending || passwordMismatch}
+          className="rounded-md bg-clay px-4 py-2 text-white disabled:opacity-50"
+        >
+          {changePasswordMutation.isPending
+            ? t('settings.password.saving')
+            : t('settings.password.savePassword')}
         </button>
       </form>
 

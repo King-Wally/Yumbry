@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 import { Prisma } from '../generated/prisma/client.js';
 import {
   AuthBodySchema,
+  ChangePasswordBodySchema,
   DeleteAccountBodySchema,
   ForgotPasswordBodySchema,
   ResetPasswordBodySchema,
@@ -10,6 +11,7 @@ import {
 } from '../schemas/auth.schema.js';
 import { AUTH_COOKIE_NAME, signAuthToken, verifyAuthToken } from '../utils/jwt.js';
 import {
+  changePassword,
   deleteUser,
   findUserByEmail,
   findUserById,
@@ -121,6 +123,20 @@ export async function postResetPassword(req: Request, res: Response) {
 
     setAuthCookie(res, result.userId, result.tokenVersion);
     res.status(200).json({ id: result.userId });
+  } catch (err) {
+    if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
+    throw err;
+  }
+}
+
+export async function postChangePassword(req: Request, res: Response) {
+  try {
+    const { currentPassword, newPassword } = ChangePasswordBodySchema.parse(req.body);
+    const result = await changePassword(req.userId as number, currentPassword, newPassword);
+    if (!result) return res.status(401).json({ error: 'Incorrect password.' });
+
+    setAuthCookie(res, req.userId as number, result.tokenVersion);
+    res.status(204).end();
   } catch (err) {
     if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
     throw err;

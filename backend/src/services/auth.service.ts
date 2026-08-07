@@ -148,3 +148,23 @@ export async function resetPassword(
     return { userId: resetToken.userId, tokenVersion: user.tokenVersion };
   });
 }
+
+export async function changePassword(
+  userId: number,
+  currentPassword: string,
+  newPassword: string
+): Promise<{ tokenVersion: number } | null> {
+  const user = await findUserById(userId);
+  const valid = await verifyPassword(currentPassword, user?.password_hash);
+  if (!user || !valid) return null;
+
+  const passwordHash = await hashPassword(newPassword);
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash, tokenVersion: { increment: 1 } },
+    select: { tokenVersion: true },
+  });
+
+  return { tokenVersion: updated.tokenVersion };
+}

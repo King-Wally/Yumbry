@@ -49,6 +49,17 @@
       "saving": "Saving...",
       "saveSettings": "Save settings"
     },
+    "password": {
+      "title": "Password",
+      "description": "Change the password used to sign in. This will sign you out on all other devices.",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmNewPassword": "Confirm new password",
+      "mismatch": "The passwords don't match.",
+      "saved": "Password changed.",
+      "saving": "Saving...",
+      "savePassword": "Save password"
+    },
     "dangerZone": {
       "title": "Danger zone",
       "description": "Permanently delete your account and everything in it — recipes, tags, categories, and settings. This cannot be undone.",

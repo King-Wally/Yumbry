@@ -228,6 +228,131 @@ describe.skipIf(!TEST_DATABASE_URL)('auth API', () => {
     expect(recipeRows).toHaveLength(0);
   });
 
+  it('changes the password and keeps the current session logged in', async () => {
+    const ip = '10.0.0.13';
+    const agent = request.agent(app);
+    await agent
+      .post('/api/auth/register')
+      .set('X-Forwarded-For', ip)
+      .send({ email: 'gina@example.com', password: 'password123' });
+
+    const change = await agent
+      .post('/api/auth/change-password')
+      .set('X-Forwarded-For', ip)
+      .send({ currentPassword: 'password123', newPassword: 'newpassword456' });
+    expect(change.status).toBe(204);
+
+    const me = await agent.get('/api/auth/me');
+    expect(me.status).toBe(200);
+  });
+
+  it('logs in with the new password and rejects the old one', async () => {
+    const ip = '10.0.0.14';
+    const agent = request.agent(app);
+    await agent
+      .post('/api/auth/register')
+      .set('X-Forwarded-For', ip)
+      .send({ email: 'hank@example.com', password: 'password123' });
+
+    await agent
+      .post('/api/auth/change-password')
+      .set('X-Forwarded-For', ip)
+      .send({ currentPassword: 'password123', newPassword: 'newpassword456' });
+
+    const oldLogin = await request(app)
+      .post('/api/auth/login')
+      .set('X-Forwarded-For', ip)
+      .send({ email: 'hank@example.com', password: 'password123' });
+    expect(oldLogin.status).toBe(401);
+
+    const newLogin = await request(app)
+      .post('/api/auth/login')
+      .set('X-Forwarded-For', ip)
+      .send({ email: 'hank@example.com', password: 'newpassword456' });
+    expect(newLogin.status).toBe(200);
+  });
+
+  it('rejects a password change with the wrong current password, and still allows access', async () => {
+    const ip = '10.0.0.15';
+    const agent = request.agent(app);
+    await agent
+      .post('/api/auth/register')
+      .set('X-Forwarded-For', ip)
+      .send({ email: 'ivy@example.com', password: 'password123' });
+
+    const wrongPassword = await agent
+      .post('/api/auth/change-password')
+      .set('X-Forwarded-For', ip)
+      .send({ currentPassword: 'wrong-password', newPassword: 'newpassword456' });
+    expect(wrongPassword.status).toBe(401);
+
+    const me = await agent.get('/api/auth/me');
+    expect(me.status).toBe(200);
+  });
+
+  it('rejects a change-password body with a short new password or a missing current password', async () => {
+    const ip = '10.0.0.16';
+    const agent = request.agent(app);
+    await agent
+      .post('/api/auth/register')
+      .set('X-Forwarded-For', ip)
+      .send({ email: 'jack@example.com', password: 'password123' });
+
+    const shortNew = await agent
+      .post('/api/auth/change-password')
+      .set('X-Forwarded-For', ip)
+      .send({ currentPassword: 'password123', newPassword: 'short' });
+    expect(shortNew.status).toBe(400);
+
+    const missingCurrent = await agent
+      .post('/api/auth/change-password')
+      .set('X-Forwarded-For', ip)
+      .send({ newPassword: 'newpassword456' });
+    expect(missingCurrent.status).toBe(400);
+  });
+
+  it('returns 401 from POST /api/auth/change-password without a session', async () => {
+    const res = await request(app)
+      .post('/api/auth/change-password')
+      .send({ currentPassword: 'password123', newPassword: 'newpassword456' });
+    expect(res.status).toBe(401);
+  });
+
+  it('invalidates other sessions on password change while refreshing the current one', async () => {
+    const ip = '10.0.0.17';
+    const agentA = request.agent(app);
+    const register = await agentA
+      .post('/api/auth/register')
+      .set('X-Forwarded-For', ip)
+      .send({ email: 'kara@example.com', password: 'password123' });
+
+    const rawCookieA = (register.headers['set-cookie'] as unknown as string[])?.find((c) =>
+      c.startsWith('token=')
+    );
+    expect(rawCookieA).toBeDefined();
+
+    // A second "tab" holding the same still-valid cookie.
+    const agentB = request.agent(app);
+    await agentB
+      .post('/api/auth/login')
+      .set('X-Forwarded-For', ip)
+      .send({ email: 'kara@example.com', password: 'password123' });
+
+    const change = await agentA
+      .post('/api/auth/change-password')
+      .set('X-Forwarded-For', ip)
+      .send({ currentPassword: 'password123', newPassword: 'newpassword456' });
+    expect(change.status).toBe(204);
+
+    // agentB's stale cookie (from before the password change) is invalidated.
+    const staleReplay = await agentB.get('/api/auth/me').set('X-Forwarded-For', ip);
+    expect(staleReplay.status).toBe(401);
+
+    // agentA's cookie was refreshed by the change-password response, so it still works.
+    const meA = await agentA.get('/api/auth/me').set('X-Forwarded-For', ip);
+    expect(meA.status).toBe(200);
+  });
+
   it('defaults locale to en and updates it via PATCH /api/auth/me', async () => {
     const agent = request.agent(app);
     await agent

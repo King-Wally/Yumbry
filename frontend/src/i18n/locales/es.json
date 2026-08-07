@@ -49,6 +49,17 @@
       "saving": "Guardando...",
       "saveSettings": "Guardar ajustes"
     },
+    "password": {
+      "title": "Contraseña",
+      "description": "Cambia la contraseña utilizada para iniciar sesión. Esto cerrará tu sesión en todos los demás dispositivos.",
+      "currentPassword": "Contraseña actual",
+      "newPassword": "Nueva contraseña",
+      "confirmNewPassword": "Confirma la nueva contraseña",
+      "mismatch": "Las contraseñas no coinciden.",
+      "saved": "Contraseña cambiada.",
+      "saving": "Guardando...",
+      "savePassword": "Guardar contraseña"
+    },
     "dangerZone": {
       "title": "Zona de peligro",
       "description": "Elimina permanentemente tu cuenta y todo su contenido — recetas, etiquetas, categorías y ajustes. Esta acción no se puede deshacer.",

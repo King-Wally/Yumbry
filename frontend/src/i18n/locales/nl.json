@@ -49,6 +49,17 @@
       "saving": "Opslaan...",
       "saveSettings": "Instellingen opslaan"
     },
+    "password": {
+      "title": "Wachtwoord",
+      "description": "Wijzig het wachtwoord waarmee je inlogt. Dit meldt je af op alle andere apparaten.",
+      "currentPassword": "Huidig wachtwoord",
+      "newPassword": "Nieuw wachtwoord",
+      "confirmNewPassword": "Bevestig nieuw wachtwoord",
+      "mismatch": "De wachtwoorden komen niet overeen.",
+      "saved": "Wachtwoord gewijzigd.",
+      "saving": "Opslaan...",
+      "savePassword": "Wachtwoord opslaan"
+    },
     "dangerZone": {
       "title": "Gevarenzone",
       "description": "Verwijder je account en alles erin permanent — recepten, tags, categorieën en instellingen. Dit kan niet ongedaan worden gemaakt.",

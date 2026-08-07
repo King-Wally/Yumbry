@@ -49,6 +49,17 @@
       "saving": "Enregistrement...",
       "saveSettings": "Enregistrer les paramètres"
     },
+    "password": {
+      "title": "Mot de passe",
+      "description": "Modifiez le mot de passe utilisé pour vous connecter. Cela vous déconnectera de tous les autres appareils.",
+      "currentPassword": "Mot de passe actuel",
+      "newPassword": "Nouveau mot de passe",
+      "confirmNewPassword": "Confirmez le nouveau mot de passe",
+      "mismatch": "Les mots de passe ne correspondent pas.",
+      "saved": "Mot de passe modifié.",
+      "saving": "Enregistrement...",
+      "savePassword": "Enregistrer le mot de passe"
+    },
     "dangerZone": {
       "title": "Zone de danger",
       "description": "Supprimez définitivement votre compte et tout son contenu — recettes, tags, catégories et paramètres. Cette action est irréversible.",

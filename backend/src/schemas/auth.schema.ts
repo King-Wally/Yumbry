@@ -27,6 +27,13 @@ export const ResetPasswordBodySchema = z.object({
 
 export type ResetPasswordBody = z.infer<typeof ResetPasswordBodySchema>;
 
+export const ChangePasswordBodySchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8).max(72),
+});
+
+export type ChangePasswordBody = z.infer<typeof ChangePasswordBodySchema>;
+
 export const LocaleSchema = z.enum(SUPPORTED_LOCALES);
 
 export const UpdateProfileBodySchema = z.object({
