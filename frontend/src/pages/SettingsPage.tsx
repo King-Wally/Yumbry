@@ -215,7 +215,10 @@ export default function SettingsPage() {
           </label>
 
           {provider === 'ollama' ? (
-            <p className="text-xs text-stone-500">{t('settings.ai.ollamaNote')}</p>
+            <>
+              <p className="text-xs text-stone-500">{t('settings.ai.ollamaNote')}</p>
+              <p className="text-xs text-stone-500">{t('settings.ai.ollamaCorsNote')}</p>
+            </>
           ) : (
             <>
               <label className="block text-sm font-medium text-stone-700">
