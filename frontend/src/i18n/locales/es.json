@@ -160,12 +160,14 @@
     "ingredients": {
       "label": "Ingredientes",
       "addButton": "+ Añadir ingrediente",
-      "placeholder": "p. ej. 1 1/2 tazas de harina"
+      "placeholder": "p. ej. 1 1/2 tazas de harina",
+      "dragHandle": "Reordenar ingrediente"
     },
     "instructions": {
       "label": "Preparación",
       "addButton": "+ Añadir paso",
-      "placeholder": "Describe este paso"
+      "placeholder": "Describe este paso",
+      "dragHandle": "Reordenar paso"
     }
   },
   "import": {

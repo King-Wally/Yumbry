@@ -160,12 +160,14 @@
     "ingredients": {
       "label": "Ingrédients",
       "addButton": "+ Ajouter un ingrédient",
-      "placeholder": "ex. 1 1/2 tasse de farine"
+      "placeholder": "ex. 1 1/2 tasse de farine",
+      "dragHandle": "Réorganiser l'ingrédient"
     },
     "instructions": {
       "label": "Préparation",
       "addButton": "+ Ajouter une étape",
-      "placeholder": "Décrivez cette étape"
+      "placeholder": "Décrivez cette étape",
+      "dragHandle": "Réorganiser l'étape"
     }
   },
   "import": {

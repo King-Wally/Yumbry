@@ -15,6 +15,7 @@ export default function IngredientListEditor({ ingredients, onChange }: Ingredie
       createItem={() => ''}
       label={t('recipeForm.ingredients.label')}
       addLabel={t('recipeForm.ingredients.addButton')}
+      dragHandleLabel={t('recipeForm.ingredients.dragHandle')}
       renderItem={(line, update) => (
         <input
           type="text"

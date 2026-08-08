@@ -160,12 +160,14 @@
     "ingredients": {
       "label": "Ingredients",
       "addButton": "+ Add ingredient",
-      "placeholder": "e.g. 1 1/2 cups flour"
+      "placeholder": "e.g. 1 1/2 cups flour",
+      "dragHandle": "Reorder ingredient"
     },
     "instructions": {
       "label": "Instructions",
       "addButton": "+ Add step",
-      "placeholder": "Describe this step"
+      "placeholder": "Describe this step",
+      "dragHandle": "Reorder step"
     }
   },
   "import": {

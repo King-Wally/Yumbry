@@ -160,12 +160,14 @@
     "ingredients": {
       "label": "Ingrediënten",
       "addButton": "+ Ingrediënt toevoegen",
-      "placeholder": "bijv. 1 1/2 kopjes bloem"
+      "placeholder": "bijv. 1 1/2 kopjes bloem",
+      "dragHandle": "Ingrediënt verplaatsen"
     },
     "instructions": {
       "label": "Bereidingswijze",
       "addButton": "+ Stap toevoegen",
-      "placeholder": "Beschrijf deze stap"
+      "placeholder": "Beschrijf deze stap",
+      "dragHandle": "Stap verplaatsen"
     }
   },
   "import": {
