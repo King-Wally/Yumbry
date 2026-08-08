@@ -33,9 +33,26 @@ app.use('/api/tags', requireAuth, tagsRouter);
 app.use('/api/categories', requireAuth, categoriesRouter);
 app.use('/api/ai', requireAuth, aiRouter);
 
+// The shell and the service worker must always be revalidated, otherwise a stale
+// index.html can be served from the HTTP cache before the service worker ever runs.
+// Everything under assets/ is content-hashed by Vite, so it can be cached forever.
+const NO_CACHE_FILES = new Set(['index.html', 'sw.js', 'registerSW.js', 'manifest.webmanifest']);
+const ASSETS_PREFIX = path.join(PUBLIC_DIR, 'assets') + path.sep;
+
 if (fs.existsSync(PUBLIC_DIR)) {
-  app.use(express.static(PUBLIC_DIR));
+  app.use(
+    express.static(PUBLIC_DIR, {
+      setHeaders: (res, filePath) => {
+        if (NO_CACHE_FILES.has(path.basename(filePath))) {
+          res.setHeader('Cache-Control', 'no-cache');
+        } else if (filePath.startsWith(ASSETS_PREFIX)) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        }
+      },
+    })
+  );
   app.get(/^(?!\/api|\/uploads).*/, (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
   });
 }

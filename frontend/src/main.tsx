@@ -2,15 +2,15 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { ApiError } from './api/client';
 import { queryKeys } from './api/queryKeys';
+import { registerServiceWorker } from './pwa';
 import './i18n';
 import './index.css';
 
-registerSW({ immediate: true });
+registerServiceWorker();
 
 // 401: refetch auth status to clear user context and redirect to /login
 const queryClient = new QueryClient({
