@@ -1,7 +1,6 @@
 import type { AiChatMessage, RecipeInput } from '../types';
 import {
   AiProviderError,
-  DEFAULT_OLLAMA_BASE_URL,
   badStatusMessage,
   buildChatMessages,
   malformedModelListMessage,
@@ -35,7 +34,13 @@ import {
  */
 
 function resolveBaseUrl(baseUrl: string | null): string {
-  return baseUrl ? baseUrl.replace(/\/+$/, '') : DEFAULT_OLLAMA_BASE_URL;
+  if (baseUrl === null) {
+    throw new AiProviderError(
+      'A base URL is required for Ollama. Check the address on the Settings page.',
+      'unreachable'
+    );
+  }
+  return baseUrl?.replace(/\/+$/, '') || '';
 }
 
 async function postChatCompletion(

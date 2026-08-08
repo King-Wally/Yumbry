@@ -1,7 +1,7 @@
 import OpenAI, { APIConnectionError, APIError } from 'openai';
 import {
   AiProviderError,
-  DEFAULT_OLLAMA_BASE_URL,
+  DEFAULT_BASE_URLS,
   badStatusMessage,
   malformedModelListMessage,
   malformedResponseMessage,
@@ -17,13 +17,6 @@ export { AiProviderError };
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/+$/, '');
 }
-
-const DEFAULT_BASE_URLS: Record<Exclude<AiProvider, 'custom'>, string> = {
-  openai: 'https://api.openai.com/v1',
-  anthropic: 'https://api.anthropic.com/v1',
-  gemini: 'https://generativelanguage.googleapis.com/v1beta/openai',
-  ollama: DEFAULT_OLLAMA_BASE_URL,
-};
 
 export function resolveBaseUrl(provider: AiProvider, baseUrl: string | null): string {
   if (baseUrl) return normalizeBaseUrl(baseUrl);

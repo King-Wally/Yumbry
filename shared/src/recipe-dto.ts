@@ -1,16 +1,5 @@
 import type { AiChatMessage } from './ai-recipe-draft.js';
 
-/**
- * Wire-shape DTOs shared between backend/src/services/recipe.types.ts and
- * frontend/src/types.ts. These are the fields with no Date/string crossing
- * concern — id/name/text/number scalars that are identical on both sides of
- * the API boundary. `RecipeRow`/`Recipe`/`RecipeSummary` (which carry
- * created_at/updated_at) stay local to each package for now: backend types
- * those as `Date` (what recipe.service.ts's Prisma mapper actually produces)
- * while frontend types them as `string` (what actually crosses the wire) —
- * reconciling that is a separate follow-up.
- */
-
 export interface Tag {
   id: number;
   name: string;

@@ -14,7 +14,7 @@ import { useAuth } from '../hooks/useAuth';
 import { listOllamaModelsDirect } from '../services/ollama-direct';
 import Dialog from '../components/Dialog';
 import type { AiProvider } from '../types';
-import { SUPPORTED_LOCALES, type SupportedLocale } from 'yumbry-shared';
+import { DEFAULT_BASE_URLS, SUPPORTED_LOCALES, type SupportedLocale } from 'yumbry-shared';
 
 const PROVIDER_LABELS: Record<AiProvider, string> = {
   openai: 'OpenAI',
@@ -182,8 +182,12 @@ export default function SettingsPage() {
               required
               value={provider}
               onChange={(e) => {
-                setProvider(e.target.value as AiProvider | '');
+                const nextProvider = e.target.value as AiProvider | '';
+                setProvider(nextProvider);
                 setAvailableModels(null);
+                if (nextProvider && nextProvider !== 'custom' && !baseUrl) {
+                  setBaseUrl(DEFAULT_BASE_URLS[nextProvider]);
+                }
               }}
               className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none"
             >

@@ -1,12 +1,3 @@
-/** Single source of truth for the AI-chat prompt and JSON-envelope parsing
- * shared by every caller of an OpenAI-compatible chat-completions endpoint —
- * the backend's `/api/ai/chat` proxy (backend/src/controllers/ai.controller.ts)
- * for hosted providers, and the frontend's browser-direct Ollama client
- * (frontend/src/services/ollama-direct.ts). Living in its own workspace
- * package means both consume the exact same compiled logic — there is no
- * second hand-copied version of this prompt or its parsing to drift out of
- * sync. */
-
 export interface AiChatMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
