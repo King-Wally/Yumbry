@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 import { getAiSettingsForCall } from '../services/ai-settings.service.js';
 import { chatWithAi, type AiProvider } from '../services/ai-provider.service.js';
 import {
+  AI_ENVELOPE_JSON_SCHEMA,
   buildChatMessages,
   parseChatEnvelope,
   SUPPORTED_LOCALES,
@@ -55,7 +56,7 @@ export async function postAiChat(req: Request, res: Response) {
       baseUrl: settings.base_url,
       apiKey: settings.api_key,
       model: settings.model,
-      jsonMode: true,
+      jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
     });
 
     res.json(parseChatEnvelope(raw, body.current_draft));

@@ -1,5 +1,6 @@
 import type { AiChatMessage, RecipeInput } from '../types';
 import {
+  AI_ENVELOPE_JSON_SCHEMA,
   AiProviderError,
   badStatusMessage,
   buildChatMessages,
@@ -48,15 +49,26 @@ async function postChatCompletion(
   model: string,
   messages: unknown
 ): Promise<string> {
-  let res: Response;
-  try {
-    res = await fetch(`${resolveBaseUrl(baseUrl)}/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages, response_format: { type: 'json_object' } }),
-    });
-  } catch {
-    throw new AiProviderError(unreachableMessage(), 'unreachable');
+  const url = `${resolveBaseUrl(baseUrl)}/chat/completions`;
+
+  const send = async (responseFormat: unknown): Promise<Response> => {
+    try {
+      return await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, messages, response_format: responseFormat }),
+      });
+    } catch {
+      throw new AiProviderError(unreachableMessage(), 'unreachable');
+    }
+  };
+
+  // Constrained decoding against the envelope schema is the strongest guarantee of a parseable
+  // response, but Ollama only gained `json_schema` support in its OpenAI-compatible endpoint in
+  // 0.5 — a 400/422 means this build refuses the request shape, so fall back to plain JSON mode.
+  let res = await send({ type: 'json_schema', json_schema: AI_ENVELOPE_JSON_SCHEMA });
+  if (res.status === 400 || res.status === 422) {
+    res = await send({ type: 'json_object' });
   }
 
   if (!res.ok) {

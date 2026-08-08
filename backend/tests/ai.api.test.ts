@@ -301,7 +301,7 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
         .send({ messages: [{ role: 'user', content: 'hi' }], current_draft: null });
 
       const promptMessages = chatWithAi.mock.calls[0][0];
-      expect(promptMessages[0].content).toContain('write "reply" in English');
+      expect(promptMessages[0].content).toContain('Write "reply" in English');
     });
 
     it('targets the locale set via PATCH /api/auth/me in the prompt', async () => {
@@ -318,7 +318,7 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
         .send({ messages: [{ role: 'user', content: 'hi' }], current_draft: null });
 
       const promptMessages = chatWithAi.mock.calls[0][0];
-      expect(promptMessages[0].content).toContain('write "reply" in French');
+      expect(promptMessages[0].content).toContain('Write "reply" in French');
 
       // Reset for subsequent tests in this file that assume the default locale.
       await agent.patch('/api/auth/me').send({ locale: 'en' });

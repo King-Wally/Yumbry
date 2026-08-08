@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { AI_ENVELOPE_JSON_SCHEMA } from 'yumbry-shared';
 import {
   AiProviderError,
   chatWithAi,
@@ -59,7 +60,7 @@ describe('chatWithAi', () => {
     expect(reply).toBe('Here is a recipe.');
   });
 
-  it('calls the chat completions endpoint with the given model and messages', async () => {
+  it('calls the chat completions endpoint with the given model, messages and JSON schema', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
@@ -70,9 +71,10 @@ describe('chatWithAi', () => {
       baseUrl: 'http://localhost:11434/v1',
       apiKey: null,
       model: 'llama3.1',
-      jsonMode: true,
+      jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
     });
 
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
       'http://localhost:11434/v1/chat/completions',
       expect.objectContaining({ method: 'POST' })
@@ -80,8 +82,88 @@ describe('chatWithAi', () => {
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body).toMatchObject({
       model: 'llama3.1',
-      response_format: { type: 'json_object' },
+      response_format: { type: 'json_schema', json_schema: { name: 'recipe_chat_turn' } },
     });
+  });
+
+  it('sends no response_format when no JSON schema is requested', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await chatWithAi([{ role: 'user', content: 'hi' }], {
+      provider: 'ollama',
+      baseUrl: 'http://localhost:11434/v1',
+      apiKey: null,
+      model: 'llama3.1',
+    });
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).response_format).toBeUndefined();
+  });
+
+  it('falls back to plain JSON mode when the provider rejects the json_schema request shape', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ error: { message: 'unsupported' } }, 400))
+      .mockResolvedValueOnce(
+        jsonResponse({ choices: [{ message: { content: '{"reply":"hi"}' } }] })
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const reply = await chatWithAi([{ role: 'user', content: 'hi' }], {
+      provider: 'anthropic',
+      baseUrl: null,
+      apiKey: 'sk-x',
+      model: 'claude-sonnet-5',
+      jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
+    });
+
+    expect(reply).toBe('{"reply":"hi"}');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).response_format.type).toBe('json_schema');
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).response_format).toEqual({
+      type: 'json_object',
+    });
+  });
+
+  it('does not downgrade for errors other than a rejected request shape', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ error: { message: 'server exploded' } }, 500));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      chatWithAi([{ role: 'user', content: 'hi' }], {
+        provider: 'openai',
+        baseUrl: null,
+        apiKey: 'sk-x',
+        model: 'gpt-4o-mini',
+        jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
+      })
+    ).rejects.toMatchObject({ kind: 'bad_status' });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('surfaces the downgraded call’s own failure rather than retrying further', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ error: { message: 'unsupported' } }, 400))
+      .mockResolvedValueOnce(jsonResponse({ error: { message: 'bad key' } }, 401));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      chatWithAi([{ role: 'user', content: 'hi' }], {
+        provider: 'openai',
+        baseUrl: null,
+        apiKey: 'sk-bad',
+        model: 'gpt-4o-mini',
+        jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
+      })
+    ).rejects.toMatchObject({ kind: 'bad_status', message: expect.stringContaining('bad key') });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('throws an unreachable AiProviderError when the connection fails', async () => {
