@@ -6,6 +6,7 @@ import {
   AI_ENVELOPE_JSON_SCHEMA,
   buildChatMessages,
   parseChatEnvelope,
+  RECIPE_SAMPLING,
   SUPPORTED_LOCALES,
   type SupportedLocale,
 } from 'yumbry-shared';
@@ -57,6 +58,7 @@ export async function postAiChat(req: Request, res: Response) {
       apiKey: settings.api_key,
       model: settings.model,
       jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
+      sampling: RECIPE_SAMPLING,
     });
 
     res.json(parseChatEnvelope(raw, body.current_draft));

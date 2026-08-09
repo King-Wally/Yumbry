@@ -3,6 +3,7 @@ import {
   AI_ENVELOPE_JSON_SCHEMA,
   buildChatMessages,
   parseChatEnvelope,
+  RECIPE_SAMPLING,
   type AiChatMessage,
   type AiRecipeDraft,
   type SupportedLocale,
@@ -477,7 +478,8 @@ describe('buildChatMessages', () => {
       expect(messages[0].role).toBe('system');
       expect(messages[0].content).toContain(SYSTEM_PROMPT_MARKER);
       expect(messages[0].content).toContain(`Write "reply" in ${languageName}`);
-      expect(messages[0].content).toContain(`translate it into ${languageName}`);
+      expect(messages[0].content).toContain(`Write the recipe in ${languageName}`);
+      expect(messages[0].content).not.toContain('translate');
       expect(messages[1]).toEqual({
         role: 'system',
         content: 'There is no recipe draft yet — this is the start of a new recipe.',
@@ -504,5 +506,12 @@ describe('buildChatMessages', () => {
   it('does not add Flemish-specific vocabulary guidance for non-Dutch locales', () => {
     const messages = buildChatMessages([{ role: 'user', content: 'hi' }], null, 'es');
     expect(messages[0].content).not.toContain('"ajuin" not "ui"');
+  });
+});
+
+describe('RECIPE_SAMPLING', () => {
+  it('has no repetition penalty and a low, deterministic-leaning temperature', () => {
+    expect(RECIPE_SAMPLING.repeat_penalty).toBe(1.0);
+    expect(RECIPE_SAMPLING.temperature).toBeLessThan(0.8);
   });
 });

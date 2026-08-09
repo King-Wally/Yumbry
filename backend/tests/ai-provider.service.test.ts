@@ -207,6 +207,82 @@ describe('chatWithAi', () => {
       })
     ).rejects.toMatchObject({ kind: 'malformed_response' });
   });
+
+  it('sends only the standard sampling fields to a provider without llama.cpp/Ollama extensions', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await chatWithAi([{ role: 'user', content: 'hi' }], {
+      provider: 'openai',
+      baseUrl: null,
+      apiKey: 'sk-x',
+      model: 'gpt-4o-mini',
+      sampling: { temperature: 0.6, top_p: 0.95, top_k: 64, min_p: 0, repeat_penalty: 1.0 },
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.temperature).toBe(0.6);
+    expect(body.top_p).toBe(0.95);
+    expect(body.top_k).toBeUndefined();
+    expect(body.min_p).toBeUndefined();
+    expect(body.repeat_penalty).toBeUndefined();
+  });
+
+  it('sends the extended sampler fields to llamacpp and ollama', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await chatWithAi([{ role: 'user', content: 'hi' }], {
+      provider: 'llamacpp',
+      baseUrl: null,
+      apiKey: null,
+      model: 'gemma-4-e2b-it',
+      sampling: { temperature: 0.6, top_p: 0.95, top_k: 64, min_p: 0, repeat_penalty: 1.0 },
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body).toMatchObject({
+      temperature: 0.6,
+      top_p: 0.95,
+      top_k: 64,
+      min_p: 0,
+      repeat_penalty: 1.0,
+    });
+  });
+
+  it('drops sampling on the final retry if the json_object-with-sampling call also rejects the request shape', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ error: { message: 'unsupported schema' } }, 400))
+      .mockResolvedValueOnce(jsonResponse({ error: { message: 'unsupported sampling' } }, 400))
+      .mockResolvedValueOnce(
+        jsonResponse({ choices: [{ message: { content: '{"reply":"hi"}' } }] })
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const reply = await chatWithAi([{ role: 'user', content: 'hi' }], {
+      provider: 'custom',
+      baseUrl: 'http://example.test/v1',
+      apiKey: 'sk-x',
+      model: 'some-model',
+      jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
+      sampling: { temperature: 0.6, top_p: 0.95, top_k: 64, min_p: 0, repeat_penalty: 1.0 },
+    });
+
+    expect(reply).toBe('{"reply":"hi"}');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).response_format.type).toBe('json_schema');
+    const secondBody = JSON.parse(fetchMock.mock.calls[1][1].body);
+    expect(secondBody.response_format).toEqual({ type: 'json_object' });
+    expect(secondBody.temperature).toBe(0.6);
+    const thirdBody = JSON.parse(fetchMock.mock.calls[2][1].body);
+    expect(thirdBody.response_format).toEqual({ type: 'json_object' });
+    expect(thirdBody.temperature).toBeUndefined();
+  });
 });
 
 describe('listAiModels', () => {

@@ -48,6 +48,38 @@ export interface AiJsonSchemaFormat {
 }
 
 /**
+ * `temperature`/`top_p` are standard OpenAI fields, sent to every provider. `top_k`/`min_p`/
+ * `repeat_penalty` are llama.cpp/Ollama sampler extensions — sending them to OpenAI, Anthropic
+ * or Gemini's compat endpoints would 400, so callers must gate those on provider (see
+ * `chatWithAi` in backend/src/services/ai-provider.service.ts and the equivalent gating in
+ * frontend/src/services/ollama-direct.ts).
+ */
+export interface AiSamplingParams {
+  temperature?: number;
+  top_p?: number;
+  top_k?: number;
+  min_p?: number;
+  repeat_penalty?: number;
+}
+
+/**
+ * Sampling tuned for constrained JSON recipe drafting: low variance (the failure mode we're
+ * guarding against is invented quantities, not repetitive prose) and no repetition penalty,
+ * since the envelope legitimately repeats structural tokens (`", "`, `"_minutes"`) and recipes
+ * legitimately repeat ingredient names across the ingredient list and the steps — penalizing
+ * that under grammar-constrained decoding just pushes the model onto worse *allowed* tokens.
+ * A single global profile rather than a per-provider one: the task's needs are provider-
+ * independent, only wire compatibility differs (see `AiSamplingParams`).
+ */
+export const RECIPE_SAMPLING: AiSamplingParams = {
+  temperature: 0.6,
+  top_p: 0.95,
+  top_k: 64,
+  min_p: 0,
+  repeat_penalty: 1.0,
+};
+
+/**
  * Sent as `response_format: { type: 'json_schema', json_schema: ... }` so providers that
  * support constrained decoding (OpenAI, recent Ollama, most custom endpoints) make an
  * invalid response structurally impossible rather than merely discouraged.
@@ -127,16 +159,19 @@ function languageRules(locale: SupportedLocale): string {
     return `- Write the recipe in ${languageName}.`;
   }
 
+  // Deliberately a single, directly executable instruction rather than "draft in English
+  // first, then translate as a final step": under grammar-constrained decoding every token is
+  // already inside the JSON envelope, so there is nowhere for a hidden English draft to go —
+  // asking for one is an instruction the model cannot actually follow, which for a small model
+  // is not a harmless no-op but noise that degrades the instructions around it.
   const flemishNote =
     locale === 'nl'
       ? ' Use Flemish vocabulary as spoken in Flanders, not Netherlands Dutch — "ajuin" not "ui", "kropsla" not "krop sla".'
       : '';
 
   return (
-    `- Draft the recipe in English first, using whichever units are natural for it. Then, as a final ` +
-    `step, translate it into ${languageName} and convert every measurement to metric.${flemishNote}\n` +
-    `- Only the translated ${languageName} version goes into "recipe". The English draft is an internal ` +
-    `step and must never reach the user.`
+    `- Write the recipe in ${languageName}, converting every measurement to metric yourself if the ` +
+    `dish is normally described with imperial units.${flemishNote}`
   );
 }
 

@@ -7,6 +7,7 @@ import {
   malformedModelListMessage,
   malformedResponseMessage,
   parseChatEnvelope,
+  RECIPE_SAMPLING,
   unreachableMessage,
   type AiChatEnvelope,
   type AiRecipeDraft,
@@ -51,12 +52,21 @@ async function postChatCompletion(
 ): Promise<string> {
   const url = `${resolveBaseUrl(baseUrl)}/chat/completions`;
 
+  // Ollama's OpenAI-compatible endpoint accepts the same llama.cpp-style sampler extensions
+  // (top_k, min_p, repeat_penalty) alongside temperature/top_p — see RECIPE_SAMPLING in
+  // shared/src/ai-recipe-draft.ts for why these values were chosen. Sent here too so Ollama
+  // users get the same recipe quality as everyone else, not a drifted duplicate.
   const send = async (responseFormat: unknown): Promise<Response> => {
     try {
       return await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, messages, response_format: responseFormat }),
+        body: JSON.stringify({
+          model,
+          messages,
+          response_format: responseFormat,
+          ...RECIPE_SAMPLING,
+        }),
       });
     } catch {
       throw new AiProviderError(unreachableMessage(), 'unreachable');

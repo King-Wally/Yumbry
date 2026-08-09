@@ -1,4 +1,5 @@
 import OpenAI, { APIConnectionError, APIError } from 'openai';
+import type { ChatCompletionCreateParamsNonStreaming } from 'openai/resources/chat/completions';
 import {
   AiProviderError,
   DEFAULT_BASE_URLS,
@@ -10,13 +11,32 @@ import {
   type AiJsonSchemaFormat,
   type AiProvider,
   type AiProviderErrorKind,
+  type AiSamplingParams,
 } from 'yumbry-shared';
 
-export type { AiChatMessage, AiProvider, AiProviderErrorKind };
+export type { AiChatMessage, AiProvider, AiProviderErrorKind, AiSamplingParams };
 export { AiProviderError };
 
 type ChatResponseFormat =
   { type: 'json_object' } | { type: 'json_schema'; json_schema: AiJsonSchemaFormat };
+
+// `top_k`/`min_p`/`repeat_penalty` are llama.cpp/Ollama sampler extensions, not part of the
+// OpenAI request shape — sending them to OpenAI, Anthropic-compat or Gemini-compat endpoints is
+// a 400 waiting to happen. `temperature`/`top_p` are standard OpenAI fields and safe everywhere.
+const EXTENDED_SAMPLING_PROVIDERS: ReadonlySet<AiProvider> = new Set(['llamacpp', 'ollama']);
+
+function samplingBody(
+  provider: AiProvider,
+  sampling: AiSamplingParams | undefined
+): Record<string, unknown> {
+  if (!sampling) return {};
+  const { temperature, top_p, top_k, min_p, repeat_penalty } = sampling;
+  const body: Record<string, unknown> = { temperature, top_p };
+  if (EXTENDED_SAMPLING_PROVIDERS.has(provider)) {
+    Object.assign(body, { top_k, min_p, repeat_penalty });
+  }
+  return body;
+}
 
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/+$/, '');
@@ -72,28 +92,43 @@ export async function chatWithAi(
     apiKey: string | null;
     model: string;
     jsonSchema?: AiJsonSchemaFormat;
+    sampling?: AiSamplingParams;
   }
 ): Promise<string> {
   const client = createClient(options);
 
-  const create = (responseFormat?: ChatResponseFormat) =>
+  const create = (responseFormat: ChatResponseFormat | undefined, withSampling: boolean) =>
     client.chat.completions.create({
       model: options.model,
       messages,
       ...(responseFormat ? { response_format: responseFormat } : {}),
-    });
+      ...(withSampling ? samplingBody(options.provider, options.sampling) : {}),
+    } as ChatCompletionCreateParamsNonStreaming);
+
+  const schemaFormat: ChatResponseFormat | undefined = options.jsonSchema
+    ? { type: 'json_schema', json_schema: options.jsonSchema }
+    : undefined;
 
   let response;
   try {
-    response = await create(
-      options.jsonSchema ? { type: 'json_schema', json_schema: options.jsonSchema } : undefined
-    );
+    response = await create(schemaFormat, true);
   } catch (err) {
     if (!options.jsonSchema || !rejectsRequestShape(err)) throw toAiProviderError(err);
+    // A 400/422 on the schema request means the endpoint refused the request shape (unknown
+    // response_format, or possibly an unrecognized sampling field) rather than the model
+    // failing, so it's safe to retry once with less asked of it. Sampling params are carried
+    // into this first retry since a schema-only endpoint often still accepts them; if that
+    // retry itself 400s, drop sampling too on the last attempt — an unsupported sampling field
+    // is exactly the kind of thing a downgrade should shed before giving up.
     try {
-      response = await create({ type: 'json_object' });
+      response = await create({ type: 'json_object' }, true);
     } catch (retryErr) {
-      throw toAiProviderError(retryErr);
+      if (!rejectsRequestShape(retryErr)) throw toAiProviderError(retryErr);
+      try {
+        response = await create({ type: 'json_object' }, false);
+      } catch (finalErr) {
+        throw toAiProviderError(finalErr);
+      }
     }
   }
 
