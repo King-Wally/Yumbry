@@ -18,6 +18,32 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      llama:
+        condition: service_started
+    restart: unless-stopped
+
+  # Built-in, zero-config local AI provider: llama.cpp's OpenAI-compatible
+  # server, pre-loaded with Google's Gemma 4 E2B instruct model. Reachable
+  # from `app` at http://llama:8080/v1 (see DEFAULT_BASE_URLS in
+  # shared/src/ai-provider-error.ts). The model is pulled from Hugging Face
+  # on first start and cached in the `llama_cache` volume, so it isn't
+  # re-downloaded on every restart — this can take a few minutes the first
+  # time, which is why `app` only waits for it to start, not become healthy.
+  llama:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    ports:
+      - '${LLAMA_PORT:-8081}:8080'
+    environment:
+      LLAMA_ARG_HF_REPO: ggml-org/gemma-4-E2B-it-GGUF:${LLAMACPP_QUANT:-Q4_0}
+      # Pins a stable model id (used as `model` in AiSettings/chat requests)
+      # independent of the exact GGUF filename/quant — must match
+      # LLAMACPP_MODEL in shared/src/ai-provider-error.ts.
+      LLAMA_ARG_ALIAS: gemma-4-e2b-it
+      LLAMA_ARG_HOST: 0.0.0.0
+      LLAMA_ARG_PORT: 8080
+      LLAMA_CACHE: /root/.cache/llama.cpp
+    volumes:
+      - llama_cache:/root/.cache/llama.cpp
     restart: unless-stopped
 
   db:
@@ -40,3 +66,4 @@ services:
 volumes:
   db_data:
   uploads_data:
+  llama_cache:

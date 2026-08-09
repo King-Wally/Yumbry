@@ -37,6 +37,7 @@
       "baseUrlOptional": "(optional — overrides the provider default)",
       "ollamaNote": "No API key is sent. If your Ollama instance requires authentication (e.g. behind a reverse proxy), use the Custom provider instead, which stays routed through the server.",
       "ollamaCorsNote": "Ollama is contacted directly by your browser, so it must be reachable from whichever device you're using this app on — not from the server. If this app isn't served from localhost, also set OLLAMA_ORIGINS to include this app's origin before starting Ollama, or the browser will block the request as cross-origin.",
+      "llamacppNote": "Runs entirely inside this app's own Docker setup — no API key, address, or model to configure. The first request after starting the stack may be slow while the model downloads.",
       "apiKey": "API key",
       "optional": "(optional)",
       "apiKeySavedPlaceholder": "•••• (saved — leave blank to keep)",

@@ -34,6 +34,13 @@ Inspect uploaded photos via `docker compose exec app ls /app/uploads` (there's
 no host filesystem path for them in the Docker deployment — see Development
 below for the separate local-dev location).
 
+`docker compose up` also starts a `llama` service — a built-in, zero-config AI
+provider (llama.cpp serving Google's Gemma 4 E2B model) selectable on the
+Settings page without any API key or address to configure. It downloads a
+few GB of model weights into its own `llama_cache` volume the first time it
+starts, so the first AI request after a fresh install may be slow until that
+finishes; every other provider works immediately as usual.
+
 ## Importing a recipe
 
 Most recipe blogs embed a `<script type="application/ld+json">` tag containing

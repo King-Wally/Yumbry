@@ -37,6 +37,7 @@
       "baseUrlOptional": "(facultatif — remplace la valeur par défaut du fournisseur)",
       "ollamaNote": "Aucune clé API n'est envoyée. Si votre instance Ollama nécessite une authentification (par exemple derrière un reverse proxy), utilisez plutôt le fournisseur personnalisé, qui reste acheminé via le serveur.",
       "ollamaCorsNote": "Ollama est contacté directement par votre navigateur, il doit donc être accessible depuis l'appareil sur lequel vous utilisez cette application — pas depuis le serveur. Si cette application n'est pas servie depuis localhost, définissez également OLLAMA_ORIGINS pour inclure l'origine de cette application avant de démarrer Ollama, sinon le navigateur bloquera la requête comme étant cross-origin.",
+      "llamacppNote": "Fonctionne entièrement dans la configuration Docker de cette application — aucune clé API, adresse ou modèle à configurer. La première requête après le démarrage de la pile peut être lente pendant le téléchargement du modèle.",
       "apiKey": "Clé API",
       "optional": "(facultatif)",
       "apiKeySavedPlaceholder": "•••• (enregistrée — laissez vide pour conserver)",

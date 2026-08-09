@@ -9,7 +9,14 @@ import { listAiModels, type AiProvider } from '../services/ai-provider.service.j
 import { AiSettingsBodySchema } from '../schemas/ai-settings.schema.js';
 import { sendAiProviderError } from '../utils/ai-provider-error-response.js';
 
-const KNOWN_PROVIDERS: AiProvider[] = ['openai', 'anthropic', 'gemini', 'ollama', 'custom'];
+const KNOWN_PROVIDERS: AiProvider[] = [
+  'openai',
+  'anthropic',
+  'gemini',
+  'ollama',
+  'llamacpp',
+  'custom',
+];
 
 function isAiProvider(value: unknown): value is AiProvider {
   return typeof value === 'string' && (KNOWN_PROVIDERS as string[]).includes(value);
