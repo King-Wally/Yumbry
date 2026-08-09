@@ -14,11 +14,7 @@ import { useAuth } from '../hooks/useAuth';
 import { listOllamaModelsDirect } from '../services/ollama-direct';
 import Dialog from '../components/Dialog';
 import type { AiProvider } from '../types';
-import {
-  DEFAULT_BASE_URLS,
-  SUPPORTED_LOCALES,
-  type SupportedLocale,
-} from 'yumbry-shared';
+import { DEFAULT_BASE_URLS, SUPPORTED_LOCALES, type SupportedLocale } from 'yumbry-shared';
 
 const PROVIDER_LABELS: Record<AiProvider, string> = {
   openai: 'OpenAI',
@@ -277,7 +273,6 @@ export default function SettingsPage() {
               <p className="text-sm text-red-600">{t('settings.ai.connectionError')}</p>
             )}
           </>
-
 
           <label className="block text-sm font-medium text-stone-700">
             {t('settings.ai.model')}
