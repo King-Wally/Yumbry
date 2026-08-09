@@ -1,4 +1,4 @@
-export type AiProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'llamacpp' | 'custom';
+export type AiProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'custom';
 
 export type AiProviderErrorKind = 'unreachable' | 'bad_status' | 'malformed_response';
 
@@ -17,17 +17,7 @@ export const DEFAULT_BASE_URLS: Record<Exclude<AiProvider, 'custom'>, string> = 
   anthropic: 'https://api.anthropic.com/v1',
   gemini: 'https://generativelanguage.googleapis.com/v1beta/openai',
   ollama: 'http://localhost:11434/v1',
-  // Reachable from the backend container over the Docker Compose network —
-  // see the `llama` service in docker-compose.yml.
-  llamacpp: 'http://llama:8080/v1',
 };
-
-// The `llamacpp` provider is a fixed, zero-config local model — this must
-// match the `LLAMA_ARG_ALIAS` set on the `llama` service in
-// docker-compose.yml, and is what the Settings page locks the model field
-// to for this provider (see PROVIDER_LABELS/BASE_URL_REQUIRED in
-// frontend/src/pages/SettingsPage.tsx).
-export const LLAMACPP_MODEL = 'gemma-4-e2b-it';
 
 export function unreachableMessage(): string {
   return 'Could not reach the AI provider. Check the address and connection on the Settings page.';

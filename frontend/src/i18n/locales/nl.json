@@ -37,7 +37,6 @@
       "baseUrlOptional": "(optioneel — overschrijft de standaard van de provider)",
       "ollamaNote": "Er wordt geen API-sleutel verzonden. Als je Ollama-instantie authenticatie vereist (bijvoorbeeld achter een reverse proxy), gebruik dan de aangepaste provider, die via de server blijft lopen.",
       "ollamaCorsNote": "Je browser benadert Ollama rechtstreeks, dus het moet bereikbaar zijn vanaf het toestel waarop je deze app gebruikt — niet vanaf de server. Als deze app niet vanaf localhost wordt geserveerd, stel dan ook OLLAMA_ORIGINS in zodat het de origin van deze app bevat voordat je Ollama start, anders blokkeert de browser het verzoek als cross-origin.",
-      "llamacppNote": "Draait volledig binnen de eigen Docker-opzet van deze app — geen API-sleutel, adres of model om te configureren. De eerste aanvraag na het starten van de stack kan traag zijn terwijl het model wordt gedownload.",
       "apiKey": "API-sleutel",
       "optional": "(optioneel)",
       "apiKeySavedPlaceholder": "•••• (opgeslagen — laat leeg om te behouden)",

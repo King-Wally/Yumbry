@@ -16,7 +16,6 @@ import Dialog from '../components/Dialog';
 import type { AiProvider } from '../types';
 import {
   DEFAULT_BASE_URLS,
-  LLAMACPP_MODEL,
   SUPPORTED_LOCALES,
   type SupportedLocale,
 } from 'yumbry-shared';
@@ -26,7 +25,6 @@ const PROVIDER_LABELS: Record<AiProvider, string> = {
   anthropic: 'Anthropic',
   gemini: 'Google Gemini',
   ollama: 'Ollama',
-  llamacpp: 'Local Gemma (built-in)',
   custom: 'Custom (OpenAI-compatible)',
 };
 
@@ -35,7 +33,6 @@ const BASE_URL_REQUIRED: Record<AiProvider, boolean> = {
   anthropic: false,
   gemini: false,
   ollama: true,
-  llamacpp: false,
   custom: true,
 };
 
@@ -192,12 +189,7 @@ export default function SettingsPage() {
                 const nextProvider = e.target.value as AiProvider | '';
                 setProvider(nextProvider);
                 setAvailableModels(null);
-                if (nextProvider === 'llamacpp') {
-                  // Fixed, zero-config provider — nothing to fill in, the
-                  // backend resolves the base URL from DEFAULT_BASE_URLS.
-                  setBaseUrl('');
-                  setModel(LLAMACPP_MODEL);
-                } else if (nextProvider && nextProvider !== 'custom' && !baseUrl) {
+                if (nextProvider && nextProvider !== 'custom' && !baseUrl) {
                   setBaseUrl(DEFAULT_BASE_URLS[nextProvider]);
                 }
               }}
@@ -212,29 +204,25 @@ export default function SettingsPage() {
             </select>
           </label>
 
-          {provider !== 'llamacpp' && (
-            <label className="block text-sm font-medium text-stone-700">
-              {t('settings.ai.baseUrl')}
-              {baseUrlRequired ? '' : ` ${t('settings.ai.baseUrlOptional')}`}
-              <input
-                type="text"
-                required={baseUrlRequired}
-                value={baseUrl}
-                onChange={(e) => {
-                  setBaseUrl(e.target.value);
-                  setAvailableModels(null);
-                }}
-                placeholder={
-                  provider === 'ollama' ? 'http://localhost:11434/v1' : 'https://api.example.com/v1'
-                }
-                className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none"
-              />
-            </label>
-          )}
+          <label className="block text-sm font-medium text-stone-700">
+            {t('settings.ai.baseUrl')}
+            {baseUrlRequired ? '' : ` ${t('settings.ai.baseUrlOptional')}`}
+            <input
+              type="text"
+              required={baseUrlRequired}
+              value={baseUrl}
+              onChange={(e) => {
+                setBaseUrl(e.target.value);
+                setAvailableModels(null);
+              }}
+              placeholder={
+                provider === 'ollama' ? 'http://localhost:11434/v1' : 'https://api.example.com/v1'
+              }
+              className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none"
+            />
+          </label>
 
-          {provider === 'llamacpp' ? (
-            <p className="text-xs text-stone-500">{t('settings.ai.llamacppNote')}</p>
-          ) : provider === 'ollama' ? (
+          {provider === 'ollama' ? (
             <>
               <p className="text-xs text-stone-500">{t('settings.ai.ollamaNote')}</p>
               <p className="text-xs text-stone-500">{t('settings.ai.ollamaCorsNote')}</p>
@@ -273,36 +261,27 @@ export default function SettingsPage() {
             </>
           )}
 
-          {provider !== 'llamacpp' && (
-            <>
-              <button
-                type="button"
-                onClick={() => checkConnectionMutation.mutate()}
-                disabled={checkConnectionMutation.isPending}
-                className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100 disabled:opacity-50"
-              >
-                {checkConnectionMutation.isPending
-                  ? t('settings.ai.checking')
-                  : t('settings.ai.checkConnection')}
-              </button>
+          <>
+            <button
+              type="button"
+              onClick={() => checkConnectionMutation.mutate()}
+              disabled={checkConnectionMutation.isPending}
+              className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100 disabled:opacity-50"
+            >
+              {checkConnectionMutation.isPending
+                ? t('settings.ai.checking')
+                : t('settings.ai.checkConnection')}
+            </button>
 
-              {checkConnectionMutation.isError && (
-                <p className="text-sm text-red-600">{t('settings.ai.connectionError')}</p>
-              )}
-            </>
-          )}
+            {checkConnectionMutation.isError && (
+              <p className="text-sm text-red-600">{t('settings.ai.connectionError')}</p>
+            )}
+          </>
+
 
           <label className="block text-sm font-medium text-stone-700">
             {t('settings.ai.model')}
-            {provider === 'llamacpp' ? (
-              <input
-                type="text"
-                readOnly
-                disabled
-                value={model}
-                className="mt-1 w-full rounded-md border border-stone-300 bg-stone-100 px-3 py-2 text-stone-600"
-              />
-            ) : availableModels && availableModels.length > 0 ? (
+            {availableModels && availableModels.length > 0 ? (
               <select
                 value={model}
                 onChange={(e) => setModel(e.target.value)}

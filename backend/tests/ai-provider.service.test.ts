@@ -230,17 +230,17 @@ describe('chatWithAi', () => {
     expect(body.repeat_penalty).toBeUndefined();
   });
 
-  it('sends the extended sampler fields to llamacpp and ollama', async () => {
+  it('sends the extended sampler fields to ollama', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
     vi.stubGlobal('fetch', fetchMock);
 
     await chatWithAi([{ role: 'user', content: 'hi' }], {
-      provider: 'llamacpp',
+      provider: 'ollama',
       baseUrl: null,
       apiKey: null,
-      model: 'gemma-4-e2b-it',
+      model: 'llama3.1',
       sampling: { temperature: 0.6, top_p: 0.95, top_k: 64, min_p: 0, repeat_penalty: 1.0 },
     });
 
