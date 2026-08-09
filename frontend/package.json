@@ -1,6 +1,6 @@
 {
   "name": "yumbry-frontend",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "private": true,
   "type": "module",
   "scripts": {
@@ -19,6 +19,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@radix-ui/react-dialog": "^1.1.23",
+    "@radix-ui/react-navigation-menu": "^1.2.22",
     "@tanstack/react-query": "^5.51.1",
     "i18next": "^26.3.6",
     "lucide-react": "^1.28.0",

@@ -11,10 +11,10 @@ import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import ProtectedRoute from './components/ProtectedRoute';
-import CollapsibleActions from './components/CollapsibleActions';
 import { useAuth } from './hooks/useAuth';
 import { useAiSettings } from './hooks/useAiSettings';
 import { version } from '../package.json';
+import * as NavigationMenuPrimitive from '@radix-ui/react-navigation-menu';
 
 export default function App() {
   const { t } = useTranslation();
@@ -33,36 +33,63 @@ export default function App() {
           </Link>
           <nav className="text-sm font-medium text-stone-600">
             {user && (
-              <CollapsibleActions
-                rowClassName="gap-5"
-                pinned={
-                  <Link
-                    to="/recipes/new"
-                    className="rounded-md bg-clay px-3 py-1.5 text-white shadow-sm transition hover:bg-clay/90 hover:shadow"
-                  >
-                    {t('nav.addRecipe')}
-                  </Link>
-                }
-              >
-                <Link to="/import" className="transition-colors hover:text-clay">
-                  {t('nav.import')}
-                </Link>
-                {aiSettings?.model && (
-                  <Link to="/create-with-ai" className="transition-colors hover:text-clay">
-                    {t('nav.createWithAi')}
-                  </Link>
-                )}
-                <Link to="/settings" className="transition-colors hover:text-clay">
-                  {t('nav.settings')}
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => logout()}
-                  className="text-left transition-colors hover:text-clay"
-                >
-                  {t('nav.logOut')}
-                </button>
-              </CollapsibleActions>
+              <NavigationMenuPrimitive.Root className="relative flex items-center gap-2">
+                <NavigationMenuPrimitive.List>
+                  <NavigationMenuPrimitive.Item>
+                    <NavigationMenuPrimitive.Trigger className="px-3 py-1.5 rounded-md transition hover:bg-stone-100 hover:text-clay data-[state=open]:bg-stone-100 data-[state=open]:text-clay">
+                      {t('nav.addRecipe')}
+                    </NavigationMenuPrimitive.Trigger>
+                    <NavigationMenuPrimitive.Content className="absolute top-full left-1/2 transform -translate-x-1/2 text-nowrap mt-2 rounded-md bg-white shadow-lg border border-stone-200">
+                      <div className="flex flex-col">
+                        <Link to="/recipes/new" className="px-5 py-2 transition hover:bg-stone-100">
+                          {t('nav.manually')}
+                        </Link>
+                        <hr className="h-px bg-stone-200" />
+                        <Link to="/import" className="px-5 py-2 transition hover:bg-stone-100">
+                          {t('nav.import')}
+                        </Link>
+                        <hr className="h-px bg-stone-200" />
+                        <Link to="/import" className="px-5 py-2 transition hover:bg-stone-100">
+                          {t('nav.paste')}
+                        </Link>
+                        {aiSettings?.model && (
+                          <>
+                            <hr className="h-px bg-stone-200" />
+                            <Link
+                              to="/create-with-ai"
+                              className="px-5 py-2 transition hover:bg-stone-100"
+                            >
+                              {t('nav.createWithAi')}
+                            </Link>
+                          </>
+                        )}
+                      </div>
+                    </NavigationMenuPrimitive.Content>
+                  </NavigationMenuPrimitive.Item>
+                </NavigationMenuPrimitive.List>
+                <NavigationMenuPrimitive.List>
+                  <NavigationMenuPrimitive.Item>
+                    <NavigationMenuPrimitive.Trigger className="px-3 py-1.5 rounded-md transition hover:bg-stone-100 hover:text-clay data-[state=open]:bg-stone-100 data-[state=open]:text-clay">
+                      {t('nav.profile')}
+                    </NavigationMenuPrimitive.Trigger>
+                    <NavigationMenuPrimitive.Content className="absolute top-full right-0 mt-2 text-nowrap rounded-md bg-white shadow-lg border border-stone-200">
+                      <div className="flex flex-col">
+                        <Link to="/settings" className="px-5 py-2 transition hover:bg-stone-100">
+                          {t('nav.settings')}
+                        </Link>
+                        <hr className="h-px bg-stone-200" />
+                        <button
+                          type="button"
+                          onClick={() => logout()}
+                          className="px-5 py-2 transition hover:bg-stone-100"
+                        >
+                          {t('nav.logOut')}
+                        </button>
+                      </div>
+                    </NavigationMenuPrimitive.Content>
+                  </NavigationMenuPrimitive.Item>
+                </NavigationMenuPrimitive.List>
+              </NavigationMenuPrimitive.Root>
             )}
           </nav>
         </div>

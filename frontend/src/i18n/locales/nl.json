@@ -16,10 +16,13 @@
   },
   "nav": {
     "addRecipe": "Recept toevoegen",
-    "import": "Importeren",
+    "import": "Importeer JSON-LD",
     "createWithAi": "Maken met AI",
     "settings": "Instellingen",
-    "logOut": "Uitloggen"
+    "logOut": "Uitloggen",
+    "profile": "Profiel",
+    "manually": "Handmatig",
+    "paste": "URL plakken"
   },
   "settings": {
     "language": {

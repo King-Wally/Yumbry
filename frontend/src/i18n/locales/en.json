@@ -16,10 +16,13 @@
   },
   "nav": {
     "addRecipe": "Add recipe",
-    "import": "Import",
+    "import": "Import JSON-LD",
     "createWithAi": "Create with AI",
     "settings": "Settings",
-    "logOut": "Log out"
+    "logOut": "Log out",
+    "profile": "Profile",
+    "manually": "Manually",
+    "paste": "Paste URL"
   },
   "settings": {
     "language": {
