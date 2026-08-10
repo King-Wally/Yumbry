@@ -49,7 +49,7 @@ export interface AiJsonSchemaFormat {
 
 /**
  * `temperature`/`top_p` are standard OpenAI fields, sent to every provider. `top_k`/`min_p`/
- * `repeat_penalty` are llama.cpp/Ollama sampler extensions — sending them to OpenAI, Anthropic
+ * `repeat_penalty` are Ollama sampler extensions — sending them to OpenAI, Anthropic
  * or Gemini's compat endpoints would 400, so callers must gate those on provider (see
  * `chatWithAi` in backend/src/services/ai-provider.service.ts and the equivalent gating in
  * frontend/src/services/ollama-direct.ts).

@@ -208,7 +208,7 @@ describe('chatWithAi', () => {
     ).rejects.toMatchObject({ kind: 'malformed_response' });
   });
 
-  it('sends only the standard sampling fields to a provider without llama.cpp/Ollama extensions', async () => {
+  it('sends only the standard sampling fields to a provider without Ollama extensions', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(jsonResponse({ choices: [{ message: { content: 'ok' } }] }));

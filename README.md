@@ -34,18 +34,6 @@ Inspect uploaded photos via `docker compose exec app ls /app/uploads` (there's
 no host filesystem path for them in the Docker deployment — see Development
 below for the separate local-dev location).
 
-`docker compose up` also starts a `llama` service — a built-in. It downloads a
-few GB of model weights into its own `llama_cache` volume the first time it
-starts, so the first AI request after a fresh install may be slow until that
-finishes; every other provider works immediately as usual.
-
-Being a small (~2B-effective-parameter), quantized, CPU-served model, its
-output quality and speed are naturally more limited than a hosted provider's
-— see `.env.example` for tuning knobs (`LLAMACPP_QUANT`, `LLAMACPP_MODEL_SIZE`,
-`LLAMA_CTX_SIZE`, `LLAMA_THREADS`) if you want to trade RAM/speed for quality,
-or just switch to a hosted or self-hosted Ollama provider on the Settings page
-instead.
-
 ## Importing a recipe
 
 Most recipe blogs embed a `<script type="application/ld+json">` tag containing

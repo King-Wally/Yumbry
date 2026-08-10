@@ -18,78 +18,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      llama:
-        condition: service_started
-    restart: unless-stopped
-
-  # Built-in, zero-config local AI provider: llama.cpp's OpenAI-compatible
-  # server, pre-loaded with Google's Gemma 4 E2B instruct model. Reachable
-  # from `app` at http://llama:8080/v1 (see DEFAULT_BASE_URLS in
-  # shared/src/ai-provider-error.ts). The model is pulled from Hugging Face
-  # on first start and cached in the `llama_cache` volume, so it isn't
-  # re-downloaded on every restart — this can take a few minutes the first
-  # time, which is why `app` only waits for it to start, not become healthy.
-  llama:
-    image: ghcr.io/ggml-org/llama.cpp:server
-    ports:
-      # Loopback only: llama-server has no authentication of its own, so
-      # publishing it on 0.0.0.0 would expose an unauthenticated inference
-      # endpoint to the whole LAN. `app` reaches it over the Docker network
-      # regardless of this binding.
-      - '127.0.0.1:${LLAMA_PORT:-8081}:8080'
-    environment:
-      LLAMA_ARG_HF_REPO: ggml-org/gemma-4-${LLAMACPP_MODEL_SIZE:-E2B}-it-GGUF:${LLAMACPP_QUANT:-Q4_0}
-      # Deliberately NOT parameterized by LLAMACPP_MODEL_SIZE, even though the
-      # repo above can change to E4B: this must match LLAMACPP_MODEL in
-      # shared/src/ai-provider-error.ts, which is what gets written into every
-      # user's AiSettings.model column and what the Settings page locks the
-      # model field to. Changing it would break every existing installation's
-      # saved settings with a bad_status error on the next chat request.
-      LLAMA_ARG_ALIAS: gemma-4-e2b-it
-      LLAMA_ARG_HOST: 0.0.0.0
-      LLAMA_ARG_PORT: 8080
-      LLAMA_CACHE: /root/.cache/llama.cpp
-      # Gemma 4 declares a 128K context window; leaving --ctx-size unset lets
-      # the server take that from the model and allocate a KV cache sized for
-      # it, which is far more than a recipe chat prompt needs and can be a
-      # meaningful chunk of RAM on constrained hardware (e.g. a Raspberry Pi).
-      LLAMA_ARG_CTX_SIZE: ${LLAMA_CTX_SIZE:-8192}
-      # --ctx-size is the *total* KV budget, split evenly across slots; the
-      # auto default can pick more than one slot and silently shrink the
-      # usable context per conversation. This app has one user talking to the
-      # model at a time, so give the single slot all of it.
-      LLAMA_ARG_N_PARALLEL: 1
-      # Caps a runaway generation (e.g. a repetition loop) instead of letting
-      # it run to the client SDK's own timeout. A full recipe envelope is
-      # comfortably under 1200 tokens.
-      LLAMA_ARG_N_PREDICT: 1536
-      # Reasoning/thinking mode is deliberately off: llama.cpp issue #20345
-      # means enable_thinking + response_format silently drops grammar
-      # enforcement, and this app's whole chat contract depends on the
-      # response_format json_schema being enforced.
-      LLAMA_ARG_THINK_BUDGET: 0
-      # buildChatMessages (shared/src/ai-recipe-draft.ts) inlines the current
-      # draft into whichever assistant turn is currently last, so on every
-      # new turn the previous assistant message shrinks — the prompt prefix
-      # changes retroactively from that point on. --cache-reuse lets the
-      # server reuse KV chunks after that divergence instead of recomputing
-      # the whole tail from scratch.
-      LLAMA_ARG_CACHE_REUSE: 256
-      LLAMA_ARG_THREADS: ${LLAMA_THREADS:--1}
-      # Roughly halves KV-cache RAM at a negligible quality cost.
-      LLAMA_ARG_CACHE_TYPE_K: q8_0
-      LLAMA_ARG_CACHE_TYPE_V: q8_0
-    volumes:
-      - llama_cache:/root/.cache/llama.cpp
-    healthcheck:
-      test: ['CMD-SHELL', 'curl -fsS http://localhost:8080/health || exit 1']
-      interval: 15s
-      timeout: 5s
-      retries: 40
-      # First run downloads several GB of model weights before the server can
-      # answer at all — this only affects `docker compose ps`/healthcheck
-      # reporting, not startup ordering (see the `depends_on` note on `app`).
-      start_period: 900s
     restart: unless-stopped
 
   db:
@@ -112,4 +40,3 @@ services:
 volumes:
   db_data:
   uploads_data:
-  llama_cache:

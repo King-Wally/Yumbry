@@ -20,7 +20,7 @@ export { AiProviderError };
 type ChatResponseFormat =
   { type: 'json_object' } | { type: 'json_schema'; json_schema: AiJsonSchemaFormat };
 
-// `top_k`/`min_p`/`repeat_penalty` are llama.cpp/Ollama sampler extensions, not part of the
+// `top_k`/`min_p`/`repeat_penalty` are Ollama sampler extensions, not part of the
 // OpenAI request shape — sending them to OpenAI, Anthropic-compat or Gemini-compat endpoints is
 // a 400 waiting to happen. `temperature`/`top_p` are standard OpenAI fields and safe everywhere.
 const EXTENDED_SAMPLING_PROVIDERS: ReadonlySet<AiProvider> = new Set(['ollama']);
