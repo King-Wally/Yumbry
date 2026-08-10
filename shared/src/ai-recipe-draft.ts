@@ -159,19 +159,11 @@ function languageRules(locale: SupportedLocale): string {
     return `- Write the recipe in ${languageName}.`;
   }
 
-  // Deliberately a single, directly executable instruction rather than "draft in English
-  // first, then translate as a final step": under grammar-constrained decoding every token is
-  // already inside the JSON envelope, so there is nowhere for a hidden English draft to go —
-  // asking for one is an instruction the model cannot actually follow, which for a small model
-  // is not a harmless no-op but noise that degrades the instructions around it.
-  const flemishNote =
-    locale === 'nl'
-      ? ' Use Flemish vocabulary as spoken in Flanders, not Netherlands Dutch — "ajuin" not "ui", "kropsla" not "krop sla".'
-      : '';
-
   return (
-    `- Write the recipe in ${languageName}, converting every measurement to metric yourself if the ` +
-    `dish is normally described with imperial units.${flemishNote}`
+    `- Draft the recipe in English first, using whichever units are natural for it. Then, as a final ` +
+    `step, translate it into ${languageName} and convert every measurement to metric.` +
+    `- Only the translated ${languageName} version goes into "recipe". The English draft is an internal ` +
+    `step and must never reach the user.`
   );
 }
 
