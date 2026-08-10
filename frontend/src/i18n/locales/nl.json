@@ -31,28 +31,6 @@
       "label": "Taal",
       "saved": "Taal opgeslagen."
     },
-    "ai": {
-      "title": "AI-instellingen",
-      "description": "Kies de AI-provider die door de AI-assistentfuncties wordt gebruikt en configureer hoe deze te bereiken is.",
-      "provider": "Provider",
-      "selectProvider": "Kies een provider...",
-      "baseUrl": "Basis-URL",
-      "baseUrlOptional": "(optioneel — overschrijft de standaard van de provider)",
-      "ollamaNote": "Er wordt geen API-sleutel verzonden. Als je Ollama-instantie authenticatie vereist (bijvoorbeeld achter een reverse proxy), gebruik dan de aangepaste provider, die via de server blijft lopen.",
-      "ollamaCorsNote": "Je browser benadert Ollama rechtstreeks, dus het moet bereikbaar zijn vanaf het toestel waarop je deze app gebruikt — niet vanaf de server. Als deze app niet vanaf localhost wordt geserveerd, stel dan ook OLLAMA_ORIGINS in zodat het de origin van deze app bevat voordat je Ollama start, anders blokkeert de browser het verzoek als cross-origin.",
-      "apiKey": "API-sleutel",
-      "optional": "(optioneel)",
-      "apiKeySavedPlaceholder": "•••• (opgeslagen — laat leeg om te behouden)",
-      "clearApiKey": "Verwijder de opgeslagen API-sleutel",
-      "checking": "Controleren...",
-      "checkConnection": "Verbinding controleren / modellen laden",
-      "connectionError": "Kon die provider niet bereiken — je kunt hieronder nog steeds handmatig een modelnaam invoeren.",
-      "model": "Model",
-      "selectModel": "Kies een model...",
-      "saved": "Instellingen opgeslagen.",
-      "saving": "Opslaan...",
-      "saveSettings": "Instellingen opslaan"
-    },
     "password": {
       "title": "Wachtwoord",
       "description": "Wijzig het wachtwoord waarmee je inlogt. Dit meldt je af op alle andere apparaten.",
@@ -184,7 +162,6 @@
     "importFromUrl": "Importeren vanaf URL"
   },
   "aiChat": {
-    "noModelConfigured": "Er is nog geen AI-model geconfigureerd. Ga naar Instellingen om er een te kiezen.",
     "loadingRecipe": "Recept laden...",
     "improveTitle": "\"{{title}}\" verbeteren met AI",
     "createTitle": "Maken met AI",
@@ -196,8 +173,7 @@
     "changePlaceholder": "Vertel de AI wat er moet veranderen",
     "cookPlaceholder": "Vertel de AI wat je wilt koken",
     "send": "Versturen",
-    "saveAndReview": "Opslaan en bekijken",
-    "checkSettings": "Controleer je AI-instellingen"
+    "saveAndReview": "Opslaan en bekijken"
   },
   "categoryPicker": {
     "newCategoryPlaceholder": "Of typ een nieuwe categorie",

@@ -31,28 +31,6 @@
       "label": "Langue",
       "saved": "Langue enregistrée."
     },
-    "ai": {
-      "title": "Paramètres IA",
-      "description": "Choisissez le fournisseur d'IA utilisé par les fonctionnalités de l'assistant IA et configurez comment le contacter.",
-      "provider": "Fournisseur",
-      "selectProvider": "Sélectionnez un fournisseur...",
-      "baseUrl": "URL de base",
-      "baseUrlOptional": "(facultatif — remplace la valeur par défaut du fournisseur)",
-      "ollamaNote": "Aucune clé API n'est envoyée. Si votre instance Ollama nécessite une authentification (par exemple derrière un reverse proxy), utilisez plutôt le fournisseur personnalisé, qui reste acheminé via le serveur.",
-      "ollamaCorsNote": "Ollama est contacté directement par votre navigateur, il doit donc être accessible depuis l'appareil sur lequel vous utilisez cette application — pas depuis le serveur. Si cette application n'est pas servie depuis localhost, définissez également OLLAMA_ORIGINS pour inclure l'origine de cette application avant de démarrer Ollama, sinon le navigateur bloquera la requête comme étant cross-origin.",
-      "apiKey": "Clé API",
-      "optional": "(facultatif)",
-      "apiKeySavedPlaceholder": "•••• (enregistrée — laissez vide pour conserver)",
-      "clearApiKey": "Effacer la clé API enregistrée",
-      "checking": "Vérification...",
-      "checkConnection": "Vérifier la connexion / charger les modèles",
-      "connectionError": "Impossible de contacter ce fournisseur — vous pouvez encore saisir un nom de modèle manuellement ci-dessous.",
-      "model": "Modèle",
-      "selectModel": "Sélectionnez un modèle...",
-      "saved": "Paramètres enregistrés.",
-      "saving": "Enregistrement...",
-      "saveSettings": "Enregistrer les paramètres"
-    },
     "password": {
       "title": "Mot de passe",
       "description": "Modifiez le mot de passe utilisé pour vous connecter. Cela vous déconnectera de tous les autres appareils.",
@@ -184,7 +162,6 @@
     "importFromUrl": "Importer depuis une URL"
   },
   "aiChat": {
-    "noModelConfigured": "Aucun modèle d'IA n'est encore configuré. Rendez-vous dans les Paramètres pour en choisir un.",
     "loadingRecipe": "Chargement de la recette...",
     "improveTitle": "Améliorer « {{title}} » avec l'IA",
     "createTitle": "Créer avec l'IA",
@@ -196,8 +173,7 @@
     "changePlaceholder": "Dites à l'IA ce qu'il faut changer",
     "cookPlaceholder": "Dites à l'IA ce que vous voulez cuisiner",
     "send": "Envoyer",
-    "saveAndReview": "Enregistrer et vérifier",
-    "checkSettings": "Vérifiez vos paramètres IA"
+    "saveAndReview": "Enregistrer et vérifier"
   },
   "categoryPicker": {
     "newCategoryPlaceholder": "Ou saisissez une nouvelle catégorie",

@@ -5,8 +5,7 @@ from a recipe site's JSON-LD, search and filter by tag, scale ingredients to any
 serving size, and attach photos.
 
 Each user logs in with an email and password and only ever sees their own
-recipes, tags, categories, and AI settings — there's no sharing between
-accounts. Anyone reaching the app can self-register; there's no invite system,
+recipes, tags, and categories — there's no sharing between accounts. Anyone reaching the app can self-register; there's no invite system,
 so this is still meant for a trusted local network (household, small team),
 not the open internet, unless you put it behind your own access control.
 Logins last up to 30 days (see `JWT_SECRET` below).

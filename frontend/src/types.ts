@@ -1,4 +1,4 @@
-import type { Tag, Category, Ingredient, Instruction, AiProvider } from 'yumbry-shared';
+import type { Tag, Category, Ingredient, Instruction } from 'yumbry-shared';
 
 export type {
   Tag,
@@ -6,7 +6,6 @@ export type {
   Ingredient,
   Instruction,
   RecipeInput,
-  AiProvider,
   AiChatMessage,
   AiChatTurnRequest,
   AiChatTurnResponse,
@@ -32,12 +31,4 @@ export type RecipeSummary = RecipeBase;
 export interface Recipe extends RecipeBase {
   ingredients: Ingredient[];
   instructions: Instruction[];
-}
-
-export interface AiSettings {
-  provider: AiProvider | null;
-  base_url: string | null;
-  model: string | null;
-  has_api_key: boolean;
-  updated_at: string;
 }

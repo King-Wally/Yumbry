@@ -47,42 +47,25 @@ export interface AiJsonSchemaFormat {
   schema: Record<string, unknown>;
 }
 
-/**
- * `temperature`/`top_p` are standard OpenAI fields, sent to every provider. `top_k`/`min_p`/
- * `repeat_penalty` are Ollama sampler extensions — sending them to OpenAI, Anthropic
- * or Gemini's compat endpoints would 400, so callers must gate those on provider (see
- * `chatWithAi` in backend/src/services/ai-provider.service.ts and the equivalent gating in
- * frontend/src/services/ollama-direct.ts).
- */
+/** Standard OpenAI-compatible sampling fields, sent as-is to Gemini's OpenAI-compat endpoint. */
 export interface AiSamplingParams {
   temperature?: number;
   top_p?: number;
-  top_k?: number;
-  min_p?: number;
-  repeat_penalty?: number;
 }
 
 /**
- * Sampling tuned for constrained JSON recipe drafting: low variance (the failure mode we're
- * guarding against is invented quantities, not repetitive prose) and no repetition penalty,
- * since the envelope legitimately repeats structural tokens (`", "`, `"_minutes"`) and recipes
- * legitimately repeat ingredient names across the ingredient list and the steps — penalizing
- * that under grammar-constrained decoding just pushes the model onto worse *allowed* tokens.
- * A single global profile rather than a per-provider one: the task's needs are provider-
- * independent, only wire compatibility differs (see `AiSamplingParams`).
+ * Sampling tuned for constrained JSON recipe drafting: low variance, since the failure mode
+ * we're guarding against is invented quantities, not repetitive prose.
  */
 export const RECIPE_SAMPLING: AiSamplingParams = {
   temperature: 0.6,
   top_p: 0.95,
-  top_k: 64,
-  min_p: 0,
-  repeat_penalty: 1.0,
 };
 
 /**
- * Sent as `response_format: { type: 'json_schema', json_schema: ... }` so providers that
- * support constrained decoding (OpenAI, recent Ollama, most custom endpoints) make an
- * invalid response structurally impossible rather than merely discouraged.
+ * Sent as `response_format: { type: 'json_schema', json_schema: ... }` so models that support
+ * constrained decoding make an invalid response structurally impossible rather than merely
+ * discouraged.
  *
  * Shaped for OpenAI's `strict: true` rules: every property listed in `required`,
  * `additionalProperties: false` everywhere, and optionality expressed as a nullable type —
@@ -322,8 +305,10 @@ function firstBalancedObject(text: string): string | null {
   return null;
 }
 
-// Reasoning models (deepseek-r1, qwen3, ...) emit their thinking before the answer; several
-// models still wrap JSON in markdown fences despite being told not to.
+// Some models (e.g. OpenRouter-routed deepseek-r1, qwen3) emit <think> blocks before the answer;
+// markdown-fenced JSON is also common despite being told not to. Kept defensively — it's unclear
+// whether Gemini's OpenAI-compat layer leaks thinking text into content the same way, and this
+// stripping is a no-op if it never does.
 function extractJsonText(text: string): string {
   const withoutThinking = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
   const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(withoutThinking);

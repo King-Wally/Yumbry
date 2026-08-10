@@ -3,20 +3,11 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AiChatPage from '../src/pages/AiChatPage';
-import { queryKeys } from '../src/api/queryKeys';
 import * as apiClient from '../src/api/client';
 import { AuthProvider } from '../src/context/AuthContext';
-import type { AiSettings, Recipe, RecipeInput } from '../src/types';
+import type { Recipe, RecipeInput } from '../src/types';
 
 vi.mock('../src/api/client');
-
-const aiSettings: AiSettings = {
-  provider: 'openai',
-  base_url: null,
-  model: 'gpt-4o-mini',
-  has_api_key: true,
-  updated_at: '2026-01-01T00:00:00.000Z',
-};
 
 const recipe: Recipe = {
   id: 1,
@@ -54,10 +45,6 @@ function LocationProbe() {
 
 function renderCreate() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  // Seed the AI settings query directly, rather than relying on the mocked
-  // getAiSettings resolving before a test interacts with the page — avoids a
-  // race against AiChatPage's "no model configured" guard.
-  queryClient.setQueryData(queryKeys.aiSettings, aiSettings);
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter
@@ -77,7 +64,6 @@ function renderCreate() {
 
 function renderImprove() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  queryClient.setQueryData(queryKeys.aiSettings, aiSettings);
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter
@@ -98,7 +84,6 @@ function renderImprove() {
 describe('AiChatPage create mode', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(apiClient.getAiSettings).mockResolvedValue(aiSettings);
     vi.mocked(apiClient.getCurrentUser).mockRejectedValue(new Error('not authenticated'));
   });
 
@@ -163,7 +148,6 @@ describe('AiChatPage create mode', () => {
 describe('AiChatPage improve mode', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(apiClient.getAiSettings).mockResolvedValue(aiSettings);
     vi.mocked(apiClient.getCurrentUser).mockRejectedValue(new Error('not authenticated'));
   });
 
@@ -234,6 +218,6 @@ describe('AiChatPage improve mode', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
-    expect(await screen.findByText('Check your AI settings')).toBeInTheDocument();
+    expect(await screen.findByText('Could not reach the AI provider.')).toBeInTheDocument();
   });
 });

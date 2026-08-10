@@ -12,14 +12,12 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
-import { useAiSettings } from './hooks/useAiSettings';
 import { version } from '../package.json';
 import * as NavigationMenuPrimitive from '@radix-ui/react-navigation-menu';
 
 export default function App() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
-  const { data: aiSettings } = useAiSettings({ enabled: Boolean(user) });
 
   return (
     <div className="flex min-h-screen flex-col bg-cream">
@@ -52,17 +50,13 @@ export default function App() {
                         <Link to="/import" className="px-5 py-2 transition hover:bg-stone-100">
                           {t('nav.paste')}
                         </Link>
-                        {aiSettings?.model && (
-                          <>
-                            <hr className="h-px bg-stone-200" />
-                            <Link
-                              to="/create-with-ai"
-                              className="px-5 py-2 transition hover:bg-stone-100"
-                            >
-                              {t('nav.createWithAi')}
-                            </Link>
-                          </>
-                        )}
+                        <hr className="h-px bg-stone-200" />
+                        <Link
+                          to="/create-with-ai"
+                          className="px-5 py-2 transition hover:bg-stone-100"
+                        >
+                          {t('nav.createWithAi')}
+                        </Link>
                       </div>
                     </NavigationMenuPrimitive.Content>
                   </NavigationMenuPrimitive.Item>

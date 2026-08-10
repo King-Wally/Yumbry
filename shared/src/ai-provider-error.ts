@@ -1,6 +1,5 @@
-export type AiProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'custom';
-
-export type AiProviderErrorKind = 'unreachable' | 'bad_status' | 'malformed_response';
+export type AiProviderErrorKind =
+  'unreachable' | 'bad_status' | 'malformed_response' | 'not_configured';
 
 export class AiProviderError extends Error {
   readonly kind: AiProviderErrorKind;
@@ -12,15 +11,8 @@ export class AiProviderError extends Error {
   }
 }
 
-export const DEFAULT_BASE_URLS: Record<Exclude<AiProvider, 'custom'>, string> = {
-  openai: 'https://api.openai.com/v1',
-  anthropic: 'https://api.anthropic.com/v1',
-  gemini: 'https://generativelanguage.googleapis.com/v1beta/openai',
-  ollama: 'http://localhost:11434/v1',
-};
-
 export function unreachableMessage(): string {
-  return 'Could not reach the AI provider. Check the address and connection on the Settings page.';
+  return 'Could not reach the AI provider. Please try again later.';
 }
 
 export function badStatusMessage(status: number | string, detail: string): string {
@@ -30,5 +22,5 @@ export function badStatusMessage(status: number | string, detail: string): strin
 export const malformedResponseMessage =
   'The AI provider response did not include an assistant message.';
 
-export const malformedModelListMessage =
-  'The AI provider returned an unexpected model list response.';
+export const notConfiguredMessage =
+  'The AI assistant is not configured on this server. Ask your administrator to set GEMINI_API_KEY.';

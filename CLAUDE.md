@@ -5,9 +5,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 Yumbry is a self-hosted, multi-user recipe manager: manual/JSON-LD recipe import, tag/category
-filtering, serving-size scaling, photo attachments, and an optional per-user AI assistant for
-drafting/improving recipes. Every user's data (recipes, tags, categories, AI settings) is siloed —
-no sharing between accounts.
+filtering, serving-size scaling, photo attachments, and an AI assistant for drafting/improving
+recipes, backed by a single server-wide Google Gemini API key (`GEMINI_API_KEY`) — there is no
+per-user AI configuration. Every user's data (recipes, tags, categories) is siloed — no sharing
+between accounts.
 
 npm workspaces monorepo: `backend` (Express + Prisma + Postgres), `frontend` (React + Vite),
 `shared` (types + logic consumed by both).
@@ -54,8 +55,9 @@ TEST_DATABASE_URL=postgres://chef:changeme@localhost:5432/recipe_vault_test npm 
 Never point `TEST_DATABASE_URL` at a real database — integration tests drop and recreate the
 `public` schema on every run. `vitest.config.ts` sets `fileParallelism: false` because multiple
 `*.api.test.ts` files share/reset that same DB and would race otherwise; it also injects fixed
-dummy `JWT_SECRET`/`AI_SETTINGS_ENCRYPTION_KEY`/email env vars since several backend modules
-throw at import time if those are unset.
+dummy `JWT_SECRET`/email env vars since several backend modules throw at import time if those are
+unset. `GEMINI_API_KEY` is read lazily (not at import time), so AI chat tests mock
+`chatWithAi` directly instead of needing a dummy key.
 
 To run a single test file: `npx vitest run tests/recipes.api.test.ts` (from `backend/` or
 `frontend/`).
@@ -95,27 +97,19 @@ everywhere") works via a `tokenVersion` counter on `User`: `requireAuth` re-veri
 DB's current `tokenVersion` on every request, so bumping it invalidates all previously-issued
 tokens without a blocklist.
 
-`AI_SETTINGS_ENCRYPTION_KEY` is a separate secret (AES-256-GCM, `utils/crypto.ts`) used only to
-encrypt/decrypt users' AI provider API keys at rest, also fail-fast at import time.
-`getAiSettingsForCall` is the only place that decrypts it — never used for the public settings
-GET response.
+### AI provider
 
-### AI provider abstraction
-
-`services/ai-provider.service.ts` talks to `openai`, `anthropic`, `gemini`, `ollama`, and `custom`
-providers all through the single `openai` npm SDK client, pointed at provider-specific default
-base URLs, because all of these expose an OpenAI-compatible chat-completions endpoint (`custom`
-requires the user to supply their own base URL). SDK errors are normalized into a shared
-`AiProviderError` (kind: `unreachable` | `bad_status` | `malformed_response`) defined in
-`shared/src/ai-provider-error.ts`.
-
-**Ollama is the one exception to the backend-mediated flow**: the frontend calls Ollama directly
-from the browser (`frontend/src/services/ollama-direct.ts`), since a self-hosted backend
-generally can't reach a user's local Ollama instance. Every other provider goes through
-`POST /api/ai/chat`. Both paths share the same prompt-building/response-parsing logic
-(`buildChatMessages`/`parseChatEnvelope` in `shared/src/ai-recipe-draft.ts`) so behavior stays
-identical regardless of which path handles a given provider — when touching AI chat behavior,
-check both consumers.
+`services/ai-provider.service.ts` talks to Google Gemini
+(`https://generativelanguage.googleapis.com/v1beta/openai/`) through the `openai` npm SDK client,
+since Gemini exposes an OpenAI-compatible chat-completions endpoint.
+`GEMINI_API_KEY` and `GEMINI_MODEL` (default `gemini-2.5-flash`) are read from
+`process.env` lazily, at call time inside `chatWithAi` — not at module import time — so the app
+still boots without them; a missing key throws an `AiProviderError` with kind `not_configured`
+(mapped to HTTP 503), meaning the AI assistant is simply unavailable rather than the whole app
+failing to start. SDK errors are normalized into the same `AiProviderError` (kind: `unreachable` |
+`bad_status` | `malformed_response` | `not_configured`) defined in `shared/src/ai-provider-error.ts`.
+There is no per-user provider/API key configuration — one server-wide key serves every user via
+`POST /api/ai/chat`.
 
 ### Prisma
 
@@ -128,7 +122,7 @@ hot-reloads without leaking connection pools. Generated client output is customi
 Core models (`backend/prisma/schema.prisma`): `User` (has `tokenVersion`, `locale`), `Recipe`
 (belongs to `User`/`Category`; has `Ingredient[]`/`Instruction[]`/`RecipeTag[]`), `Tag`/`Category`
 (both scoped per-user, unique on `(userId, name)`), `RecipeTag` (join table),
-`PasswordResetToken`, `AiSettings` (1:1 with `User`).
+`PasswordResetToken`.
 
 Migration conventions: edit `schema.prisma`, run `npm run db:migrate:dev` against local Postgres,
 commit the generated migration folder. Never hand-edit an already-committed migration — write a
@@ -148,9 +142,8 @@ keys centralized in `frontend/src/api/queryKeys.ts`). React Context is used only
 API calls go through one file, `frontend/src/api/client.ts`: one function per backend endpoint,
 all routed through a shared internal `request<T>()` helper (adds `credentials: 'include'` for
 the auth cookie, normalizes error bodies into a typed `ApiError` with a `.kind`, and forces any
-401 to `kind: 'unauthenticated'` client-side regardless of server body). `frontend/src/services/`
-is not a general services layer — it holds only `ollama-direct.ts`, the special-cased
-direct-to-Ollama path described above, which bypasses `api/client.ts` and the backend entirely.
+401 to `kind: 'unauthenticated'` client-side regardless of server body). There is no
+`frontend/src/services/` layer — every AI chat call goes through `api/client.ts` to the backend.
 
 i18n is `i18next`/`react-i18next`, locale files under `frontend/src/i18n/locales/{en,nl,fr,es}.json`
 matching `SUPPORTED_LOCALES` from `shared`. Locale resolves from localStorage
@@ -173,10 +166,9 @@ Exports three modules from `shared/src/index.ts`:
   `Instruction`, `RecipeInput`, `AiChatTurnRequest/Response`) shared verbatim between backend
   responses and frontend consumption.
 - `ai-recipe-draft.ts` — real logic, not just types: `buildChatMessages`/`parseChatEnvelope`
-  plus `SUPPORTED_LOCALES`, the single source of truth for prompt building and response parsing
-  used by both the backend SDK path and the frontend direct-to-Ollama path.
-- `ai-provider-error.ts` — the `AiProvider`/`AiProviderErrorKind` types, the `AiProviderError`
-  class, and canned error-message builders, for the same "one vocabulary, two consumers" reason.
+  plus `SUPPORTED_LOCALES`, the single source of truth for prompt building and response parsing.
+- `ai-provider-error.ts` — the `AiProviderErrorKind` type, the `AiProviderError` class, and
+  canned error-message builders.
 
 In the Docker image, `backend/node_modules/yumbry-shared` (a symlink from the workspace install)
 is deliberately replaced with a real copied directory (`package.json` + `dist/`) since `shared/`
@@ -186,9 +178,9 @@ source isn't present in the runtime stage — see the Dockerfile's `shared-build
 
 - Prefer matching the existing per-controller Zod validation pattern over introducing a new
   validation abstraction, unless asked to refactor it.
-- Any change to AI chat prompt/response behavior likely needs updating both consumers:
-  `backend/src/services/ai-provider.service.ts` (SDK-mediated providers) and
-  `frontend/src/services/ollama-direct.ts` (Ollama), since they share `shared/src/ai-recipe-draft.ts`.
+- AI chat prompt/response behavior lives in `shared/src/ai-recipe-draft.ts`
+  (`buildChatMessages`/`parseChatEnvelope`), consumed only by
+  `backend/src/services/ai-provider.service.ts` — there's a single consumer now, not two.
 - `Recipe`, `Tag`, and `Category` are all scoped per-user — new queries/mutations must filter by
   the authenticated `userId`, matching the existing ownership-check middleware
   (`requireRecipeOwner`, `requirePhotoOwner`).

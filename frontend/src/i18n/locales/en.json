@@ -31,28 +31,6 @@
       "label": "Language",
       "saved": "Language saved."
     },
-    "ai": {
-      "title": "AI settings",
-      "description": "Choose the AI provider used by the AI assistant features, and configure how to reach it.",
-      "provider": "Provider",
-      "selectProvider": "Select a provider...",
-      "baseUrl": "Base URL",
-      "baseUrlOptional": "(optional — overrides the provider default)",
-      "ollamaNote": "No API key is sent. If your Ollama instance requires authentication (e.g. behind a reverse proxy), use the Custom provider instead, which stays routed through the server.",
-      "ollamaCorsNote": "Ollama is contacted directly by your browser, so it must be reachable from whichever device you're using this app on — not from the server. If this app isn't served from localhost, also set OLLAMA_ORIGINS to include this app's origin before starting Ollama, or the browser will block the request as cross-origin.",
-      "apiKey": "API key",
-      "optional": "(optional)",
-      "apiKeySavedPlaceholder": "•••• (saved — leave blank to keep)",
-      "clearApiKey": "Clear the saved API key",
-      "checking": "Checking...",
-      "checkConnection": "Check connection / load models",
-      "connectionError": "Couldn't reach that provider — you can still type a model name manually below.",
-      "model": "Model",
-      "selectModel": "Select a model...",
-      "saved": "Settings saved.",
-      "saving": "Saving...",
-      "saveSettings": "Save settings"
-    },
     "password": {
       "title": "Password",
       "description": "Change the password used to sign in. This will sign you out on all other devices.",
@@ -184,7 +162,6 @@
     "importFromUrl": "Import from URL"
   },
   "aiChat": {
-    "noModelConfigured": "No AI model is configured yet. Visit Settings to choose one.",
     "loadingRecipe": "Loading recipe...",
     "improveTitle": "Improve \"{{title}}\" with AI",
     "createTitle": "Create with AI",
@@ -196,8 +173,7 @@
     "changePlaceholder": "Tell the AI what to change",
     "cookPlaceholder": "Tell the AI what you'd like to cook",
     "send": "Send",
-    "saveAndReview": "Save and review",
-    "checkSettings": "Check your AI settings"
+    "saveAndReview": "Save and review"
   },
   "categoryPicker": {
     "newCategoryPlaceholder": "Or type a new category",

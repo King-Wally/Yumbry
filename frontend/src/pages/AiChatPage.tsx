@@ -7,9 +7,6 @@ import { queryKeys } from '../api/queryKeys';
 import AiErrorBanner from '../components/AiErrorBanner';
 import RecipePreview from '../components/RecipePreview';
 import { toRecipeInput } from '../utils/recipe-mapping';
-import { useAiSettings } from '../hooks/useAiSettings';
-import { useAuth } from '../hooks/useAuth';
-import { chatWithOllamaDirect } from '../services/ollama-direct';
 import type { AiChatMessage, RecipeInput } from '../types';
 
 export default function AiChatPage() {
@@ -24,9 +21,6 @@ export default function AiChatPage() {
     enabled: isImproving,
   });
 
-  const { data: aiSettings } = useAiSettings();
-  const { user } = useAuth();
-
   const [messages, setMessages] = useState<AiChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [draft, setDraft] = useState<RecipeInput | null>(null);
@@ -39,19 +33,8 @@ export default function AiChatPage() {
   }
 
   const chatMutation = useMutation({
-    mutationFn: (nextMessages: AiChatMessage[]) => {
-      if (!aiSettings?.model || !aiSettings?.provider) {
-        return Promise.reject(new Error(t('aiChat.noModelConfigured')));
-      }
-      if (aiSettings.provider === 'ollama') {
-        return chatWithOllamaDirect(nextMessages, draft, {
-          baseUrl: aiSettings.base_url,
-          model: aiSettings.model,
-          locale: user?.locale ?? 'en',
-        });
-      }
-      return chatAboutRecipe({ messages: nextMessages, current_draft: draft });
-    },
+    mutationFn: (nextMessages: AiChatMessage[]) =>
+      chatAboutRecipe({ messages: nextMessages, current_draft: draft }),
     onSuccess: (res) => {
       setMessages((m) => [...m, { role: 'assistant', content: res.reply }]);
       setDraft(res.recipe);

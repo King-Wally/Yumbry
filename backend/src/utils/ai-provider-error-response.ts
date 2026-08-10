@@ -6,6 +6,7 @@ const STATUS_BY_KIND: Record<AiProviderErrorKind, number> = {
   unreachable: 502,
   bad_status: 502,
   malformed_response: 502,
+  not_configured: 503,
 };
 
 /** Turns an AiProviderError into the right HTTP response; rethrows anything

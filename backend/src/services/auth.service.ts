@@ -90,10 +90,6 @@ export async function registerUser(email: string, password: string): Promise<Use
       throw err;
     }
 
-    await tx.aiSettings.create({
-      data: { userId: user.id, provider: null, baseUrl: null, model: null },
-    });
-
     return toUserRow(user);
   });
 }

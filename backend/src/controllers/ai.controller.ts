@@ -1,7 +1,6 @@
 import type { Request, Response } from 'express';
 import { ZodError } from 'zod';
-import { getAiSettingsForCall } from '../services/ai-settings.service.js';
-import { chatWithAi, type AiProvider } from '../services/ai-provider.service.js';
+import { chatWithAi } from '../services/ai-provider.service.js';
 import {
   AI_ENVELOPE_JSON_SCHEMA,
   buildChatMessages,
@@ -17,33 +16,9 @@ function isEnvelopeParseError(err: unknown): err is Error {
   return err instanceof Error && err.message.startsWith('The AI response');
 }
 
-async function requireModel(
-  res: Response,
-  userId: number
-): Promise<{
-  provider: AiProvider;
-  base_url: string | null;
-  api_key: string | null;
-  model: string;
-} | null> {
-  const settings = await getAiSettingsForCall(userId);
-  if (!settings.model || !settings.provider) {
-    res.status(409).json({ error: 'No AI model is configured yet. Visit Settings to choose one.' });
-    return null;
-  }
-  return {
-    provider: settings.provider,
-    base_url: settings.base_url,
-    api_key: settings.api_key,
-    model: settings.model,
-  };
-}
-
 export async function postAiChat(req: Request, res: Response) {
   try {
     const body = AiChatTurnRequestSchema.parse(req.body);
-    const settings = await requireModel(res, req.userId as number);
-    if (!settings) return;
 
     // Use the user's chosen locale, defaulting to English when they haven't
     // set one (users.locale itself already defaults to 'en').
@@ -53,10 +28,6 @@ export async function postAiChat(req: Request, res: Response) {
         : 'en';
 
     const raw = await chatWithAi(buildChatMessages(body.messages, body.current_draft, locale), {
-      provider: settings.provider,
-      baseUrl: settings.base_url,
-      apiKey: settings.api_key,
-      model: settings.model,
       jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
       sampling: RECIPE_SAMPLING,
     });

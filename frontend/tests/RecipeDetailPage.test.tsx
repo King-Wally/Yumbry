@@ -4,17 +4,9 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import RecipeDetailPage from '../src/pages/RecipeDetailPage';
 import * as apiClient from '../src/api/client';
-import type { AiSettings, Recipe } from '../src/types';
+import type { Recipe } from '../src/types';
 
 vi.mock('../src/api/client');
-
-const aiSettings: AiSettings = {
-  provider: 'ollama',
-  base_url: null,
-  model: null,
-  has_api_key: false,
-  updated_at: '2026-01-01T00:00:00.000Z',
-};
 
 const recipe: Recipe = {
   id: 1,
@@ -63,7 +55,6 @@ function renderDetail() {
 describe('RecipeDetailPage render-time state sync', () => {
   it('initializes the servings stepper from the recipe base servings (a string from the API)', async () => {
     vi.mocked(apiClient.getRecipe).mockResolvedValue(recipe);
-    vi.mocked(apiClient.getAiSettings).mockResolvedValue(aiSettings);
     renderDetail();
 
     expect(await screen.findByText('2 cups flour')).toBeInTheDocument();
@@ -72,7 +63,6 @@ describe('RecipeDetailPage render-time state sync', () => {
 
   it('rescales ingredient amounts when the user adjusts servings', async () => {
     vi.mocked(apiClient.getRecipe).mockResolvedValue(recipe);
-    vi.mocked(apiClient.getAiSettings).mockResolvedValue(aiSettings);
     renderDetail();
 
     await screen.findByText('2 cups flour');
