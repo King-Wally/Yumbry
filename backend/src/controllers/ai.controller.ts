@@ -16,6 +16,12 @@ function isEnvelopeParseError(err: unknown): err is Error {
   return err instanceof Error && err.message.startsWith('The AI response');
 }
 
+// Cheap, no-network check the frontend polls to decide whether to show AI entry points at all,
+// rather than only discovering the server has no key configured after a chat attempt 503s.
+export async function getAiStatus(_req: Request, res: Response) {
+  res.json({ configured: Boolean(process.env.GEMINI_API_KEY) });
+}
+
 export async function postAiChat(req: Request, res: Response) {
   try {
     const body = AiChatTurnRequestSchema.parse(req.body);

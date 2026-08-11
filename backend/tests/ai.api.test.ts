@@ -47,6 +47,29 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
     chatWithAi.mockReset();
   });
 
+  describe('GET /api/ai/status', () => {
+    const originalKey = process.env.GEMINI_API_KEY;
+
+    afterEach(() => {
+      if (originalKey === undefined) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalKey;
+    });
+
+    it('reports configured: true when GEMINI_API_KEY is set', async () => {
+      process.env.GEMINI_API_KEY = 'test-key';
+      const res = await agent.get('/api/ai/status');
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ configured: true });
+    });
+
+    it('reports configured: false when GEMINI_API_KEY is unset', async () => {
+      delete process.env.GEMINI_API_KEY;
+      const res = await agent.get('/api/ai/status');
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ configured: false });
+    });
+  });
+
   describe('POST /api/ai/chat', () => {
     it('returns the envelope shape on success', async () => {
       chatWithAi.mockResolvedValue(

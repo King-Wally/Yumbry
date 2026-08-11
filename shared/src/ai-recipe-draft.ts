@@ -1,3 +1,5 @@
+import { QUANTITY_TOKEN_PATTERN, parseQuantityToken } from './quantity.js';
+
 export interface AiChatMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
@@ -34,11 +36,22 @@ const LANGUAGE_NAMES: Record<SupportedLocale, string> = {
 };
 
 // Example lines shown in the prompt, per locale.
-const EXAMPLES: Record<SupportedLocale, { ingredient: string; instruction: string }> = {
-  en: { ingredient: '450 g flour', instruction: 'Finely chop the onion.' },
-  nl: { ingredient: '450 g bloem', instruction: 'Snijd de ajuin fijn.' },
-  fr: { ingredient: '450 g farine', instruction: "Hachez finement l'oignon." },
-  es: { ingredient: '450 g harina', instruction: 'Pica finamente la cebolla.' },
+const EXAMPLES: Record<
+  SupportedLocale,
+  { ingredient: string; countable: string; instruction: string }
+> = {
+  en: { ingredient: '450 g flour', countable: '2 eggs', instruction: 'Finely chop the onion.' },
+  nl: { ingredient: '450 g bloem', countable: '2 eieren', instruction: 'Snijd de ajuin fijn.' },
+  fr: {
+    ingredient: '450 g farine',
+    countable: '2 œufs',
+    instruction: "Hachez finement l'oignon.",
+  },
+  es: {
+    ingredient: '450 g harina',
+    countable: '2 huevos',
+    instruction: 'Pica finamente la cebolla.',
+  },
 };
 
 export interface AiJsonSchemaFormat {
@@ -127,7 +140,7 @@ const ENVELOPE_SKELETON = `{
     "cook_time_minutes": 0,
     "total_time_minutes": 0,
     "servings": 4,
-    "ingredients": ["<amount> <unit> <name>"],
+    "ingredients": ["450 g flour", "2 eggs"],
     "instructions": ["one short imperative step"],
     "tags": ["string"],
     "category": "string or null"
@@ -137,17 +150,22 @@ const ENVELOPE_SKELETON = `{
 function languageRules(locale: SupportedLocale): string {
   const languageName = LANGUAGE_NAMES[locale];
 
-  // English needs no translation stage
   if (locale === 'en') {
     return `- Write the recipe in ${languageName}.`;
   }
 
-  return (
-    `- Draft the recipe in English first, using whichever units are natural for it. Then, as a final ` +
-    `step, translate it into ${languageName} and convert every measurement to metric.` +
-    `- Only the translated ${languageName} version goes into "recipe". The English draft is an internal ` +
-    `step and must never reach the user.`
-  );
+  // Compose directly in the target language and directly in metric — no intermediate English
+  // draft, no separate conversion step. A draft-then-convert stage is what produces recipes that
+  // start out imperial and only become metric (and get a "converted to metric" narration) on the
+  // next turn.
+  //
+  // Unlike English (see the comment on IMPERIAL_UNIT_ALTERNATION below), we also ask for metric
+  // explicitly here: the deterministic converter only recognizes English unit words, so it can't
+  // catch imperial units written in French/Dutch/Spanish. Metric is already the ambient default
+  // for cooking content in these languages, so a prompt reminder is far more likely to be
+  // followed than it would be against English's strong imperial-recipe training prior.
+  return `- Write the recipe directly in ${languageName}. Do not draft it in another language first.
+- Use metric units (g, kg, ml, l, °C) for every measurement.`;
 }
 
 function buildChatSystemPrompt(locale: SupportedLocale = 'en'): AiChatMessage {
@@ -171,9 +189,11 @@ preview beside the chat shows your current best draft of the recipe.
 
 ## Writing the recipe
 ${languageRules(locale)}
-- Metric units only: g, kg, ml, l, °C. Never cups, ounces, pounds, tablespoons or °F.
-- Each "ingredients" entry is one plain line, "<amount> <unit> <name>" and nothing else — for example
-  "${example.ingredient}". No prep notes, no parentheses, no alternatives; that detail belongs in a step.
+- Each "ingredients" entry is one plain line, amount followed by name and nothing else — for example
+  "${example.ingredient}" or "${example.countable}". No prep notes, no parentheses, no alternatives;
+  that detail belongs in a step.
+- Countable items take just the number and the plural name, no unit word — for example
+  "${example.countable}". Never write the literal word "unit".
 - Each "instructions" entry is one short imperative action — for example "${example.instruction}". No
   step numbers, no explanation of why it matters, no technique commentary.
 - "total_time_minutes" equals prep plus cook time, unless there is resting or marinating time to add.
@@ -183,6 +203,7 @@ ${languageRules(locale)}
 - Write "reply" in ${languageName}, 2-3 sentences at most, and never leave it empty.
 - Say briefly what the recipe is and what you changed, or ask a clarifying question.
 - Do not restate the ingredient list or justify every choice — the preview already shows the recipe.
+- Never mention units, measurements, or converting them — the user never asked for a conversion.
 
 ## Response format
 Respond with one JSON object and nothing else: no markdown fences, no text before or after it, no
@@ -369,12 +390,132 @@ function mapEntries<T>(value: unknown, map: (entry: unknown) => T | null): T[] {
   return value.map(map).filter((entry): entry is T => entry !== null);
 }
 
+/**
+ * The model is free to write a recipe in whatever units are natural for it — no "metric only"
+ * instruction survives a strong training-data prior for imperial-coded dishes (burgers, American
+ * baking, ...) reliably enough to matter. Metric-only output is instead guaranteed here,
+ * deterministically, on every ingredient line and instruction: unambiguous units are rewritten
+ * with a fixed conversion factor, so the model's choice of units never reaches the user. Genuinely
+ * ambiguous units (pint, quart, gallon, stick) are deliberately left untouched rather than guessed
+ * at.
+ */
+const IMPERIAL_UNIT_ALTERNATION =
+  'lbs?|pounds?|fl\\s*oz|fluid\\s+ounces?|oz|ounces?|tbsp|tablespoons?|tsp|teaspoons?|cups?|inch(?:es)?';
+
+// Grams/ml/cm read oddly with decimals ("174.999999999999997 g"); recipes never need that
+// precision, and it's the same rounding the prompt already asks the model to do itself.
+function roundAmount(amount: number): number {
+  return Math.round(amount);
+}
+
+// Unit tokens can carry inner whitespace ("fl oz"); normalize before looking them up so
+// "fl  oz"/"FL OZ" all resolve to the same IMPERIAL_TO_METRIC entry.
+function normalizeUnitKey(unitToken: string): string {
+  return unitToken.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+// Bare "oz"/"ounce(s)" default to the weight factor — the common case (meat, cheese, shrimp) —
+// since regex alone can't reliably tell it apart from a fluid ounce without more context than an
+// ingredient line gives. "fl oz"/"fluid ounce(s)" is unambiguous, so it gets its own volume entry.
+const IMPERIAL_TO_METRIC: Record<string, { factor: number; unit: string }> = {
+  tsp: { factor: 5, unit: 'ml' },
+  teaspoon: { factor: 5, unit: 'ml' },
+  teaspoons: { factor: 5, unit: 'ml' },
+  tbsp: { factor: 15, unit: 'ml' },
+  tablespoon: { factor: 15, unit: 'ml' },
+  tablespoons: { factor: 15, unit: 'ml' },
+  cup: { factor: 240, unit: 'ml' },
+  cups: { factor: 240, unit: 'ml' },
+  'fl oz': { factor: 30, unit: 'ml' },
+  'fluid ounce': { factor: 30, unit: 'ml' },
+  'fluid ounces': { factor: 30, unit: 'ml' },
+  oz: { factor: 28, unit: 'g' },
+  ounce: { factor: 28, unit: 'g' },
+  ounces: { factor: 28, unit: 'g' },
+  lb: { factor: 450, unit: 'g' },
+  lbs: { factor: 450, unit: 'g' },
+  pound: { factor: 450, unit: 'g' },
+  pounds: { factor: 450, unit: 'g' },
+  inch: { factor: 2.5, unit: 'cm' },
+  inches: { factor: 2.5, unit: 'cm' },
+};
+
+// A dual-listed amount the model sometimes already self-corrects inline, e.g.
+// "1.5 lbs (680g) ground beef" — keep only the given metric value, dropping the imperial part.
+// The `{0,20}?` gap tolerates a short hedge phrase before the number ("about", "approx.") so a
+// hedge word doesn't leave the imperial part to be converted independently, producing two
+// conflicting values.
+const DUAL_LISTED_REGEX = new RegExp(
+  `(?:${QUANTITY_TOKEN_PATTERN})\\s*(?:${IMPERIAL_UNIT_ALTERNATION})\\.?\\s*\\([a-z.,\\s]{0,20}?([\\d.,]+)\\s*(g|kg|ml|l)\\s*\\)`,
+  'gi'
+);
+
+// Same idea as DUAL_LISTED_REGEX, for a dual-listed oven temperature, e.g. "350°F (177°C)" — keep
+// the given Celsius value instead of also converting the Fahrenheit part independently.
+const DUAL_LISTED_TEMPERATURE_REGEX = new RegExp(
+  `(?:${QUANTITY_TOKEN_PATTERN})\\s*°?\\s*F\\.?\\s*\\([a-z.,\\s]{0,20}?([\\d.,]+)\\s*°?\\s*C\\s*\\)`,
+  'gi'
+);
+
+// Allows a hyphen between amount and unit ("1-inch pieces"), not just whitespace. The optional
+// leading "<amount>-" group handles a written range ("2-3 tbsp"): when present, both ends are
+// converted with the same factor instead of only the unit-adjacent number.
+const STANDALONE_IMPERIAL_REGEX = new RegExp(
+  `(?:(${QUANTITY_TOKEN_PATTERN})\\s*-\\s*)?(${QUANTITY_TOKEN_PATTERN})[\\s-]*(${IMPERIAL_UNIT_ALTERNATION})\\.?\\b`,
+  'gi'
+);
+
+// Same range handling as STANDALONE_IMPERIAL_REGEX, for a written temperature range ("350-375°F").
+const FAHRENHEIT_REGEX = /(?:(\d+(?:\.\d+)?)\s*-\s*)?(\d+(?:\.\d+)?)\s*°?\s*F\b/gi;
+
+function fahrenheitToCelsius(fahrenheit: number): number {
+  return Math.round(((fahrenheit - 32) * 5) / 9 / 5) * 5;
+}
+
+function convertImperialToMetric(text: string): string {
+  return text
+    .replace(DUAL_LISTED_REGEX, (_match, metricAmount: string, metricUnit: string) => {
+      return `${metricAmount} ${metricUnit}`;
+    })
+    .replace(DUAL_LISTED_TEMPERATURE_REGEX, (_match, celsius: string) => `${celsius}°C`)
+    .replace(
+      STANDALONE_IMPERIAL_REGEX,
+      (match, rangeStart: string | undefined, amountToken: string, unitToken: string) => {
+        const conversion = IMPERIAL_TO_METRIC[normalizeUnitKey(unitToken)];
+        if (!conversion) return match;
+
+        const convertedEnd = roundAmount(parseQuantityToken(amountToken) * conversion.factor);
+        if (!Number.isFinite(convertedEnd)) return match;
+
+        if (rangeStart) {
+          const convertedStart = roundAmount(parseQuantityToken(rangeStart) * conversion.factor);
+          if (!Number.isFinite(convertedStart)) return match;
+          return `${convertedStart}-${convertedEnd} ${conversion.unit}`;
+        }
+
+        return `${convertedEnd} ${conversion.unit}`;
+      }
+    )
+    .replace(FAHRENHEIT_REGEX, (_match, rangeStart: string | undefined, fahrenheit: string) => {
+      const convertedEnd = fahrenheitToCelsius(Number(fahrenheit));
+      if (rangeStart) {
+        const convertedStart = fahrenheitToCelsius(Number(rangeStart));
+        return `${convertedStart}-${convertedEnd}°C`;
+      }
+      return `${convertedEnd}°C`;
+    });
+}
+
 function extractRecipeDraft(
   node: Record<string, unknown>,
   currentImagePath: string | null
 ): AiRecipeDraft {
-  const ingredientLines = mapEntries(node.ingredients, toIngredientLine);
-  const instructionTexts = mapEntries(node.instructions, toInstructionText);
+  const ingredientLines = mapEntries(node.ingredients, toIngredientLine).map(
+    convertImperialToMetric
+  );
+  const instructionTexts = mapEntries(node.instructions, toInstructionText).map(
+    convertImperialToMetric
+  );
 
   const tags = Array.isArray(node.tags)
     ? [

@@ -9,6 +9,7 @@ import RecipeHero from '../components/RecipeHero';
 import ServingsStepper from '../components/ServingsStepper';
 import TimeStat from '../components/TimeStat';
 import { useScaledIngredients } from '../hooks/useScaledIngredients';
+import { useAiStatus } from '../hooks/useAiStatus';
 import { toNumber } from '../utils/numeric';
 import CollapsibleActions from '../components/CollapsibleActions';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -23,6 +24,7 @@ export default function RecipeDetailPage() {
     queryKey: queryKeys.recipe(id!),
     queryFn: () => getRecipe(id!),
   });
+  const { data: aiStatus } = useAiStatus();
 
   const [servings, setServings] = useState(1);
   const [servingsForRecipeId, setServingsForRecipeId] = useState<number | null>(null);
@@ -75,12 +77,14 @@ export default function RecipeDetailPage() {
           >
             {t('recipes.detail.edit')}
           </Link>
-          <Link
-            to={`/recipes/${id}/ai-improve`}
-            className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
-          >
-            {t('recipes.detail.improveWithAi')}
-          </Link>
+          {aiStatus?.configured && (
+            <Link
+              to={`/recipes/${id}/ai-improve`}
+              className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
+            >
+              {t('recipes.detail.improveWithAi')}
+            </Link>
+          )}
           <button
             type="button"
             onClick={() => setConfirmDeleteOpen(true)}

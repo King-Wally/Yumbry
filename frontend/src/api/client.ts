@@ -109,6 +109,10 @@ export function getCategories() {
   return request<Category[]>('/categories');
 }
 
+export function getAiStatus() {
+  return request<{ configured: boolean }>('/ai/status');
+}
+
 export function chatAboutRecipe(data: AiChatTurnRequest) {
   return request<AiChatTurnResponse>('/ai/chat', {
     method: 'POST',

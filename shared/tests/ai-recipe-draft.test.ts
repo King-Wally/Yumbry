@@ -19,7 +19,7 @@ describe('parseChatEnvelope', () => {
     cook_time_minutes: 25,
     total_time_minutes: 40,
     servings: 4,
-    ingredients: ['1 can coconut milk', '2 tbsp red curry paste'],
+    ingredients: ['400 ml coconut milk', '30 g red curry paste'],
     instructions: ['Press and cube the tofu.', 'Simmer the sauce.'],
     tags: ['curry', 'vegetarian', 'Curry'],
     category: 'Main course',
@@ -35,7 +35,7 @@ describe('parseChatEnvelope', () => {
     expect(envelope.recipe.image_path).toBeNull();
     expect(envelope.recipe.prep_time_minutes).toBe(15);
     expect(envelope.recipe.servings).toBe(4);
-    expect(envelope.recipe.ingredients).toEqual(['1 can coconut milk', '2 tbsp red curry paste']);
+    expect(envelope.recipe.ingredients).toEqual(['400 ml coconut milk', '30 g red curry paste']);
     expect(envelope.recipe.instructions).toEqual([
       { step_number: 1, text: 'Press and cube the tofu.' },
       { step_number: 2, text: 'Simmer the sauce.' },
@@ -273,6 +273,95 @@ describe('parseChatEnvelope', () => {
     expect(envelope.recipe.tags).toEqual(['vegan', 'quick']);
   });
 
+  it('rewrites imperial units to metric — the model is free to write any units, this guarantees the output is metric regardless', () => {
+    const envelope = parseChatEnvelope(
+      JSON.stringify({
+        recipe: {
+          ingredients: [
+            '1.5 lbs (680g) 80/20 ground beef',
+            '1 tbsp olive oil or butter',
+            '1 tsp salt',
+            '1/2 tsp black pepper',
+            '1/2 cup diced onion',
+            '8 oz shrimp',
+            '450 g flour',
+            '2 eggs',
+            '1 quart milk',
+          ],
+          instructions: ['Preheat the oven to 350°F.', 'Cut the carrots into 1-inch pieces.'],
+        },
+      })
+    );
+
+    expect(envelope.recipe.ingredients).toEqual([
+      '680 g 80/20 ground beef',
+      '15 ml olive oil or butter',
+      '5 ml salt',
+      '3 ml black pepper',
+      '120 ml diced onion',
+      '224 g shrimp',
+      '450 g flour', // already metric — untouched
+      '2 eggs', // no unit at all — untouched
+      '1 quart milk', // ambiguous/rare unit, deliberately not converted
+    ]);
+    expect(envelope.recipe.instructions).toEqual([
+      { step_number: 1, text: 'Preheat the oven to 175°C.' },
+      { step_number: 2, text: 'Cut the carrots into 3 cm pieces.' },
+    ]);
+  });
+
+  it('leaves a bare ratio like "80/20" alone when no unit word follows it', () => {
+    const envelope = parseChatEnvelope(
+      JSON.stringify({ recipe: { ingredients: ['80/20 ground beef'] } })
+    );
+    expect(envelope.recipe.ingredients).toEqual(['80/20 ground beef']);
+  });
+
+  it('converts both ends of a written quantity range, not just the unit-adjacent number', () => {
+    const envelope = parseChatEnvelope(
+      JSON.stringify({
+        recipe: {
+          ingredients: ['2-3 tbsp olive oil'],
+          instructions: ['Preheat the oven to 350-375°F.'],
+        },
+      })
+    );
+    expect(envelope.recipe.ingredients).toEqual(['30-45 ml olive oil']);
+    expect(envelope.recipe.instructions).toEqual([
+      { step_number: 1, text: 'Preheat the oven to 175-190°C.' },
+    ]);
+  });
+
+  it('collapses a dual-listed amount even with a hedge word before the metric value', () => {
+    const envelope = parseChatEnvelope(
+      JSON.stringify({ recipe: { ingredients: ['1.5 lbs (about 680g) ground beef'] } })
+    );
+    expect(envelope.recipe.ingredients).toEqual(['680 g ground beef']);
+  });
+
+  it('collapses a dual-listed temperature instead of converting the Fahrenheit part too', () => {
+    const envelope = parseChatEnvelope(
+      JSON.stringify({ recipe: { instructions: ['Preheat the oven to 350°F (177°C).'] } })
+    );
+    expect(envelope.recipe.instructions).toEqual([
+      { step_number: 1, text: 'Preheat the oven to 177°C.' },
+    ]);
+  });
+
+  it('converts "fl oz" to ml, unlike bare "oz" which defaults to weight', () => {
+    const envelope = parseChatEnvelope(
+      JSON.stringify({ recipe: { ingredients: ['8 fl oz milk', '8 oz shrimp'] } })
+    );
+    expect(envelope.recipe.ingredients).toEqual(['240 ml milk', '224 g shrimp']);
+  });
+
+  it('leaves a malformed zero-denominator fraction unconverted instead of producing Infinity', () => {
+    const envelope = parseChatEnvelope(
+      JSON.stringify({ recipe: { ingredients: ['5/0 cups sugar'] } })
+    );
+    expect(envelope.recipe.ingredients).toEqual(['5/0 cups sugar']);
+  });
+
   it('throws a clear error when the response is not JSON at all', () => {
     expect(() => parseChatEnvelope('Sorry, I cannot help with that.')).toThrow(
       /did not contain valid JSON/
@@ -478,8 +567,11 @@ describe('buildChatMessages', () => {
       expect(messages[0].role).toBe('system');
       expect(messages[0].content).toContain(SYSTEM_PROMPT_MARKER);
       expect(messages[0].content).toContain(`Write "reply" in ${languageName}`);
-      expect(messages[0].content).toContain(`Write the recipe in ${languageName}`);
+      expect(messages[0].content).toContain(`Write the recipe directly in ${languageName}`);
       expect(messages[0].content).not.toContain('translate');
+      expect(messages[0].content).not.toContain('English first');
+      expect(messages[0].content).not.toContain('whichever units are natural');
+      expect(messages[0].content).not.toContain('convert every measurement');
       expect(messages[1]).toEqual({
         role: 'system',
         content: 'There is no recipe draft yet — this is the start of a new recipe.',
@@ -498,20 +590,65 @@ describe('buildChatMessages', () => {
     expect(messages[0].content).toContain(ingredient);
   });
 
-  it('reuses the existing Flemish Dutch vocabulary guidance for locale nl', () => {
+  it('reuses the existing Flemish Dutch example instruction line for locale nl', () => {
     const messages = buildChatMessages([{ role: 'user', content: 'hi' }], null, 'nl');
-    expect(messages[0].content).toContain('"ajuin" not "ui"');
+    expect(messages[0].content).toContain('Snijd de ajuin fijn.');
   });
 
-  it('does not add Flemish-specific vocabulary guidance for non-Dutch locales', () => {
+  it('does not use the Flemish example instruction line for non-Dutch locales', () => {
     const messages = buildChatMessages([{ role: 'user', content: 'hi' }], null, 'es');
-    expect(messages[0].content).not.toContain('"ajuin" not "ui"');
+    expect(messages[0].content).not.toContain('Snijd de ajuin fijn.');
+  });
+
+  it(
+    'for English, does not instruct the model to use metric units — conversion is handled ' +
+      'deterministically instead',
+    () => {
+      const messages = buildChatMessages([{ role: 'user', content: 'hi' }], null, 'en');
+      const content = messages[0].content;
+
+      expect(content).not.toContain('whichever units are natural');
+      expect(content).not.toContain('convert every measurement');
+      expect(content).not.toContain('English first');
+      expect(content).not.toContain('Use metric units');
+    }
+  );
+
+  it.each(['nl', 'fr', 'es'] as const)(
+    'for non-English locale %s, backstops the deterministic converter with an explicit metric instruction',
+    (locale) => {
+      const messages = buildChatMessages([{ role: 'user', content: 'hi' }], null, locale);
+      expect(messages[0].content).toContain('Use metric units (g, kg, ml, l, °C)');
+    }
+  );
+
+  it.each([
+    { locale: 'en' as const, countable: '2 eggs' },
+    { locale: 'nl' as const, countable: '2 eieren' },
+    { locale: 'fr' as const, countable: '2 œufs' },
+    { locale: 'es' as const, countable: '2 huevos' },
+  ])(
+    'shows a countable ingredient example with no filler unit word for locale $locale',
+    ({ locale, countable }) => {
+      const messages = buildChatMessages([{ role: 'user', content: 'hi' }], null, locale);
+      expect(messages[0].content).toContain(countable);
+    }
+  );
+
+  it('never asks for a literal "unit" filler word or shows one in the envelope skeleton', () => {
+    const messages = buildChatMessages([{ role: 'user', content: 'hi' }], null);
+    expect(messages[0].content).not.toContain('<amount> <unit> <name>');
+    expect(messages[0].content).not.toMatch(/\d+ unit /);
+  });
+
+  it('tells the model never to mention units or conversion in the reply', () => {
+    const messages = buildChatMessages([{ role: 'user', content: 'hi' }], null);
+    expect(messages[0].content).toContain('Never mention units');
   });
 });
 
 describe('RECIPE_SAMPLING', () => {
-  it('has no repetition penalty and a low, deterministic-leaning temperature', () => {
-    expect(RECIPE_SAMPLING.repeat_penalty).toBe(1.0);
+  it('has a low, deterministic-leaning temperature', () => {
     expect(RECIPE_SAMPLING.temperature).toBeLessThan(0.8);
   });
 });

@@ -1,3 +1,5 @@
+import { QUANTITY_TOKEN_PATTERN, parseQuantityToken } from 'yumbry-shared';
+
 export interface ParsedIngredient {
   raw_text: string;
   amount: number | null;
@@ -115,11 +117,13 @@ function normalizeDecimalComma(text: string): string {
   return text.replace(/^(\d+),(\d+)(?=\s|$)/, '$1.$2');
 }
 
-function roundAmount(amount: number): number {
+// Distinct precision from shared's whole-number roundAmount (used for display strings): scaling a
+// recipe by an odd servings ratio needs sub-1 precision to stay accurate across repeated scaling.
+function roundParsedAmount(amount: number): number {
   return Math.round(amount * 1000) / 1000;
 }
 
-const LEADING_QUANTITY_REGEX = /^(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?)(?=\s|$)/;
+const LEADING_QUANTITY_REGEX = new RegExp(`^(${QUANTITY_TOKEN_PATTERN})(?=\\s|$)`);
 
 interface LeadingQuantity {
   amount: number;
@@ -136,19 +140,7 @@ function parseLeadingQuantity(text: string): LeadingQuantity | null {
   const token = match[0];
   const rest = normalized.slice(match[0].length);
 
-  const mixedMatch = /^(\d+)\s+(\d+)\/(\d+)$/.exec(token);
-  if (mixedMatch) {
-    const [, whole, num, den] = mixedMatch;
-    return { amount: roundAmount(Number(whole) + Number(num) / Number(den)), rest };
-  }
-
-  const fractionMatch = /^(\d+)\/(\d+)$/.exec(token);
-  if (fractionMatch) {
-    const [, num, den] = fractionMatch;
-    return { amount: roundAmount(Number(num) / Number(den)), rest };
-  }
-
-  return { amount: roundAmount(Number(token)), rest };
+  return { amount: roundParsedAmount(parseQuantityToken(token)), rest };
 }
 
 interface UnitMatch {
