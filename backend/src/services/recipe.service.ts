@@ -1,5 +1,6 @@
 import { prisma } from '../db/prisma.js';
 import { withTransaction, type Queryable } from '../db/transaction.js';
+import { deleteRecipeUploadsDir, deleteUploadedFile } from '../middleware/upload.js';
 import { deleteOrphaned, upsertCategory, upsertTags } from './tag-category.service.js';
 import type {
   CategoryRef,
@@ -226,9 +227,14 @@ export async function updateRecipe(
   data: RecipeInput,
   userId: number
 ): Promise<RecipeWithRelations | null> {
-  const updated = await withTransaction(async (client) => {
+  const result = await withTransaction(async (client) => {
     const categoryId = await upsertCategory(client, data.category, userId);
     const recipeId = Number(id);
+
+    const existing = await client.recipe.findFirst({
+      where: { id: recipeId, userId },
+      select: { imagePath: true },
+    });
 
     const { count } = await client.recipe.updateMany({
       where: { id: recipeId, userId },
@@ -245,7 +251,7 @@ export async function updateRecipe(
       },
     });
 
-    if (count === 0) return false;
+    if (count === 0) return null;
 
     await client.ingredient.deleteMany({ where: { recipeId } });
     await client.instruction.deleteMany({ where: { recipeId } });
@@ -258,20 +264,31 @@ export async function updateRecipe(
     await deleteOrphaned(client, 'tags', await referencedTagIds(client, userId), userId);
     await deleteOrphaned(client, 'categories', await referencedCategoryIds(client, userId), userId);
 
-    return true;
+    return { previousImagePath: existing?.imagePath ?? null };
   });
 
-  if (!updated) return null;
+  if (!result) return null;
+
+  const nextImagePath = data.image_path ?? null;
+  if (result.previousImagePath && result.previousImagePath !== nextImagePath) {
+    await deleteUploadedFile(result.previousImagePath);
+  }
+
   return getRecipeById(id, userId);
 }
 
 export async function deleteRecipe(id: string, userId: number): Promise<boolean> {
-  return withTransaction(async (client) => {
-    const { count } = await client.recipe.deleteMany({ where: { id: Number(id), userId } });
+  const recipeId = Number(id);
+
+  const deleted = await withTransaction(async (client) => {
+    const { count } = await client.recipe.deleteMany({ where: { id: recipeId, userId } });
     await deleteOrphaned(client, 'tags', await referencedTagIds(client, userId), userId);
     await deleteOrphaned(client, 'categories', await referencedCategoryIds(client, userId), userId);
     return count > 0;
   });
+
+  if (deleted) await deleteRecipeUploadsDir(recipeId);
+  return deleted;
 }
 
 export async function setRecipePhoto(
@@ -279,9 +296,21 @@ export async function setRecipePhoto(
   imagePath: string,
   userId: number
 ): Promise<{ id: number } | null> {
+  const existing = await prisma.recipe.findFirst({
+    where: { id: Number(id), userId },
+    select: { imagePath: true },
+  });
+  if (!existing) return null;
+
   const { count } = await prisma.recipe.updateMany({
     where: { id: Number(id), userId },
     data: { imagePath, updatedAt: new Date() },
   });
-  return count > 0 ? { id: Number(id) } : null;
+  if (count === 0) return null;
+
+  if (existing.imagePath && existing.imagePath !== imagePath) {
+    await deleteUploadedFile(existing.imagePath);
+  }
+
+  return { id: Number(id) };
 }

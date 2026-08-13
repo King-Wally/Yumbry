@@ -1,7 +1,10 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import pg from 'pg';
 import type { Express } from 'express';
+import { absoluteUploadPath, UPLOADS_DIR } from '../src/middleware/upload.js';
 import { registerTestUser } from './helpers/auth.js';
 import { resetTestDatabase } from './helpers/db.js';
 
@@ -426,6 +429,61 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
 
       const otherTags = await otherAgent.get('/api/tags');
       expect(otherTags.body.map((t: { name: string }) => t.name)).toEqual(['vegan']);
+    });
+  });
+
+  describe('photo files on disk', () => {
+    const attachPhoto = (recipeId: number) =>
+      agent
+        .post(`/api/recipes/${recipeId}/photo`)
+        .attach('photo', Buffer.from('fake-image-bytes'), {
+          filename: 'photo.png',
+          contentType: 'image/png',
+        });
+
+    it('deletes the uploaded file and its directory when the recipe is deleted', async () => {
+      const created = await agent.post('/api/recipes').send({ title: 'With Photo', servings: 1 });
+      const uploaded = await attachPhoto(created.body.id);
+      expect(uploaded.status).toBe(200);
+
+      const absolute = absoluteUploadPath(uploaded.body.image_path) as string;
+      expect(fs.existsSync(absolute)).toBe(true);
+
+      const deleted = await agent.delete(`/api/recipes/${created.body.id}`);
+      expect(deleted.status).toBe(204);
+
+      expect(fs.existsSync(absolute)).toBe(false);
+      expect(fs.existsSync(path.join(UPLOADS_DIR, 'recipes', String(created.body.id)))).toBe(false);
+    });
+
+    it('deletes the superseded file when a photo is replaced', async () => {
+      const created = await agent.post('/api/recipes').send({ title: 'Replaced', servings: 1 });
+
+      const first = await attachPhoto(created.body.id);
+      const second = await attachPhoto(created.body.id);
+      expect(second.status).toBe(200);
+      expect(second.body.image_path).not.toBe(first.body.image_path);
+
+      expect(fs.existsSync(absoluteUploadPath(first.body.image_path) as string)).toBe(false);
+      expect(fs.existsSync(absoluteUploadPath(second.body.image_path) as string)).toBe(true);
+
+      await agent.delete(`/api/recipes/${created.body.id}`);
+    });
+
+    it('deletes the file when a recipe update drops image_path', async () => {
+      const created = await agent.post('/api/recipes').send({ title: 'Dropped', servings: 1 });
+      const uploaded = await attachPhoto(created.body.id);
+      const absolute = absoluteUploadPath(uploaded.body.image_path) as string;
+
+      const updated = await agent
+        .put(`/api/recipes/${created.body.id}`)
+        .send({ title: 'Dropped', servings: 1 });
+      expect(updated.status).toBe(200);
+      expect(updated.body.image_path).toBeNull();
+
+      expect(fs.existsSync(absolute)).toBe(false);
+
+      await agent.delete(`/api/recipes/${created.body.id}`);
     });
   });
 });

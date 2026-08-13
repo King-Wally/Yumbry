@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import fsp from 'node:fs/promises';
 import path from 'node:path';
 import type { Request } from 'express';
 import multer, { type FileFilterCallback } from 'multer';
@@ -42,6 +43,41 @@ export const uploadJsonFile = multer({
 
 export function publicUploadPath(absolutePath: string): string {
   return `/uploads/${path.relative(UPLOADS_DIR, absolutePath)}`;
+}
+
+/** Inverse of publicUploadPath. Returns null for anything outside UPLOADS_DIR. */
+export function absoluteUploadPath(publicPath: string): string | null {
+  if (!publicPath.startsWith('/uploads/')) return null;
+
+  const root = path.resolve(UPLOADS_DIR);
+  const absolute = path.resolve(path.join(root, publicPath.slice('/uploads/'.length)));
+  if (absolute !== root && !absolute.startsWith(root + path.sep)) return null;
+  return absolute;
+}
+
+/** Best-effort: a failed unlink leaves an orphaned file, which beats failing the request. */
+export async function deleteUploadedFile(publicPath: string | null | undefined): Promise<void> {
+  if (!publicPath) return;
+  const absolute = absoluteUploadPath(publicPath);
+  if (!absolute) return;
+
+  try {
+    await fsp.rm(absolute, { force: true });
+  } catch (err) {
+    console.error(`Failed to delete uploaded file ${absolute}:`, err);
+  }
+}
+
+/** Best-effort removal of a recipe's whole upload directory, including any orphans in it. */
+export async function deleteRecipeUploadsDir(recipeId: number): Promise<void> {
+  if (!Number.isInteger(recipeId)) return;
+  const dir = path.join(UPLOADS_DIR, 'recipes', String(recipeId));
+
+  try {
+    await fsp.rm(dir, { recursive: true, force: true });
+  } catch (err) {
+    console.error(`Failed to delete uploads directory ${dir}:`, err);
+  }
 }
 
 export { UPLOADS_DIR };
