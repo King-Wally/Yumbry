@@ -1,19 +1,30 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { chatAboutRecipe, getRecipe } from '../api/client';
+import {
+  isSupportedLocale,
+  SMALL_VOLUME_STYLES,
+  UNIT_SYSTEMS,
+  type SmallVolumeStyle,
+  type UnitSystem,
+} from 'yumbry-shared';
+import { chatAboutRecipe, getRecipe, updateProfile } from '../api/client';
 import { queryKeys } from '../api/queryKeys';
 import AiErrorBanner from '../components/AiErrorBanner';
 import RecipePreview from '../components/RecipePreview';
+import { useAuth } from '../hooks/useAuth';
+import { renderDraftForReader } from '../utils/render-draft';
 import { toRecipeInput } from '../utils/recipe-mapping';
-import type { AiChatMessage, RecipeInput } from '../types';
+import type { AiChatMessage, AiRecipeDraft } from '../types';
 
 export default function AiChatPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id } = useParams<{ id?: string }>();
   const isImproving = Boolean(id);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: recipe } = useQuery({
     queryKey: queryKeys.recipe(id!),
@@ -23,7 +34,7 @@ export default function AiChatPage() {
 
   const [messages, setMessages] = useState<AiChatMessage[]>([]);
   const [input, setInput] = useState('');
-  const [draft, setDraft] = useState<RecipeInput | null>(null);
+  const [draft, setDraft] = useState<AiRecipeDraft | null>(null);
   const [seededForId, setSeededForId] = useState<number | null>(null);
 
   // Seed preview from recipe once, in improve mode only
@@ -41,6 +52,28 @@ export default function AiChatPage() {
     },
   });
 
+  // These are stored preferences like any other, but they live here rather than in Settings
+  // because the preview beside them is the only place their effect is visible.
+  //
+  // Invalidate rather than write the response straight into the cache: AuthProvider mirrors the
+  // current user into its own state from inside the query function, so seeding the cache would
+  // update no one. Invalidating re-runs that function, which is what actually refreshes context.
+  const preferenceMutation = useMutation({
+    mutationFn: (data: { unitSystem?: UnitSystem; smallVolumes?: SmallVolumeStyle }) =>
+      updateProfile(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.authMe });
+    },
+  });
+
+  const unitSystem = user?.unitSystem ?? 'metric';
+  const smallVolumes = user?.smallVolumes ?? 'spoons';
+  const locale = isSupportedLocale(i18n.language) ? i18n.language : 'en';
+
+  // The draft the server sent is already rendered, but a preference can change after it arrives —
+  // so redraw from the canonical amounts that travel with it.
+  const shownDraft = renderDraftForReader(draft, { locale, unitSystem, smallVolumes });
+
   function handleSend(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const text = input.trim();
@@ -52,11 +85,12 @@ export default function AiChatPage() {
   }
 
   function handleSave() {
-    if (!draft) return;
+    if (!shownDraft) return;
+    // Save exactly what is on screen, not the server's last rendering of it.
     if (isImproving) {
-      navigate(`/recipes/${id}/edit`, { state: { aiDraft: draft } });
+      navigate(`/recipes/${id}/edit`, { state: { aiDraft: shownDraft } });
     } else {
-      navigate('/recipes/new', { state: { aiDraft: draft } });
+      navigate('/recipes/new', { state: { aiDraft: shownDraft } });
     }
   }
 
@@ -126,8 +160,56 @@ export default function AiChatPage() {
         </div>
 
         {/* Preview column */}
-        <div className="h-[60vh] overflow-y-auto rounded-xl border border-stone-200 bg-white p-5 shadow-sm md:h-[70vh]">
-          <RecipePreview draft={draft} />
+        <div className="flex h-[60vh] flex-col rounded-xl border border-stone-200 bg-white shadow-sm md:h-[70vh]">
+          <div className="flex flex-wrap gap-3 border-b border-stone-200 p-3">
+            <label
+              className="min-w-[8rem] flex-1 text-xs font-medium text-stone-600"
+              title={t('aiChat.units.description')}
+            >
+              {t('aiChat.units.label')}
+              <select
+                value={unitSystem}
+                onChange={(e) =>
+                  preferenceMutation.mutate({ unitSystem: e.target.value as UnitSystem })
+                }
+                disabled={preferenceMutation.isPending}
+                className="mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5 text-sm text-stone-700 focus:border-clay focus:outline-none disabled:opacity-50"
+              >
+                {UNIT_SYSTEMS.map((key) => (
+                  <option key={key} value={key}>
+                    {t(`aiChat.units.options.${key}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label
+              className="min-w-[8rem] flex-1 text-xs font-medium text-stone-600"
+              title={t('aiChat.smallVolumes.description')}
+            >
+              {t('aiChat.smallVolumes.label')}
+              <select
+                value={smallVolumes}
+                onChange={(e) =>
+                  preferenceMutation.mutate({ smallVolumes: e.target.value as SmallVolumeStyle })
+                }
+                // Imperial has no alternative to spoons at these sizes, so the control would have
+                // nothing to do.
+                disabled={preferenceMutation.isPending || unitSystem === 'imperial'}
+                className="mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5 text-sm text-stone-700 focus:border-clay focus:outline-none disabled:opacity-50"
+              >
+                {SMALL_VOLUME_STYLES.map((key) => (
+                  <option key={key} value={key}>
+                    {t(`aiChat.smallVolumes.options.${key}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-5">
+            <RecipePreview draft={shownDraft} />
+          </div>
         </div>
       </div>
 
@@ -135,7 +217,7 @@ export default function AiChatPage() {
         <button
           type="button"
           onClick={handleSave}
-          disabled={!draft}
+          disabled={!shownDraft}
           className="rounded-md bg-clay px-4 py-2 text-white disabled:opacity-50"
         >
           {t('aiChat.saveAndReview')}

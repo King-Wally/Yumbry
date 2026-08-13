@@ -41,6 +41,8 @@ describe('AuthProvider locale sync', () => {
       id: 1,
       email: 'a@example.com',
       locale: 'en',
+      unitSystem: 'metric',
+      smallVolumes: 'spoons',
     });
     const queryClient = renderWithProvider();
 
@@ -53,6 +55,8 @@ describe('AuthProvider locale sync', () => {
       id: 1,
       email: 'a@example.com',
       locale: 'fr',
+      unitSystem: 'metric',
+      smallVolumes: 'spoons',
     });
     await act(() => queryClient.invalidateQueries({ queryKey: queryKeys.authMe }));
 

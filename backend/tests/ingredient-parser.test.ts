@@ -111,4 +111,34 @@ describe('parseIngredientLine', () => {
     expect(result.amount).toBe(2);
     expect(result.name).toBe('eggs, beaten');
   });
+
+  // The word list used to be English-only, so a Dutch or French recipe saved with a null unit and
+  // the unit word swallowed into the name.
+  it.each([
+    ['2 el olijfolie', 'el', 'olijfolie'],
+    ['1 theelepel zout', 'theelepel', 'zout'],
+    ['2 c. à s. huile', 'c. à s.', 'huile'],
+    ['1 cucharadita sal', 'cucharadita', 'sal'],
+    ['3 teentjes look', 'teentjes', 'look'],
+  ])('parses %s in its own language', (line, unit, name) => {
+    const result = parseIngredientLine(line);
+    expect(result.unit).toBe(unit);
+    expect(result.name).toBe(name);
+    expect(result.is_scalable).toBe(true);
+  });
+
+  // "1½" used to substitute into "11/2" with no separator, which the leading-quantity match then
+  // read as eleven halves.
+  it('reads a mixed vulgar fraction as one and a half, not five and a half', () => {
+    const result = parseIngredientLine('1½ cups flour');
+    expect(result.amount).toBe(1.5);
+    expect(result.unit).toBe('cups');
+    expect(result.name).toBe('flour');
+  });
+
+  // A French elision is not a litre.
+  it("does not read 2 l'oignon as two litres", () => {
+    const result = parseIngredientLine("2 l'oignon");
+    expect(result.unit).toBeNull();
+  });
 });

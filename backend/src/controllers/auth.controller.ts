@@ -19,15 +19,41 @@ import {
   requestPasswordReset,
   resetPassword,
   revokeAuthSessions,
-  updateUserLocale,
+  updateUserProfile,
   verifyPassword,
+  type UserRow,
 } from '../services/auth.service.js';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const COOKIE_SECURE = process.env.COOKIE_SECURE === 'true';
 
-function toPublicUser(user: { id: number; email: string; locale: string }) {
-  return { id: user.id, email: user.email, locale: user.locale };
+interface PublicUser {
+  id: number;
+  email: string;
+  locale: string;
+  unitSystem: string;
+  smallVolumes: string;
+}
+
+function toPublicUser(user: PublicUser): PublicUser {
+  return {
+    id: user.id,
+    email: user.email,
+    locale: user.locale,
+    unitSystem: user.unitSystem,
+    smallVolumes: user.smallVolumes,
+  };
+}
+
+// Service rows are snake_case; `req.user` is already camelCase. One adapter beats two shapes.
+function publicUserFromRow(user: UserRow): PublicUser {
+  return toPublicUser({
+    id: user.id,
+    email: user.email,
+    locale: user.locale,
+    unitSystem: user.unit_system,
+    smallVolumes: user.small_volumes,
+  });
 }
 
 function setAuthCookie(res: Response, userId: number, tokenVersion: number): void {
@@ -46,7 +72,7 @@ export async function postRegister(req: Request, res: Response) {
     if (!user) return res.status(409).json({ error: 'Email is already registered.' });
 
     setAuthCookie(res, user.id, user.token_version);
-    res.status(201).json({ id: user.id, email: user.email });
+    res.status(201).json(publicUserFromRow(user));
   } catch (err) {
     if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
     throw err;
@@ -61,7 +87,7 @@ export async function postLogin(req: Request, res: Response) {
     if (!user || !valid) return res.status(401).json({ error: 'Invalid email or password.' });
 
     setAuthCookie(res, user.id, user.token_version);
-    res.json({ id: user.id, email: user.email });
+    res.json(publicUserFromRow(user));
   } catch (err) {
     if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
     throw err;
@@ -93,9 +119,9 @@ export async function getMe(req: Request, res: Response) {
 
 export async function patchMe(req: Request, res: Response) {
   try {
-    const { locale } = UpdateProfileBodySchema.parse(req.body);
-    const user = await updateUserLocale(req.userId as number, locale);
-    res.json(toPublicUser(user));
+    const patch = UpdateProfileBodySchema.parse(req.body);
+    const user = await updateUserProfile(req.userId as number, patch);
+    res.json(publicUserFromRow(user));
   } catch (err) {
     if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
     throw err;

@@ -173,7 +173,23 @@
     "changePlaceholder": "Dile a la IA qué cambiar",
     "cookPlaceholder": "Dile a la IA qué te gustaría cocinar",
     "send": "Enviar",
-    "saveAndReview": "Guardar y revisar"
+    "saveAndReview": "Guardar y revisar",
+    "units": {
+      "label": "Unidades",
+      "description": "Elige las unidades en las que el asistente de IA escribe las recetas nuevas. Las recetas que ya has guardado nunca se convierten.",
+      "options": {
+        "metric": "Métrico (g, ml, °C)",
+        "imperial": "Imperial (oz, tazas, °F)"
+      }
+    },
+    "smallVolumes": {
+      "label": "Cantidades pequeñas",
+      "description": "Cómo escribe el asistente de IA las cantidades pequeñas en las recetas métricas. Los mililitros son exactos; las cucharas son más rápidas. No afecta a las recetas imperiales.",
+      "options": {
+        "spoons": "Cucharas (cdta, cda)",
+        "millilitres": "Mililitros (ml)"
+      }
+    }
   },
   "categoryPicker": {
     "newCategoryPlaceholder": "O escribe una nueva categoría",

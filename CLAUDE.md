@@ -102,7 +102,7 @@ tokens without a blocklist.
 `services/ai-provider.service.ts` talks to Google Gemini
 (`https://generativelanguage.googleapis.com/v1beta/openai/`) through the `openai` npm SDK client,
 since Gemini exposes an OpenAI-compatible chat-completions endpoint.
-`GEMINI_API_KEY` and `GEMINI_MODEL` (default `gemini-2.5-flash`) are read from
+`GEMINI_API_KEY` and `GEMINI_MODEL` (default `gemini-3.5-flash-lite`) are read from
 `process.env` lazily, at call time inside `chatWithAi` — not at module import time — so the app
 still boots without them; a missing key throws an `AiProviderError` with kind `not_configured`
 (mapped to HTTP 503), meaning the AI assistant is simply unavailable rather than the whole app

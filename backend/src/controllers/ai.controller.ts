@@ -4,10 +4,17 @@ import { chatWithAi } from '../services/ai-provider.service.js';
 import {
   AI_ENVELOPE_JSON_SCHEMA,
   buildChatMessages,
+  DEFAULT_LOCALE,
+  DEFAULT_SMALL_VOLUME_STYLE,
+  DEFAULT_UNIT_SYSTEM,
+  isSmallVolumeStyle,
+  isSupportedLocale,
+  isUnitSystem,
   parseChatEnvelope,
   RECIPE_SAMPLING,
-  SUPPORTED_LOCALES,
+  type SmallVolumeStyle,
   type SupportedLocale,
+  type UnitSystem,
 } from 'yumbry-shared';
 import { AiChatTurnRequestSchema } from '../schemas/ai-chat.schema.js';
 import { sendAiProviderError } from '../utils/ai-provider-error-response.js';
@@ -26,19 +33,34 @@ export async function postAiChat(req: Request, res: Response) {
   try {
     const body = AiChatTurnRequestSchema.parse(req.body);
 
-    // Use the user's chosen locale, defaulting to English when they haven't
-    // set one (users.locale itself already defaults to 'en').
-    const locale: SupportedLocale =
-      req.user && SUPPORTED_LOCALES.includes(req.user.locale as SupportedLocale)
-        ? (req.user.locale as SupportedLocale)
-        : 'en';
+    // Both columns are unconstrained strings in the database, so re-validate rather than trusting
+    // the value; both already default to the same fallbacks used here.
+    const locale: SupportedLocale = isSupportedLocale(req.user?.locale)
+      ? req.user.locale
+      : DEFAULT_LOCALE;
+    const unitSystem: UnitSystem = isUnitSystem(req.user?.unitSystem)
+      ? req.user.unitSystem
+      : DEFAULT_UNIT_SYSTEM;
+    const smallVolumes: SmallVolumeStyle = isSmallVolumeStyle(req.user?.smallVolumes)
+      ? req.user.smallVolumes
+      : DEFAULT_SMALL_VOLUME_STYLE;
 
+    // `unitSystem` reaches the parser and never the prompt. The model writes canonical metric for
+    // every reader; converting it afterwards is what makes unit compliance a property of the code
+    // rather than a hope about the model.
     const raw = await chatWithAi(buildChatMessages(body.messages, body.current_draft, locale), {
       jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
       sampling: RECIPE_SAMPLING,
     });
 
-    res.json(parseChatEnvelope(raw, body.current_draft));
+    res.json(
+      parseChatEnvelope(raw, {
+        currentDraft: body.current_draft,
+        locale,
+        unitSystem,
+        smallVolumes,
+      })
+    );
   } catch (err) {
     if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
     if (isEnvelopeParseError(err)) {

@@ -13,6 +13,8 @@ export interface UserRow {
   password_hash: string;
   token_version: number;
   locale: string;
+  unit_system: string;
+  small_volumes: string;
   created_at: Date;
 }
 
@@ -25,6 +27,8 @@ function toUserRow(user: {
   passwordHash: string;
   tokenVersion: number;
   locale: string;
+  unitSystem: string;
+  smallVolumes: string;
   createdAt: Date;
 }): UserRow {
   return {
@@ -33,6 +37,8 @@ function toUserRow(user: {
     password_hash: user.passwordHash,
     token_version: user.tokenVersion,
     locale: user.locale,
+    unit_system: user.unitSystem,
+    small_volumes: user.smallVolumes,
     created_at: user.createdAt,
   };
 }
@@ -59,10 +65,15 @@ export async function deleteUser(id: number): Promise<void> {
   await prisma.user.delete({ where: { id } });
 }
 
-export async function updateUserLocale(userId: number, locale: string): Promise<UserRow> {
+// Generalised rather than given a sibling per column: Prisma ignores `undefined` keys, so a
+// partial update needs no branching, and the next preference to be added needs no third function.
+export async function updateUserProfile(
+  userId: number,
+  data: { locale?: string; unitSystem?: string; smallVolumes?: string }
+): Promise<UserRow> {
   const user = await prisma.user.update({
     where: { id: userId },
-    data: { locale },
+    data,
   });
   return toUserRow(user);
 }

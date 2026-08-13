@@ -59,7 +59,7 @@ describe('chatWithAi', () => {
     );
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body).toMatchObject({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash-lite',
       response_format: { type: 'json_schema', json_schema: { name: 'recipe_chat_turn' } },
     });
   });

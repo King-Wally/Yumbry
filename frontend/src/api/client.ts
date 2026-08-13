@@ -7,7 +7,7 @@ import type {
   RecipeSummary,
   Tag,
 } from '../types';
-import type { SupportedLocale } from 'yumbry-shared';
+import type { SmallVolumeStyle, SupportedLocale, UnitSystem } from 'yumbry-shared';
 
 interface ApiErrorBody {
   error?: string;
@@ -124,13 +124,21 @@ export interface CurrentUser {
   id: number;
   email: string;
   locale: SupportedLocale;
+  unitSystem: UnitSystem;
+  smallVolumes: SmallVolumeStyle;
 }
 
 export function getCurrentUser() {
   return request<CurrentUser>('/auth/me');
 }
 
-export function updateProfile(data: { locale: SupportedLocale }) {
+/** Partial on purpose: the settings page sends exactly the preference the reader just changed,
+ *  so two independent selects can't overwrite each other's value from a stale cache. */
+export function updateProfile(data: {
+  locale?: SupportedLocale;
+  unitSystem?: UnitSystem;
+  smallVolumes?: SmallVolumeStyle;
+}) {
   return request<CurrentUser>('/auth/me', { method: 'PATCH', body: JSON.stringify(data) });
 }
 

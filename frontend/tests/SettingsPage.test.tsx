@@ -31,11 +31,15 @@ describe('SettingsPage', () => {
       id: 1,
       email: 'a@example.com',
       locale: 'en',
+      unitSystem: 'metric',
+      smallVolumes: 'spoons',
     });
     vi.mocked(apiClient.updateProfile).mockResolvedValue({
       id: 1,
       email: 'a@example.com',
       locale: 'fr',
+      unitSystem: 'metric',
+      smallVolumes: 'spoons',
     });
     renderSettings();
 

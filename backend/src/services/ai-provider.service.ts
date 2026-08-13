@@ -16,7 +16,7 @@ export type { AiChatMessage, AiProviderErrorKind, AiSamplingParams };
 export { AiProviderError };
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/';
-const DEFAULT_MODEL = 'gemini-2.5-flash';
+const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
 
 type ChatResponseFormat =
   { type: 'json_object' } | { type: 'json_schema'; json_schema: AiJsonSchemaFormat };
@@ -64,6 +64,15 @@ function rejectsRequestShape(err: unknown): boolean {
   return err instanceof APIError && (err.status === 400 || err.status === 422);
 }
 
+// Whether the endpoint accepted our `json_schema` response_format is otherwise unobservable: the
+// ladder below swallows the rejection and the request still succeeds, so a schema that is silently
+// never applied looks exactly like one that works. That distinction decides how much of the unit
+// and language contract the prompt alone has to carry, so make the downgrade audible.
+function warnDowngrade(from: string, to: string, err: unknown): void {
+  const detail = err instanceof APIError ? `${err.status} ${err.message}` : String(err);
+  console.warn(`[ai-provider] response_format ${from} rejected, retrying as ${to}: ${detail}`);
+}
+
 export async function chatWithAi(
   messages: AiChatMessage[],
   options: {
@@ -95,10 +104,12 @@ export async function chatWithAi(
     // the model failing, so it's safe to retry once with less asked of it. Sampling params are
     // carried into this first retry since a schema-only endpoint often still accepts them; if
     // that retry itself 400s, drop sampling too on the last attempt.
+    warnDowngrade('json_schema', 'json_object', err);
     try {
       response = await create({ type: 'json_object' }, true);
     } catch (retryErr) {
       if (!rejectsRequestShape(retryErr)) throw toAiProviderError(retryErr);
+      warnDowngrade('json_object with sampling', 'json_object alone', retryErr);
       try {
         response = await create({ type: 'json_object' }, false);
       } catch (finalErr) {

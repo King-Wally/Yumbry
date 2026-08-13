@@ -68,6 +68,7 @@ describe('RecipeDetailPage render-time state sync', () => {
     await screen.findByText('2 cups flour');
     fireEvent.click(screen.getByLabelText('Increase servings'));
 
-    expect(await screen.findByText('2,5 cups flour')).toBeInTheDocument();
+    // A measuring cup has no 0.5 marking that reads as "2,5" — a cook reads halves.
+    expect(await screen.findByText('2 1/2 cups flour')).toBeInTheDocument();
   });
 });

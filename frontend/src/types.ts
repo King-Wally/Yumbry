@@ -7,6 +7,7 @@ export type {
   Instruction,
   RecipeInput,
   AiChatMessage,
+  AiRecipeDraft,
   AiChatTurnRequest,
   AiChatTurnResponse,
 } from 'yumbry-shared';

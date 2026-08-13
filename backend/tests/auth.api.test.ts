@@ -389,6 +389,122 @@ describe.skipIf(!TEST_DATABASE_URL)('auth API', () => {
     expect(res.status).toBe(401);
   });
 
+  it('defaults unitSystem to metric and updates it via PATCH /api/auth/me', async () => {
+    const agent = request.agent(app);
+    await agent
+      .post('/api/auth/register')
+      .set('X-Forwarded-For', '10.0.0.11')
+      .send({ email: 'ines@example.com', password: 'password123' });
+
+    const ip = '10.0.0.11';
+    expect((await agent.get('/api/auth/me').set('X-Forwarded-For', ip)).body).toMatchObject({
+      unitSystem: 'metric',
+    });
+
+    const patch = await agent
+      .patch('/api/auth/me')
+      .set('X-Forwarded-For', ip)
+      .send({ unitSystem: 'imperial' });
+    expect(patch.status).toBe(200);
+    expect(patch.body).toMatchObject({ unitSystem: 'imperial' });
+
+    expect((await agent.get('/api/auth/me').set('X-Forwarded-For', ip)).body).toMatchObject({
+      unitSystem: 'imperial',
+    });
+  });
+
+  // The settings page drives the two preferences from independent selects, so each PATCH carries
+  // only the field that changed. If one could clobber the other, changing units right after
+  // changing the language would silently revert the language.
+  it('updates locale and unitSystem independently', async () => {
+    const agent = request.agent(app);
+    await agent
+      .post('/api/auth/register')
+      .set('X-Forwarded-For', '10.0.0.12')
+      .send({ email: 'jonas@example.com', password: 'password123' });
+
+    const ip = '10.0.0.12';
+    await agent.patch('/api/auth/me').set('X-Forwarded-For', ip).send({ locale: 'nl' });
+    await agent.patch('/api/auth/me').set('X-Forwarded-For', ip).send({ unitSystem: 'imperial' });
+    const after = await agent
+      .patch('/api/auth/me')
+      .set('X-Forwarded-For', ip)
+      .send({ smallVolumes: 'millilitres' });
+
+    expect(after.body).toMatchObject({
+      locale: 'nl',
+      unitSystem: 'imperial',
+      smallVolumes: 'millilitres',
+    });
+  });
+
+  it('rejects an invalid or empty profile patch', async () => {
+    const agent = request.agent(app);
+    await agent
+      .post('/api/auth/register')
+      .set('X-Forwarded-For', '10.0.0.13')
+      .send({ email: 'karin@example.com', password: 'password123' });
+
+    const ip = '10.0.0.13';
+    const invalid = await agent
+      .patch('/api/auth/me')
+      .set('X-Forwarded-For', ip)
+      .send({ unitSystem: 'nautical' });
+    expect(invalid.status).toBe(400);
+
+    const empty = await agent.patch('/api/auth/me').set('X-Forwarded-For', ip).send({});
+    expect(empty.status).toBe(400);
+  });
+
+  it('defaults smallVolumes to spoons and updates it via PATCH /api/auth/me', async () => {
+    const agent = request.agent(app);
+    await agent
+      .post('/api/auth/register')
+      .set('X-Forwarded-For', '10.0.0.15')
+      .send({ email: 'mira@example.com', password: 'password123' });
+
+    const ip = '10.0.0.15';
+    expect((await agent.get('/api/auth/me').set('X-Forwarded-For', ip)).body).toMatchObject({
+      smallVolumes: 'spoons',
+    });
+
+    const patch = await agent
+      .patch('/api/auth/me')
+      .set('X-Forwarded-For', ip)
+      .send({ smallVolumes: 'millilitres' });
+    expect(patch.status).toBe(200);
+    expect(patch.body).toMatchObject({ smallVolumes: 'millilitres' });
+
+    expect((await agent.get('/api/auth/me').set('X-Forwarded-For', ip)).body).toMatchObject({
+      smallVolumes: 'millilitres',
+    });
+  });
+
+  // These used to answer with only { id, email } while the client typed them as the full current
+  // user, so both preferences read as undefined until /auth/me refetched.
+  it('returns the full profile from register and login', async () => {
+    const agent = request.agent(app);
+    const registered = await agent
+      .post('/api/auth/register')
+      .set('X-Forwarded-For', '10.0.0.14')
+      .send({ email: 'lars@example.com', password: 'password123' });
+    expect(registered.body).toMatchObject({
+      locale: 'en',
+      unitSystem: 'metric',
+      smallVolumes: 'spoons',
+    });
+
+    const loggedIn = await agent
+      .post('/api/auth/login')
+      .set('X-Forwarded-For', '10.0.0.14')
+      .send({ email: 'lars@example.com', password: 'password123' });
+    expect(loggedIn.body).toMatchObject({
+      locale: 'en',
+      unitSystem: 'metric',
+      smallVolumes: 'spoons',
+    });
+  });
+
   it('rate-limits repeated login attempts', async () => {
     const setupAgent = request.agent(app);
     await setupAgent

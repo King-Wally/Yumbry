@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "users" ADD COLUMN     "unit_system" TEXT NOT NULL DEFAULT 'metric';

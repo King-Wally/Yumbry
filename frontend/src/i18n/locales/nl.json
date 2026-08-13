@@ -173,7 +173,23 @@
     "changePlaceholder": "Vertel de AI wat er moet veranderen",
     "cookPlaceholder": "Vertel de AI wat je wilt koken",
     "send": "Versturen",
-    "saveAndReview": "Opslaan en bekijken"
+    "saveAndReview": "Opslaan en bekijken",
+    "units": {
+      "label": "Eenheden",
+      "description": "Kies de eenheden waarin de AI-assistent nieuwe recepten schrijft. Recepten die je al hebt opgeslagen, worden nooit omgerekend.",
+      "options": {
+        "metric": "Metrisch (g, ml, °C)",
+        "imperial": "Imperiaal (oz, cups, °F)"
+      }
+    },
+    "smallVolumes": {
+      "label": "Kleine hoeveelheden",
+      "description": "Hoe de AI-assistent kleine hoeveelheden schrijft in metrische recepten. Milliliter is exact; lepelmaten pak je sneller. Heeft geen effect op imperiale recepten.",
+      "options": {
+        "spoons": "Lepelmaten (tl, el)",
+        "millilitres": "Milliliter (ml)"
+      }
+    }
   },
   "categoryPicker": {
     "newCategoryPlaceholder": "Of typ een nieuwe categorie",

@@ -156,7 +156,7 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
         .send({ messages: [{ role: 'user', content: 'hi' }], current_draft: null });
 
       const promptMessages = chatWithAi.mock.calls[0][0];
-      expect(JSON.stringify(promptMessages)).toContain('no recipe draft yet');
+      expect(JSON.stringify(promptMessages)).toContain('There is no recipe yet.');
     });
 
     it('returns 502 when the model response is not parseable JSON', async () => {
@@ -202,7 +202,7 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
         .send({ messages: [{ role: 'user', content: 'hi' }], current_draft: null });
 
       const promptMessages = chatWithAi.mock.calls[0][0];
-      expect(promptMessages[0].content).toContain('Write "reply" in English');
+      expect(promptMessages[0].content).toContain('is written in English');
     });
 
     it('targets the locale set via PATCH /api/auth/me in the prompt', async () => {
@@ -216,10 +216,126 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
         .send({ messages: [{ role: 'user', content: 'hi' }], current_draft: null });
 
       const promptMessages = chatWithAi.mock.calls[0][0];
-      expect(promptMessages[0].content).toContain('Write "reply" in French');
+      expect(promptMessages[0].content).toContain('is written in French');
+      // The restatement rides on the final user message, where it is read last.
+      expect(promptMessages[promptMessages.length - 1].content).toContain(
+        'Every human-readable value in French'
+      );
 
       // Reset for subsequent tests in this file that assume the default locale.
       await agent.patch('/api/auth/me').send({ locale: 'en' });
+    });
+
+    it('renders the same model response in the unit system the reader chose', async () => {
+      const modelResponse = JSON.stringify({
+        recipe: {
+          title: 'Bread',
+          description: null,
+          servings: 4,
+          prep_time_minutes: null,
+          cook_time_minutes: null,
+          total_time_minutes: null,
+          category: null,
+          tags: [],
+          ingredients: [
+            { item: 'flour', quantity: 500, unit: 'g', note: null, density_key: 'flour' },
+            { item: 'butter', quantity: 250, unit: 'g', note: null, density_key: 'none' },
+          ],
+          instructions: ['Bake at 200 °C.'],
+        },
+        reply: 'Here you go.',
+      });
+
+      chatWithAi.mockResolvedValue(modelResponse);
+      const metric = await agent
+        .post('/api/ai/chat')
+        .send({ messages: [{ role: 'user', content: 'bread' }], current_draft: null });
+
+      expect(metric.body.recipe.ingredients).toEqual(['500 g flour', '250 g butter']);
+      expect(metric.body.recipe.instructions[0].text).toBe('Bake at 200 °C.');
+
+      await agent.patch('/api/auth/me').send({ unitSystem: 'imperial' });
+      chatWithAi.mockResolvedValue(modelResponse);
+      const imperial = await agent
+        .post('/api/ai/chat')
+        .send({ messages: [{ role: 'user', content: 'bread' }], current_draft: null });
+
+      expect(imperial.body.recipe.ingredients).toEqual(['4 cups flour', '9 oz butter']);
+      expect(imperial.body.recipe.instructions[0].text).toBe('Bake at 400 °F.');
+
+      // The prompt is the same either way: the model is never told what the reader picked.
+      expect(JSON.stringify(chatWithAi.mock.calls[1][0])).toBe(
+        JSON.stringify(chatWithAi.mock.calls[0][0])
+      );
+
+      await agent.patch('/api/auth/me').send({ unitSystem: 'metric' });
+    });
+
+    it('writes small amounts as millilitres when the reader asked for that', async () => {
+      const modelResponse = JSON.stringify({
+        recipe: {
+          title: 'Pad Thai',
+          description: null,
+          servings: 2,
+          prep_time_minutes: null,
+          cook_time_minutes: null,
+          total_time_minutes: null,
+          category: null,
+          tags: [],
+          ingredients: [
+            { item: 'fish sauce', quantity: 45, unit: 'ml', note: null, density_key: 'none' },
+          ],
+          instructions: ['Stir in the fish sauce.'],
+        },
+        reply: 'Here you go.',
+      });
+
+      chatWithAi.mockResolvedValue(modelResponse);
+      const spoons = await agent
+        .post('/api/ai/chat')
+        .send({ messages: [{ role: 'user', content: 'pad thai' }], current_draft: null });
+      expect(spoons.body.recipe.ingredients).toEqual(['3 tbsp fish sauce']);
+
+      await agent.patch('/api/auth/me').send({ smallVolumes: 'millilitres' });
+      chatWithAi.mockResolvedValue(modelResponse);
+      const millilitres = await agent
+        .post('/api/ai/chat')
+        .send({ messages: [{ role: 'user', content: 'pad thai' }], current_draft: null });
+      expect(millilitres.body.recipe.ingredients).toEqual(['45 ml fish sauce']);
+
+      // Same prompt either way — this is a display preference, not something the model decides.
+      expect(JSON.stringify(chatWithAi.mock.calls[1][0])).toBe(
+        JSON.stringify(chatWithAi.mock.calls[0][0])
+      );
+
+      await agent.patch('/api/auth/me').send({ smallVolumes: 'spoons' });
+    });
+
+    it('accepts a draft from a client that predates the structured side-channel', async () => {
+      chatWithAi.mockResolvedValue(
+        JSON.stringify({ reply: 'Done.', recipe: { title: 'Curry', ingredients: ['2 eggs'] } })
+      );
+
+      const res = await agent.post('/api/ai/chat').send({
+        messages: [{ role: 'user', content: 'more eggs' }],
+        current_draft: {
+          title: 'Curry',
+          description: null,
+          image_path: null,
+          prep_time_minutes: null,
+          cook_time_minutes: null,
+          total_time_minutes: null,
+          servings: 4,
+          ingredients: ['1 lb chicken'],
+          instructions: [],
+          tags: [],
+          category: null,
+        },
+      });
+
+      expect(res.status).toBe(200);
+      // Recovered from the rendered line and shown to the model in canonical metric.
+      expect(chatWithAi.mock.calls[0][0][0].content).toContain('"quantity": 450');
     });
 
     it('returns 400 on a malformed request body', async () => {

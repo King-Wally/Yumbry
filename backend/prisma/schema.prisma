@@ -13,6 +13,8 @@ model User {
   passwordHash String   @map("password_hash")
   tokenVersion Int      @default(0) @map("token_version")
   locale       String   @default("en") @map("locale")
+  unitSystem   String   @default("metric") @map("unit_system")
+  smallVolumes String   @default("spoons") @map("small_volumes")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   recipes             Recipe[]

@@ -1,4 +1,4 @@
-import type { AiChatMessage } from './ai-recipe-draft.js';
+import type { AiChatMessage, AiRecipeDraft } from './ai-recipe-draft.js';
 
 export interface Tag {
   id: number;
@@ -42,12 +42,15 @@ export interface RecipeInput {
   category: string | null;
 }
 
+// The AI turn trades `AiRecipeDraft` rather than `RecipeInput` so the canonical structured
+// ingredients ride along with the rendered lines. `AiRecipeDraft` is assignable to `RecipeInput`,
+// so everything downstream — the preview, the recipe form, the save endpoint — is unaffected.
 export interface AiChatTurnRequest {
   messages: AiChatMessage[];
-  current_draft: RecipeInput | null;
+  current_draft: AiRecipeDraft | null;
 }
 
 export interface AiChatTurnResponse {
   reply: string;
-  recipe: RecipeInput;
+  recipe: AiRecipeDraft;
 }

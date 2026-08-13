@@ -1,4 +1,4 @@
-import { QUANTITY_TOKEN_PATTERN, parseQuantityToken } from 'yumbry-shared';
+import { parseMeasurementPrefix } from 'yumbry-shared';
 
 export interface ParsedIngredient {
   raw_text: string;
@@ -8,200 +8,41 @@ export interface ParsedIngredient {
   is_scalable: boolean;
 }
 
-const UNIT_WORDS = new Set([
-  'cup',
-  'cups',
-  'c',
-  'tablespoon',
-  'tablespoons',
-  'tbsp',
-  'tbsps',
-  'tbs',
-  'teaspoon',
-  'teaspoons',
-  'tsp',
-  'tsps',
-  'ounce',
-  'ounces',
-  'oz',
-  'pound',
-  'pounds',
-  'lb',
-  'lbs',
-  'gram',
-  'grams',
-  'g',
-  'gr',
-  'kilogram',
-  'kilograms',
-  'kg',
-  'kgs',
-  'milligram',
-  'milligrams',
-  'mg',
-  'milliliter',
-  'milliliters',
-  'millilitre',
-  'millilitres',
-  'ml',
-  'liter',
-  'liters',
-  'litre',
-  'litres',
-  'l',
-  'pinch',
-  'pinches',
-  'dash',
-  'dashes',
-  'clove',
-  'cloves',
-  'can',
-  'cans',
-  'package',
-  'packages',
-  'pack',
-  'packs',
-  'pkg',
-  'slice',
-  'slices',
-  'piece',
-  'pieces',
-  'pint',
-  'pints',
-  'quart',
-  'quarts',
-  'gallon',
-  'gallons',
-  'inch',
-  'inches',
-  'centimeter',
-  'centimeters',
-  'centimetre',
-  'centimetres',
-  'cm',
-  'stick',
-  'sticks',
-  'sprig',
-  'sprigs',
-  'bunch',
-  'bunches',
-]);
-
-const VULGAR_FRACTIONS: Record<string, string> = {
-  '¼': '1/4',
-  '½': '1/2',
-  '¾': '3/4',
-  '⅐': '1/7',
-  '⅑': '1/9',
-  '⅒': '1/10',
-  '⅓': '1/3',
-  '⅔': '2/3',
-  '⅕': '1/5',
-  '⅖': '2/5',
-  '⅗': '3/5',
-  '⅘': '4/5',
-  '⅙': '1/6',
-  '⅚': '5/6',
-  '⅛': '1/8',
-  '⅜': '3/8',
-  '⅝': '5/8',
-  '⅞': '7/8',
-  '⁄': '/',
-};
-
-function normalizeFractionChars(text: string): string {
-  return text.replace(/[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞⁄]/g, (char) => VULGAR_FRACTIONS[char] ?? char);
-}
-
-function normalizeDecimalComma(text: string): string {
-  return text.replace(/^(\d+),(\d+)(?=\s|$)/, '$1.$2');
-}
-
-// Distinct precision from shared's whole-number roundAmount (used for display strings): scaling a
+// Distinct precision from the renderer's culinary rounding, which is aimed at display: scaling a
 // recipe by an odd servings ratio needs sub-1 precision to stay accurate across repeated scaling.
 function roundParsedAmount(amount: number): number {
   return Math.round(amount * 1000) / 1000;
 }
 
-const LEADING_QUANTITY_REGEX = new RegExp(`^(${QUANTITY_TOKEN_PATTERN})(?=\\s|$)`);
-
-interface LeadingQuantity {
-  amount: number;
-  rest: string;
-}
-
-function parseLeadingQuantity(text: string): LeadingQuantity | null {
-  const normalized = normalizeDecimalComma(normalizeFractionChars(text));
-  const match = LEADING_QUANTITY_REGEX.exec(normalized);
-  if (!match) {
-    return null;
-  }
-
-  const token = match[0];
-  const rest = normalized.slice(match[0].length);
-
-  return { amount: roundParsedAmount(parseQuantityToken(token)), rest };
-}
-
-interface UnitMatch {
-  unit: string;
-  rest: string;
-}
-
-function matchUnitPrefix(text: string): UnitMatch | null {
-  const trimmed = text.trimStart();
-  const wordMatch = /^([A-Za-z]+)\.?\b/.exec(trimmed);
-  if (!wordMatch) {
-    return null;
-  }
-
-  const word = wordMatch[1];
-  if (!UNIT_WORDS.has(word.toLowerCase())) {
-    return null;
-  }
-
-  const rest = trimmed.slice(wordMatch[0].length).replace(/^[\s,.;]+/, ' ');
-  return { unit: word, rest };
-}
-
 function stripLeadingOf(text: string): string {
-  return text.replace(/^[\s,.;]*of\s+/i, '');
+  return text.replace(/^[\s,.;]*(?:of|van|de|d')\s*/i, '');
 }
 
+function unparsed(rawText: string): ParsedIngredient {
+  return { raw_text: rawText, amount: null, unit: null, name: rawText, is_scalable: false };
+}
+
+/**
+ * Splits a written ingredient line into the columns the database stores.
+ *
+ * The unit vocabulary comes from the shared registry rather than a list maintained here. The two
+ * used to be independent — one answering "what can we convert", the other "what can we recognise" —
+ * and they drifted, which is why a French or Dutch recipe saved with a null unit and the unit word
+ * swallowed into the name. One registry, generated once, means "2 c. à s." and "2 el" now parse as
+ * well as "2 tbsp" does.
+ */
 export function parseIngredientLine(rawText: string): ParsedIngredient {
   const trimmed = rawText.trim();
+  if (!trimmed) return unparsed(rawText);
 
-  if (!trimmed) {
-    return {
-      raw_text: rawText,
-      amount: null,
-      unit: null,
-      name: rawText,
-      is_scalable: false,
-    };
-  }
-
-  const leading = parseLeadingQuantity(trimmed);
-
-  if (!leading) {
-    return {
-      raw_text: rawText,
-      amount: null,
-      unit: null,
-      name: rawText,
-      is_scalable: false,
-    };
-  }
-
-  const unitMatch = matchUnitPrefix(leading.rest);
-  const remainder = unitMatch ? unitMatch.rest : leading.rest;
-  const name = stripLeadingOf(remainder).trim() || rawText;
+  const parsed = parseMeasurementPrefix(trimmed);
+  if (parsed.quantity === null) return unparsed(rawText);
 
   return {
     raw_text: rawText,
-    amount: leading.amount,
-    unit: unitMatch?.unit ?? null,
-    name,
+    amount: roundParsedAmount(parsed.quantity),
+    unit: parsed.unitWord,
+    name: stripLeadingOf(parsed.rest).trim() || rawText,
     is_scalable: true,
   };
 }

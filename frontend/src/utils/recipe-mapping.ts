@@ -1,7 +1,10 @@
 import { toNumber } from './numeric';
-import type { Recipe, RecipeInput } from '../types';
+import type { AiRecipeDraft, Recipe } from '../types';
 
-export function toRecipeInput(recipe: Recipe): RecipeInput {
+// Returns the AI draft shape rather than the looser `RecipeInput`: every field is filled here,
+// and the AI turn needs the stronger guarantee. `AiRecipeDraft` is assignable to `RecipeInput`, so
+// the other callers are unaffected.
+export function toRecipeInput(recipe: Recipe): AiRecipeDraft {
   return {
     title: recipe.title,
     description: recipe.description,

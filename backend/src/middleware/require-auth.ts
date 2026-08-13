@@ -13,7 +13,13 @@ export const requireAuth = asyncHandler(async (req: Request, res, next) => {
 
   const user = await prisma.user.findUnique({
     where: { id: verified.userId },
-    select: { tokenVersion: true, email: true, locale: true },
+    select: {
+      tokenVersion: true,
+      email: true,
+      locale: true,
+      unitSystem: true,
+      smallVolumes: true,
+    },
   });
   if (!user || user.tokenVersion !== verified.tokenVersion) {
     res.status(401).json({ error: 'Authentication required.' });
@@ -21,6 +27,12 @@ export const requireAuth = asyncHandler(async (req: Request, res, next) => {
   }
 
   req.userId = verified.userId;
-  req.user = { id: verified.userId, email: user.email, locale: user.locale };
+  req.user = {
+    id: verified.userId,
+    email: user.email,
+    locale: user.locale,
+    unitSystem: user.unitSystem,
+    smallVolumes: user.smallVolumes,
+  };
   next();
 });

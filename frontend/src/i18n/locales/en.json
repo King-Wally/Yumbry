@@ -173,7 +173,23 @@
     "changePlaceholder": "Tell the AI what to change",
     "cookPlaceholder": "Tell the AI what you'd like to cook",
     "send": "Send",
-    "saveAndReview": "Save and review"
+    "saveAndReview": "Save and review",
+    "units": {
+      "label": "Units",
+      "description": "Choose the units the AI assistant writes new recipes in. Recipes you have already saved are never converted.",
+      "options": {
+        "metric": "Metric (g, ml, °C)",
+        "imperial": "Imperial (oz, cups, °F)"
+      }
+    },
+    "smallVolumes": {
+      "label": "Small amounts",
+      "description": "How the AI assistant writes small amounts in metric recipes. Millilitres are exact; spoon measures are quicker to reach for. Has no effect on imperial recipes.",
+      "options": {
+        "spoons": "Spoon measures (tsp, tbsp)",
+        "millilitres": "Millilitres (ml)"
+      }
+    }
   },
   "categoryPicker": {
     "newCategoryPlaceholder": "Or type a new category",

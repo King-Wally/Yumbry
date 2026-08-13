@@ -173,7 +173,23 @@
     "changePlaceholder": "Dites à l'IA ce qu'il faut changer",
     "cookPlaceholder": "Dites à l'IA ce que vous voulez cuisiner",
     "send": "Envoyer",
-    "saveAndReview": "Enregistrer et vérifier"
+    "saveAndReview": "Enregistrer et vérifier",
+    "units": {
+      "label": "Unités",
+      "description": "Choisissez les unités dans lesquelles l'assistant IA rédige les nouvelles recettes. Les recettes déjà enregistrées ne sont jamais converties.",
+      "options": {
+        "metric": "Métrique (g, ml, °C)",
+        "imperial": "Impérial (oz, tasses, °F)"
+      }
+    },
+    "smallVolumes": {
+      "label": "Petites quantités",
+      "description": "Comment l'assistant IA écrit les petites quantités dans les recettes métriques. Les millilitres sont exacts ; les cuillères sont plus rapides. Sans effet sur les recettes impériales.",
+      "options": {
+        "spoons": "Cuillères (c. à c., c. à s.)",
+        "millilitres": "Millilitres (ml)"
+      }
+    }
   },
   "categoryPicker": {
     "newCategoryPlaceholder": "Ou saisissez une nouvelle catégorie",

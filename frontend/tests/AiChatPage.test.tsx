@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AiChatPage from '../src/pages/AiChatPage';
 import * as apiClient from '../src/api/client';
+import type { CurrentUser } from '../src/api/client';
 import { AuthProvider } from '../src/context/AuthContext';
 import type { Recipe, RecipeInput } from '../src/types';
 
@@ -81,6 +82,112 @@ function renderImprove() {
   );
 }
 
+const currentUser: CurrentUser = {
+  id: 1,
+  email: 'a@example.com',
+  locale: 'en',
+  unitSystem: 'metric',
+  smallVolumes: 'spoons',
+};
+
+const padThaiEnvelope = {
+  reply: 'Here you go.',
+  recipe: {
+    title: 'Pad Thai',
+    description: null,
+    image_path: null,
+    prep_time_minutes: null,
+    cook_time_minutes: null,
+    total_time_minutes: null,
+    servings: 2,
+    ingredients: ['3 tbsp fish sauce'],
+    ingredients_structured: [
+      { item: 'fish sauce', quantity: 45, unit: 'ml', note: null, density_key: 'none' as const },
+    ],
+    instructions: [{ step_number: 1, text: 'Stir in the fish sauce.' }],
+    tags: [],
+    category: null,
+  },
+};
+
+// The two measurement controls live here rather than in Settings, because the preview beside them
+// is the only place their effect shows.
+describe('AiChatPage measurement controls', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(apiClient.getCurrentUser).mockResolvedValue(currentUser);
+  });
+
+  async function sendAndGetPreview() {
+    vi.mocked(apiClient.chatAboutRecipe).mockResolvedValue(padThaiEnvelope);
+    renderCreate();
+    fireEvent.change(await screen.findByPlaceholderText("Tell the AI what you'd like to cook"), {
+      target: { value: 'pad thai' },
+    });
+    fireEvent.click(screen.getByText('Send'));
+    await screen.findByText('3 tbsp fish sauce');
+  }
+
+  // Persist the preference the way the server would, so the refetch that follows returns it.
+  function setStoredPreference(patch: Partial<CurrentUser>) {
+    const updated = { ...currentUser, ...patch };
+    vi.mocked(apiClient.updateProfile).mockResolvedValue(updated);
+    vi.mocked(apiClient.getCurrentUser).mockResolvedValue(updated);
+  }
+
+  it('saves a unit choice and sends only that field', async () => {
+    await sendAndGetPreview();
+    setStoredPreference({ unitSystem: 'imperial' });
+
+    fireEvent.change(screen.getByLabelText('Units'), { target: { value: 'imperial' } });
+
+    await waitFor(() =>
+      expect(apiClient.updateProfile).toHaveBeenCalledWith({ unitSystem: 'imperial' })
+    );
+    // 45 ml is three tablespoons in either system, so the imperial rendering agrees here.
+    expect(await screen.findByText('3 tbsp fish sauce')).toBeInTheDocument();
+  });
+
+  // Without this the control would appear to do nothing until the next reply arrived.
+  it('redraws the preview immediately, without another chat call', async () => {
+    await sendAndGetPreview();
+    const chatCallsBefore = vi.mocked(apiClient.chatAboutRecipe).mock.calls.length;
+
+    setStoredPreference({ smallVolumes: 'millilitres' });
+    fireEvent.change(screen.getByLabelText('Small amounts'), {
+      target: { value: 'millilitres' },
+    });
+
+    expect(await screen.findByText('45 ml fish sauce')).toBeInTheDocument();
+    expect(screen.queryByText('3 tbsp fish sauce')).not.toBeInTheDocument();
+    expect(vi.mocked(apiClient.chatAboutRecipe).mock.calls).toHaveLength(chatCallsBefore);
+  });
+
+  it('saves what is on screen, not the server rendering it replaced', async () => {
+    await sendAndGetPreview();
+    setStoredPreference({ smallVolumes: 'millilitres' });
+    fireEvent.change(screen.getByLabelText('Small amounts'), {
+      target: { value: 'millilitres' },
+    });
+    await screen.findByText('45 ml fish sauce');
+
+    fireEvent.click(screen.getByText('Save and review'));
+
+    expect(await screen.findByTestId('location-probe')).toHaveTextContent('Pad Thai');
+  });
+
+  // Imperial has no alternative to spoons at these sizes.
+  it('disables the small-amounts control for an imperial reader', async () => {
+    vi.mocked(apiClient.getCurrentUser).mockResolvedValue({
+      ...currentUser,
+      unitSystem: 'imperial',
+    });
+    renderCreate();
+
+    expect(await screen.findByLabelText('Small amounts')).toBeDisabled();
+  });
+});
+
 describe('AiChatPage create mode', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -92,6 +199,11 @@ describe('AiChatPage create mode', () => {
       reply: 'Sure, here is a spicy curry.',
       recipe: {
         title: 'Spicy Curry',
+        description: null,
+        image_path: null,
+        prep_time_minutes: null,
+        cook_time_minutes: null,
+        total_time_minutes: null,
         servings: 4,
         ingredients: ['1 can coconut milk'],
         instructions: [{ step_number: 1, text: 'Simmer.' }],
@@ -121,6 +233,11 @@ describe('AiChatPage create mode', () => {
       reply: 'Got it.',
       recipe: {
         title: 'Spicy Curry',
+        description: null,
+        image_path: null,
+        prep_time_minutes: null,
+        cook_time_minutes: null,
+        total_time_minutes: null,
         servings: 4,
         ingredients: [],
         instructions: [],
@@ -166,6 +283,11 @@ describe('AiChatPage improve mode', () => {
       reply: 'Made it spicier.',
       recipe: {
         title: 'Spicy Curry',
+        description: null,
+        image_path: null,
+        prep_time_minutes: null,
+        cook_time_minutes: null,
+        total_time_minutes: null,
         servings: 4,
         ingredients: ['1 can coconut milk', '2 tbsp chili paste'],
         instructions: [],
