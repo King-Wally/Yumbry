@@ -252,12 +252,12 @@ describe('chatWithAi', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     await chatWithAi([{ role: 'user', content: 'hi' }], {
-      sampling: { temperature: 0.6, top_p: 0.95 },
+      sampling: { temperature: 0.6, topP: 0.95 },
     });
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.temperature).toBe(0.6);
-    expect(body.top_p).toBe(0.95);
+    expect(body.topP).toBe(0.95);
   });
 
   it('drops sampling on the final retry if the json_object-with-sampling call also rejects the request shape', async () => {
@@ -272,7 +272,7 @@ describe('chatWithAi', () => {
 
     const reply = await chatWithAi([{ role: 'user', content: 'hi' }], {
       jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
-      sampling: { temperature: 0.6, top_p: 0.95 },
+      sampling: { temperature: 0.6, topP: 0.95 },
     });
 
     expect(reply).toBe('{"reply":"hi"}');

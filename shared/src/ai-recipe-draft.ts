@@ -57,7 +57,7 @@ export interface AiJsonSchemaFormat {
 /** Standard OpenAI-compatible sampling fields, sent as-is to Gemini's OpenAI-compat endpoint. */
 export interface AiSamplingParams {
   temperature?: number;
-  top_p?: number;
+  topP?: number;
 }
 
 /**
@@ -66,7 +66,7 @@ export interface AiSamplingParams {
  */
 export const RECIPE_SAMPLING: AiSamplingParams = {
   temperature: 0.4,
-  top_p: 0.95,
+  topP: 0.95,
 };
 
 /**

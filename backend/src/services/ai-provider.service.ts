@@ -28,8 +28,8 @@ type ChatResponseFormat =
 
 function samplingBody(sampling: AiSamplingParams | undefined): Record<string, unknown> {
   if (!sampling) return {};
-  const { temperature, top_p } = sampling;
-  return { temperature, top_p };
+  const { temperature, topP } = sampling;
+  return { temperature, topP };
 }
 
 // Read lazily (at call time, not import time) so the app still boots without a Gemini key

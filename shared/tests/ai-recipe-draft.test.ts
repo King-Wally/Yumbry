@@ -365,7 +365,7 @@ describe('AI_ENVELOPE_JSON_SCHEMA', () => {
 describe('RECIPE_SAMPLING', () => {
   it('asks for low variance', () => {
     expect(RECIPE_SAMPLING.temperature).toBeLessThanOrEqual(0.5);
-    expect(RECIPE_SAMPLING.top_p).toBeLessThanOrEqual(1);
+    expect(RECIPE_SAMPLING.topP).toBeLessThanOrEqual(1);
   });
 });
 
