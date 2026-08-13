@@ -151,13 +151,16 @@
       "dragHandle": "Stap verplaatsen"
     }
   },
-  "import": {
+  "importJson": {
     "title": "Recept importeren",
-    "description": "Plak de JSON-LD uit het <0>application/ld+json</0>-scripttag van een receptensite, upload een <1>.json</1>-bestand, of plak de URL van de pagina en wij halen het recept op.",
+    "description": "Plak de JSON-LD uit het <0>application/ld+json</0>-scripttag van een receptensite, of upload een <1>.json</1>-bestand.",
     "importingText": "Importeren...",
     "importFromText": "Importeren vanuit tekst",
-    "uploadJsonFile": "Klik om een .json-bestand te uploaden",
-    "urlDescription": "Plak een URL van een receptpagina — wij halen deze op en filteren het recept eruit.",
+    "uploadJsonFile": "Klik om een .json-bestand te uploaden"
+  },
+  "importUrl": {
+    "title": "Recept importeren vanaf URL",
+    "description": "Plak een URL van een receptpagina — wij halen deze op en filteren het recept eruit.",
     "fetching": "Ophalen...",
     "importFromUrl": "Importeren vanaf URL"
   },

@@ -151,13 +151,16 @@
       "dragHandle": "Reorder step"
     }
   },
-  "import": {
+  "importJson": {
     "title": "Import a recipe",
-    "description": "Paste the JSON-LD from a recipe site's <0>application/ld+json</0> script tag, upload a <1>.json</1> file, or paste the page's URL and we'll fetch it for you.",
+    "description": "Paste the JSON-LD from a recipe site's <0>application/ld+json</0> script tag, or upload a <1>.json</1> file.",
     "importingText": "Importing...",
     "importFromText": "Import from text",
-    "uploadJsonFile": "Click to upload a .json file",
-    "urlDescription": "Paste a recipe page URL — we'll fetch it and pull out the recipe.",
+    "uploadJsonFile": "Click to upload a .json file"
+  },
+  "importUrl": {
+    "title": "Import from URL",
+    "description": "Paste a recipe page URL — we'll fetch it and pull out the recipe.",
     "fetching": "Fetching...",
     "importFromUrl": "Import from URL"
   },

@@ -151,13 +151,16 @@
       "dragHandle": "Réorganiser l'étape"
     }
   },
-  "import": {
+  "importJson": {
     "title": "Importer une recette",
-    "description": "Collez le JSON-LD depuis la balise de script <0>application/ld+json</0> d'un site de recettes, téléversez un fichier <1>.json</1>, ou collez l'URL de la page et nous la récupérerons pour vous.",
+    "description": "Collez le JSON-LD depuis la balise de script <0>application/ld+json</0> d'un site de recettes, ou téléversez un fichier <1>.json</1>.",
     "importingText": "Importation...",
     "importFromText": "Importer depuis le texte",
-    "uploadJsonFile": "Cliquez pour téléverser un fichier .json",
-    "urlDescription": "Collez l'URL d'une page de recette — nous la récupérerons et en extrairons la recette.",
+    "uploadJsonFile": "Cliquez pour téléverser un fichier .json"
+  },
+  "importUrl": {
+    "title": "Importer une recette depuis une URL",
+    "description": "Collez l'URL d'une page de recette — nous la récupérerons et en extrairons la recette.",
     "fetching": "Récupération...",
     "importFromUrl": "Importer depuis une URL"
   },

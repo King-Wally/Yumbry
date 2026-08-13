@@ -4,6 +4,7 @@ import RecipeListPage from './pages/RecipeListPage';
 import RecipeDetailPage from './pages/RecipeDetailPage';
 import RecipeFormPage from './pages/RecipeFormPage';
 import ImportPage from './pages/ImportPage';
+import UrlImportPage from './pages/UrlImportPage';
 import AiChatPage from './pages/AiChatPage';
 import SettingsPage from './pages/SettingsPage';
 import LoginPage from './pages/LoginPage';
@@ -49,7 +50,7 @@ export default function App() {
                           {t('nav.import')}
                         </Link>
                         <hr className="h-px bg-stone-200" />
-                        <Link to="/import" className="px-5 py-2 transition hover:bg-stone-100">
+                        <Link to="/import/url" className="px-5 py-2 transition hover:bg-stone-100">
                           {t('nav.paste')}
                         </Link>
                         {aiStatus?.configured && (
@@ -146,6 +147,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <ImportPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/import/url"
+            element={
+              <ProtectedRoute>
+                <UrlImportPage />
               </ProtectedRoute>
             }
           />

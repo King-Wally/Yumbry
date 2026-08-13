@@ -151,13 +151,16 @@
       "dragHandle": "Reordenar paso"
     }
   },
-  "import": {
+  "importJson": {
     "title": "Importar una receta",
-    "description": "Pega el JSON-LD de la etiqueta de script <0>application/ld+json</0> de un sitio de recetas, sube un archivo <1>.json</1>, o pega la URL de la página y la buscaremos por ti.",
+    "description": "Pega el JSON-LD de la etiqueta de script <0>application/ld+json</0> de un sitio de recetas, o sube un archivo <1>.json</1>.",
     "importingText": "Importando...",
     "importFromText": "Importar desde texto",
-    "uploadJsonFile": "Haz clic para subir un archivo .json",
-    "urlDescription": "Pega la URL de una página de receta — la buscaremos y extraeremos la receta.",
+    "uploadJsonFile": "Haz clic para subir un archivo .json"
+  },
+  "importUrl": {
+    "title": "Importar una receta desde una URL",
+    "description": "Pega la URL de una página de receta — la buscaremos y extraeremos la receta.",
     "fetching": "Buscando...",
     "importFromUrl": "Importar desde URL"
   },

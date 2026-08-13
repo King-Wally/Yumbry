@@ -1,14 +1,13 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
-import { importRecipe, importRecipeFromUrl } from '../api/client';
+import { importRecipe } from '../api/client';
 import { queryKeys } from '../api/queryKeys';
 
 export default function ImportPage() {
   const { t } = useTranslation();
   const [jsonLd, setJsonLd] = useState('');
-  const [url, setUrl] = useState('');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -18,14 +17,6 @@ export default function ImportPage() {
       queryClient.invalidateQueries({ queryKey: queryKeys.recipes() });
       queryClient.invalidateQueries({ queryKey: queryKeys.tags });
       navigate(`/recipes/${recipe.id}`);
-    },
-  });
-
-  // Returns draft for review (vs importRecipe which persists immediately)
-  const urlMutation = useMutation({
-    mutationFn: importRecipeFromUrl,
-    onSuccess: (draft) => {
-      navigate('/recipes/new', { state: { aiDraft: draft, draftSource: 'url' } });
     },
   });
 
@@ -39,18 +30,13 @@ export default function ImportPage() {
     if (file) mutation.mutate({ file });
   }
 
-  function handleUrlSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    urlMutation.mutate(url);
-  }
-
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="font-serif text-2xl text-stone-900">{t('import.title')}</h1>
+      <h1 className="font-serif text-2xl text-stone-900">{t('importJson.title')}</h1>
       <p className="text-sm text-stone-500">
-        <Trans i18nKey="import.description">
-          Paste the JSON-LD from a recipe site's <code>application/ld+json</code> script tag, upload
-          a <code>.json</code> file, or paste the page's URL and we'll fetch it for you.
+        <Trans i18nKey="importJson.description">
+          Paste the JSON-LD from a recipe site's <code>application/ld+json</code> script tag, or
+          upload a <code>.json</code> file.
         </Trans>
       </p>
 
@@ -67,7 +53,7 @@ export default function ImportPage() {
           disabled={!jsonLd || mutation.isPending}
           className="rounded-md bg-clay px-4 py-2 text-white disabled:opacity-50"
         >
-          {mutation.isPending ? t('import.importingText') : t('import.importFromText')}
+          {mutation.isPending ? t('importJson.importingText') : t('importJson.importFromText')}
         </button>
       </form>
 
@@ -84,38 +70,10 @@ export default function ImportPage() {
           className="hidden"
           onChange={handleFile}
         />
-        {t('import.uploadJsonFile')}
+        {t('importJson.uploadJsonFile')}
       </label>
 
       {mutation.isError && <p className="text-red-600">{mutation.error?.message}</p>}
-
-      <div className="flex items-center gap-3 text-sm text-stone-400">
-        <div className="h-px flex-1 bg-stone-200" />
-        {t('common.or')}
-        <div className="h-px flex-1 bg-stone-200" />
-      </div>
-
-      <form onSubmit={handleUrlSubmit} className="space-y-3">
-        <label className="block text-sm text-stone-500" htmlFor="import-url">
-          {t('import.urlDescription')}
-        </label>
-        <input
-          id="import-url"
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://example.com/some-recipe"
-          className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-clay focus:outline-none"
-        />
-        <button
-          type="submit"
-          disabled={!url || urlMutation.isPending}
-          className="rounded-md bg-clay px-4 py-2 text-white disabled:opacity-50"
-        >
-          {urlMutation.isPending ? t('import.fetching') : t('import.importFromUrl')}
-        </button>
-        {urlMutation.isError && <p className="text-red-600">{urlMutation.error?.message}</p>}
-      </form>
     </div>
   );
 }
