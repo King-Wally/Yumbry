@@ -79,7 +79,9 @@ function isQuotaError(err: unknown): boolean {
 // asking only for JSON. A quota-shaped 400 is excluded: burning it through the downgrade ladder
 // would swallow the signal the tier fallback needs.
 function rejectsRequestShape(err: unknown): boolean {
-  return err instanceof APIError && (err.status === 400 || err.status === 422) && !isQuotaError(err);
+  return (
+    err instanceof APIError && (err.status === 400 || err.status === 422) && !isQuotaError(err)
+  );
 }
 
 // Whether the endpoint accepted our `json_schema` response_format is otherwise unobservable: the
