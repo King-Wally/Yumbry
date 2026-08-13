@@ -12,13 +12,16 @@ function jsonResponse(body: unknown, status = 200): Response {
 describe('chatWithAi', () => {
   beforeEach(() => {
     process.env.GEMINI_API_KEY = 'test-gemini-key';
-    delete process.env.GEMINI_MODEL;
+    delete process.env.GEMINI_MODEL_BIG;
+    delete process.env.GEMINI_MODEL_SMALL;
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
     delete process.env.GEMINI_API_KEY;
-    delete process.env.GEMINI_MODEL;
+    delete process.env.GEMINI_MODEL_BIG;
+    delete process.env.GEMINI_MODEL_SMALL;
   });
 
   it('throws a not_configured AiProviderError when GEMINI_API_KEY is unset', async () => {
@@ -64,8 +67,8 @@ describe('chatWithAi', () => {
     });
   });
 
-  it('uses GEMINI_MODEL when set', async () => {
-    process.env.GEMINI_MODEL = 'gemini-2.5-pro';
+  it('uses GEMINI_MODEL_SMALL when set', async () => {
+    process.env.GEMINI_MODEL_SMALL = 'gemini-2.5-pro';
     const fetchMock = vi
       .fn()
       .mockResolvedValue(jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
@@ -74,6 +77,85 @@ describe('chatWithAi', () => {
     await chatWithAi([{ role: 'user', content: 'hi' }], {});
 
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).model).toBe('gemini-2.5-pro');
+  });
+
+  it('uses the big model for the big tier, from GEMINI_MODEL_BIG or its default', async () => {
+    // A Response body can only be read once, so hand each call a fresh one.
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(async () => jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'big' });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).model).toBe('gemini-3.6-flash');
+
+    process.env.GEMINI_MODEL_BIG = 'gemini-9-ultra';
+    await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'big' });
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).model).toBe('gemini-9-ultra');
+  });
+
+  it('retries the big tier on the small model when the big model is rate limited', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ error: { message: 'quota exceeded' } }, 429))
+      .mockResolvedValueOnce(jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const reply = await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'big' });
+
+    expect(reply).toBe('ok');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).model).toBe('gemini-3.6-flash');
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).model).toBe('gemini-3.5-flash-lite');
+  });
+
+  it('treats a RESOURCE_EXHAUSTED 403 as a quota error rather than a request-shape rejection', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ error: { message: 'RESOURCE_EXHAUSTED' } }, 403))
+      .mockResolvedValueOnce(jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const reply = await chatWithAi([{ role: 'user', content: 'hi' }], {
+      tier: 'big',
+      jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
+    });
+
+    expect(reply).toBe('ok');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).model).toBe('gemini-3.5-flash-lite');
+    // The quota-shaped failure must not be spent on the response_format downgrade ladder.
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).response_format.type).toBe('json_schema');
+  });
+
+  it('does not fall back to the small model for non-quota failures', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ error: { message: 'server exploded' } }, 500));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'big' })
+    ).rejects.toMatchObject({ kind: 'bad_status' });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('surfaces the small model’s failure when the fallback attempt also fails', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ error: { message: 'quota exceeded' } }, 429))
+      .mockResolvedValueOnce(jsonResponse({ error: { message: 'quota exceeded' } }, 429));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'big' })
+    ).rejects.toMatchObject({ kind: 'bad_status' });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('sends no response_format when no JSON schema is requested', async () => {

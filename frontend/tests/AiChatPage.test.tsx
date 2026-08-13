@@ -221,6 +221,10 @@ describe('AiChatPage create mode', () => {
 
     expect(await screen.findByText('Sure, here is a spicy curry.')).toBeInTheDocument();
     expect(screen.getByText('Spicy Curry')).toBeInTheDocument();
+    // The mode is what earns this first turn the big model on the server.
+    expect(apiClient.chatAboutRecipe).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: 'create', current_draft: null })
+    );
   });
 
   it('disables Save and review until a draft exists', () => {
@@ -277,7 +281,7 @@ describe('AiChatPage improve mode', () => {
     expect(apiClient.chatAboutRecipe).not.toHaveBeenCalled();
   });
 
-  it('sends the seeded baseline as current_draft on the first chat turn', async () => {
+  it('sends the seeded baseline as current_draft, in improve mode, on the first chat turn', async () => {
     vi.mocked(apiClient.getRecipe).mockResolvedValue(recipe);
     vi.mocked(apiClient.chatAboutRecipe).mockResolvedValue({
       reply: 'Made it spicier.',
@@ -307,6 +311,7 @@ describe('AiChatPage improve mode', () => {
     await waitFor(() =>
       expect(apiClient.chatAboutRecipe).toHaveBeenCalledWith(
         expect.objectContaining({
+          mode: 'improve',
           current_draft: expect.objectContaining({ title: 'Mild Curry' }),
         })
       )

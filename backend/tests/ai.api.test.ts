@@ -338,6 +338,76 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
       expect(chatWithAi.mock.calls[0][0][0].content).toContain('"quantity": 450');
     });
 
+    describe('model tier selection', () => {
+      const draft = {
+        title: 'Mild Curry',
+        description: null,
+        image_path: null,
+        prep_time_minutes: null,
+        cook_time_minutes: null,
+        total_time_minutes: null,
+        servings: 4,
+        ingredients: ['1 can coconut milk'],
+        instructions: [{ step_number: 1, text: 'Simmer.' }],
+        tags: [],
+        category: null,
+      };
+
+      function tierOfLastCall(): string | undefined {
+        return chatWithAi.mock.calls[0][1].tier;
+      }
+
+      beforeEach(() => {
+        chatWithAi.mockResolvedValue(JSON.stringify({ reply: 'ok', recipe: draft }));
+      });
+
+      it('asks for the big model on the first message of a new recipe', async () => {
+        const res = await agent.post('/api/ai/chat').send({
+          mode: 'create',
+          messages: [{ role: 'user', content: 'a spicy curry' }],
+          current_draft: null,
+        });
+
+        expect(res.status).toBe(200);
+        expect(tierOfLastCall()).toBe('big');
+      });
+
+      it('drops to the small model on follow-up messages of a new recipe', async () => {
+        const res = await agent.post('/api/ai/chat').send({
+          mode: 'create',
+          messages: [
+            { role: 'user', content: 'a spicy curry' },
+            { role: 'assistant', content: 'here you go' },
+            { role: 'user', content: 'less chilli' },
+          ],
+          current_draft: draft,
+        });
+
+        expect(res.status).toBe(200);
+        expect(tierOfLastCall()).toBe('small');
+      });
+
+      it('uses the small model for every turn of an improve session', async () => {
+        const res = await agent.post('/api/ai/chat').send({
+          mode: 'improve',
+          messages: [{ role: 'user', content: 'make it spicier' }],
+          current_draft: draft,
+        });
+
+        expect(res.status).toBe(200);
+        expect(tierOfLastCall()).toBe('small');
+      });
+
+      it('falls back to the small model when a client sends no mode at all', async () => {
+        const res = await agent
+          .post('/api/ai/chat')
+          .send({ messages: [{ role: 'user', content: 'a spicy curry' }], current_draft: null });
+
+        expect(res.status).toBe(200);
+        expect(tierOfLastCall()).toBe('small');
+      });
+    });
+
     it('returns 400 on a malformed request body', async () => {
       const missingCurrentDraft = await agent
         .post('/api/ai/chat')

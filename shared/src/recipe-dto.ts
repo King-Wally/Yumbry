@@ -45,7 +45,13 @@ export interface RecipeInput {
 // The AI turn trades `AiRecipeDraft` rather than `RecipeInput` so the canonical structured
 // ingredients ride along with the rendered lines. `AiRecipeDraft` is assignable to `RecipeInput`,
 // so everything downstream — the preview, the recipe form, the save endpoint — is unaffected.
+// Which flow the turn belongs to. It never reaches the prompt — the server uses it (together with
+// the turn count) to decide which model tier to spend on, since only the opening turn of a new
+// recipe writes one from nothing.
+export type AiChatMode = 'create' | 'improve';
+
 export interface AiChatTurnRequest {
+  mode: AiChatMode;
   messages: AiChatMessage[];
   current_draft: AiRecipeDraft | null;
 }

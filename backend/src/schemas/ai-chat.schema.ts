@@ -31,6 +31,9 @@ export const AiRecipeDraftSchema = z.object({
 });
 
 export const AiChatTurnRequestSchema = z.object({
+  // Defaulted rather than required so a tab loaded before this field existed keeps working — and
+  // the default is the cheap tier, which is the safe direction to fail.
+  mode: z.enum(['create', 'improve']).default('improve'),
   messages: z
     .array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().min(1) }))
     .min(1),

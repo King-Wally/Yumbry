@@ -45,7 +45,11 @@ export default function AiChatPage() {
 
   const chatMutation = useMutation({
     mutationFn: (nextMessages: AiChatMessage[]) =>
-      chatAboutRecipe({ messages: nextMessages, current_draft: draft }),
+      chatAboutRecipe({
+        mode: isImproving ? 'improve' : 'create',
+        messages: nextMessages,
+        current_draft: draft,
+      }),
     onSuccess: (res) => {
       setMessages((m) => [...m, { role: 'assistant', content: res.reply }]);
       setDraft(res.recipe);

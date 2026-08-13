@@ -16,7 +16,12 @@ export type { AiChatMessage, AiProviderErrorKind, AiSamplingParams };
 export { AiProviderError };
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/';
-const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
+const DEFAULT_BIG_MODEL = 'gemini-3.6-flash';
+const DEFAULT_SMALL_MODEL = 'gemini-3.5-flash-lite';
+
+// `big` is reserved for the opening turn of a new recipe, where the model invents the whole thing
+// from one line of prompt. Every other turn edits an existing draft, which the small model handles.
+export type AiModelTier = 'big' | 'small';
 
 type ChatResponseFormat =
   { type: 'json_object' } | { type: 'json_schema'; json_schema: AiJsonSchemaFormat };
@@ -35,8 +40,10 @@ function requireApiKey(): string {
   return key;
 }
 
-function resolveModel(): string {
-  return process.env.GEMINI_MODEL || DEFAULT_MODEL;
+function resolveModel(tier: AiModelTier): string {
+  return tier === 'big'
+    ? process.env.GEMINI_MODEL_BIG || DEFAULT_BIG_MODEL
+    : process.env.GEMINI_MODEL_SMALL || DEFAULT_SMALL_MODEL;
 }
 
 function createClient(apiKey: string): OpenAI {
@@ -57,11 +64,22 @@ function toAiProviderError(err: unknown): AiProviderError {
   return new AiProviderError(unreachableMessage(), 'unreachable', err);
 }
 
+const QUOTA_PATTERN = /resource_exhausted|quota|rate limit|too many requests/i;
+
+// Gemini signals an exhausted quota as a 429, but also as a 403/400 carrying RESOURCE_EXHAUSTED
+// depending on which limit was hit — the only case where retrying on a different model helps.
+function isQuotaError(err: unknown): boolean {
+  if (!(err instanceof APIError)) return false;
+  if (err.status === 429) return true;
+  return (err.status === 403 || err.status === 400) && QUOTA_PATTERN.test(err.message);
+}
+
 // A 400/422 means Gemini's OpenAI-compat endpoint (or the underlying model) refused the request
 // shape (unknown response_format) rather than the model failing, so it's safe to resend once
-// asking only for JSON.
+// asking only for JSON. A quota-shaped 400 is excluded: burning it through the downgrade ladder
+// would swallow the signal the tier fallback needs.
 function rejectsRequestShape(err: unknown): boolean {
-  return err instanceof APIError && (err.status === 400 || err.status === 422);
+  return err instanceof APIError && (err.status === 400 || err.status === 422) && !isQuotaError(err);
 }
 
 // Whether the endpoint accepted our `json_schema` response_format is otherwise unobservable: the
@@ -73,15 +91,17 @@ function warnDowngrade(from: string, to: string, err: unknown): void {
   console.warn(`[ai-provider] response_format ${from} rejected, retrying as ${to}: ${detail}`);
 }
 
-export async function chatWithAi(
+type ChatOptions = {
+  jsonSchema?: AiJsonSchemaFormat;
+  sampling?: AiSamplingParams;
+};
+
+async function runCompletion(
+  model: string,
   messages: AiChatMessage[],
-  options: {
-    jsonSchema?: AiJsonSchemaFormat;
-    sampling?: AiSamplingParams;
-  }
+  options: ChatOptions
 ): Promise<string> {
   const client = createClient(requireApiKey());
-  const model = resolveModel();
 
   const create = (responseFormat: ChatResponseFormat | undefined, withSampling: boolean) =>
     client.chat.completions.create({
@@ -123,4 +143,23 @@ export async function chatWithAi(
     throw new AiProviderError(malformedResponseMessage, 'malformed_response');
   }
   return content;
+}
+
+export async function chatWithAi(
+  messages: AiChatMessage[],
+  options: ChatOptions & { tier?: AiModelTier }
+): Promise<string> {
+  const tier = options.tier ?? 'small';
+  if (tier === 'small') return runCompletion(resolveModel('small'), messages, options);
+
+  try {
+    return await runCompletion(resolveModel('big'), messages, options);
+  } catch (err) {
+    // Only quota exhaustion is worth re-running on another model — a 5xx or an unreachable
+    // provider would fail identically on the small one, and a second call would just double the
+    // wait before the user sees the error.
+    if (!(err instanceof AiProviderError) || !isQuotaError(err.cause)) throw err;
+    console.warn(`[ai-provider] big model quota exhausted, falling back to small: ${err.message}`);
+    return runCompletion(resolveModel('small'), messages, options);
+  }
 }

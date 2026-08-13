@@ -48,9 +48,15 @@ export async function postAiChat(req: Request, res: Response) {
     // `unitSystem` reaches the parser and never the prompt. The model writes canonical metric for
     // every reader; converting it afterwards is what makes unit compliance a property of the code
     // rather than a hope about the model.
+    // The opening turn of a new recipe is the only one written from nothing, so it's the only one
+    // that gets the big model; every later turn — and every improve turn — edits a draft that is
+    // already in hand.
+    const tier = body.mode === 'create' && body.messages.length === 1 ? 'big' : 'small';
+
     const raw = await chatWithAi(buildChatMessages(body.messages, body.current_draft, locale), {
       jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
       sampling: RECIPE_SAMPLING,
+      tier,
     });
 
     res.json(

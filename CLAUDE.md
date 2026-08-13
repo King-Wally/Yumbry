@@ -102,12 +102,22 @@ tokens without a blocklist.
 `services/ai-provider.service.ts` talks to Google Gemini
 (`https://generativelanguage.googleapis.com/v1beta/openai/`) through the `openai` npm SDK client,
 since Gemini exposes an OpenAI-compatible chat-completions endpoint.
-`GEMINI_API_KEY` and `GEMINI_MODEL` (default `gemini-3.5-flash-lite`) are read from
+`GEMINI_API_KEY`, `GEMINI_MODEL_BIG` (default `gemini-3.6-flash`) and `GEMINI_MODEL_SMALL`
+(default `gemini-3.5-flash-lite`) are read from
 `process.env` lazily, at call time inside `chatWithAi` — not at module import time — so the app
 still boots without them; a missing key throws an `AiProviderError` with kind `not_configured`
 (mapped to HTTP 503), meaning the AI assistant is simply unavailable rather than the whole app
 failing to start. SDK errors are normalized into the same `AiProviderError` (kind: `unreachable` |
 `bad_status` | `malformed_response` | `not_configured`) defined in `shared/src/ai-provider-error.ts`.
+
+Two model tiers: `chatWithAi` takes a `tier` (`'big' | 'small'`, default `small`) and
+`ai.controller.ts` asks for `big` only when the request's `mode` is `'create'` and it's the first
+turn (`messages.length === 1`) — the one turn written from nothing. Every follow-up and every
+`'improve'` turn edits an existing `current_draft` and uses `small`. `mode` comes from the client
+(`AiChatMode` in `shared/src/recipe-dto.ts`, Zod-defaulted to `'improve'` so an old client falls to
+the cheap tier) and never reaches the prompt. If the big model returns a quota error (429, or a
+403/400 mentioning `RESOURCE_EXHAUSTED`/quota), `chatWithAi` retries the same request once on the
+small model.
 There is no per-user provider/API key configuration — one server-wide key serves every user via
 `POST /api/ai/chat`.
 
