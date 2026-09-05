@@ -171,10 +171,9 @@ export async function resetPassword(
       return null;
     }
 
-    await tx.passwordResetToken.update({
-      where: { id: resetToken.id },
-      data: { usedAt: new Date() },
-    });
+    // Delete rather than mark used: a consumed token has no further purpose, and
+    // deleting it here means the periodic cleanup sweep never has to touch it.
+    await tx.passwordResetToken.delete({ where: { id: resetToken.id } });
 
     const user = await tx.user.update({
       where: { id: resetToken.userId },
@@ -184,6 +183,18 @@ export async function resetPassword(
 
     return { userId: resetToken.userId, tokenVersion: user.tokenVersion };
   });
+}
+
+// Periodic safety-net sweep (see backend/src/index.ts): expired tokens are never deleted on
+// their own since nothing revisits a request that was never completed, and `usedAt` only ever
+// gets set here as a defensive fallback (`resetPassword` normally deletes the row outright).
+export async function cleanupPasswordResetTokens(): Promise<number> {
+  const { count } = await prisma.passwordResetToken.deleteMany({
+    where: {
+      OR: [{ expiresAt: { lt: new Date() } }, { usedAt: { not: null } }],
+    },
+  });
+  return count;
 }
 
 export async function changePassword(
