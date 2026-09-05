@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 
@@ -9,12 +9,16 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register } = useAuth();
+  const { user, register } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   // Set by ProtectedRoute when it bounced an unauthenticated visitor, so an
   // invite link followed while signed out resumes after signing in.
   const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? '/';
+
+  // Already signed in: visiting /register directly is confusing, so bounce
+  // back to wherever they were headed (mirrors ProtectedRoute's own redirect).
+  if (user) return <Navigate to={from} replace />;
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
