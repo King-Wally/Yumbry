@@ -23,6 +23,7 @@ import {
   verifyPassword,
   type UserRow,
 } from '../services/auth.service.js';
+import { isEmailConfigured } from '../services/email.service.js';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const COOKIE_SECURE = process.env.COOKIE_SECURE === 'true';
@@ -126,6 +127,13 @@ export async function patchMe(req: Request, res: Response) {
     if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
     throw err;
   }
+}
+
+// Cheap, no-network check the frontend polls (unauthenticated, from the login page) to decide
+// whether to show the "forgot password" link at all, rather than only discovering email isn't
+// configured after submitting the form.
+export async function getAuthConfig(_req: Request, res: Response) {
+  res.json({ passwordResetEnabled: isEmailConfigured() });
 }
 
 export async function postForgotPassword(req: Request, res: Response) {

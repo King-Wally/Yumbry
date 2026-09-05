@@ -13,6 +13,7 @@ export const queryKeys = {
   tags: ['tags'] as const,
   categories: ['categories'] as const,
   authMe: ['auth', 'me'] as const,
+  authConfig: ['auth', 'config'] as const,
   family: ['family'] as const,
   aiStatus: ['ai', 'status'] as const,
 };

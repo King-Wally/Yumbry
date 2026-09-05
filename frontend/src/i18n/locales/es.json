@@ -76,7 +76,8 @@
       "submitting": "Iniciando sesión…",
       "submit": "Iniciar sesión",
       "noAccount": "¿No tienes cuenta?",
-      "registerLink": "Regístrate"
+      "registerLink": "Regístrate",
+      "forgotPasswordLink": "¿Olvidaste tu contraseña?"
     },
     "register": {
       "title": "Crear una cuenta",

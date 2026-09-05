@@ -5,7 +5,7 @@ import { withTransaction } from '../db/transaction.js';
 import { generateResetToken, hashResetToken } from '../utils/reset-token.js';
 import { generateInviteToken } from '../utils/invite-token.js';
 import { deleteFamilyIfEmpty, lockFamilies, removeRecipeUploads } from './family.service.js';
-import { sendPasswordResetEmail } from './email.service.js';
+import { isEmailConfigured, sendPasswordResetEmail } from './email.service.js';
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
@@ -129,6 +129,13 @@ export async function registerUser(email: string, password: string): Promise<Use
 }
 
 export async function requestPasswordReset(email: string): Promise<void> {
+  // Same no-op path as "no such user" — the frontend already hides the "forgot password"
+  // entry point when email isn't configured, but this endpoint stays safe to call directly.
+  if (!isEmailConfigured()) {
+    await hashPassword('not-a-real-password');
+    return;
+  }
+
   const user = await prisma.user.findUnique({ where: { email } });
 
   if (!user) {

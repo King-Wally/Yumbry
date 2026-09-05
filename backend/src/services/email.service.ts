@@ -1,5 +1,7 @@
 import { Resend } from 'resend';
 
+// Read lazily (at call time, not import time) so the app still boots without these set —
+// self-hosters who don't want password-reset emails shouldn't be forced to configure Resend.
 function requireResendApiKey(): string {
   const key = process.env.RESEND_API_KEY;
   if (!key) throw new Error('RESEND_API_KEY must be set.');
@@ -18,17 +20,21 @@ function requireAppBaseUrl(): string {
   return url;
 }
 
-const resend = new Resend(requireResendApiKey());
-const EMAIL_FROM = requireEmailFrom();
-const APP_BASE_URL = requireAppBaseUrl();
+// Cheap, no-network check the frontend polls to decide whether to show the "forgot password"
+// entry point at all, rather than only discovering email isn't configured after submitting.
+export function isEmailConfigured(): boolean {
+  return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM && process.env.APP_BASE_URL);
+}
 
 /** Sends the password reset email containing a link with the raw (unhashed)
- * token. Throws if Resend reports an error. */
+ * token. Throws if Resend reports an error, or if email isn't configured. */
 export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {
-  const resetUrl = `${APP_BASE_URL}/reset-password?token=${token}`;
+  const resend = new Resend(requireResendApiKey());
+  const emailFrom = requireEmailFrom();
+  const resetUrl = `${requireAppBaseUrl()}/reset-password?token=${token}`;
 
   const { error } = await resend.emails.send({
-    from: EMAIL_FROM,
+    from: emailFrom,
     to,
     subject: 'Reset your Yumbry password',
     text: `We received a request to reset your Yumbry password.\n\nOpen this link to choose a new password (it expires in 1 hour):\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email.`,

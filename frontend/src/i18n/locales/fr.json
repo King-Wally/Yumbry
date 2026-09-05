@@ -76,7 +76,8 @@
       "submitting": "Connexion en cours…",
       "submit": "Se connecter",
       "noAccount": "Pas de compte ?",
-      "registerLink": "S'inscrire"
+      "registerLink": "S'inscrire",
+      "forgotPasswordLink": "Mot de passe oublié ?"
     },
     "register": {
       "title": "Créer un compte",

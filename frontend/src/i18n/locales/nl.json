@@ -76,7 +76,8 @@
       "submitting": "Bezig met inloggen…",
       "submit": "Inloggen",
       "noAccount": "Nog geen account?",
-      "registerLink": "Registreren"
+      "registerLink": "Registreren",
+      "forgotPasswordLink": "Wachtwoord vergeten?"
     },
     "register": {
       "title": "Account aanmaken",

@@ -164,6 +164,10 @@ export function deleteAccount(password: string) {
   return request<null>('/auth/me', { method: 'DELETE', body: JSON.stringify({ password }) });
 }
 
+export function getAuthConfig() {
+  return request<{ passwordResetEnabled: boolean }>('/auth/config');
+}
+
 export function forgotPassword(email: string) {
   return request<{ message: string }>('/auth/forgot-password', {
     method: 'POST',

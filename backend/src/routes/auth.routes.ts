@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   deleteAccount,
+  getAuthConfig,
   getMe,
   patchMe,
   postChangePassword,
@@ -16,6 +17,7 @@ import { asyncHandler } from '../utils/async-handler.js';
 
 export const authRouter = Router();
 
+authRouter.get('/config', asyncHandler(getAuthConfig));
 authRouter.post('/register', loginRateLimiter, asyncHandler(postRegister));
 authRouter.post('/login', loginRateLimiter, asyncHandler(postLogin));
 authRouter.post('/logout', asyncHandler(postLogout));

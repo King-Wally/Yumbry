@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
+import { useAuthConfig } from '../hooks/useAuthConfig';
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
+  const { data: authConfig } = useAuthConfig();
   const navigate = useNavigate();
   const location = useLocation();
   // Set by ProtectedRoute when it bounced an unauthenticated visitor, so an
@@ -64,7 +66,13 @@ export default function LoginPage() {
 
       {error && <p className="text-red-600">{error}</p>}
 
-      {/* Forgot password link hidden until Resend domain is configured */}
+      {authConfig?.passwordResetEnabled && (
+        <p className="text-sm text-stone-500">
+          <Link to="/forgot-password" className="text-clay hover:underline">
+            {t('auth.login.forgotPasswordLink')}
+          </Link>
+        </p>
+      )}
 
       <p className="text-sm text-stone-500">
         {t('auth.login.noAccount')}{' '}

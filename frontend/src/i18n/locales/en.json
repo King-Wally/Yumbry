@@ -76,7 +76,8 @@
       "submitting": "Logging in…",
       "submit": "Log in",
       "noAccount": "No account?",
-      "registerLink": "Register"
+      "registerLink": "Register",
+      "forgotPasswordLink": "Forgot your password?"
     },
     "register": {
       "title": "Create an account",
