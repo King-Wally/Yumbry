@@ -7,7 +7,10 @@ import { resetTestDatabase } from './helpers/db.js';
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
 
 const sendPasswordResetEmail = vi.fn().mockResolvedValue(undefined);
-vi.mock('../src/services/email.service.js', () => ({ sendPasswordResetEmail }));
+vi.mock('../src/services/email.service.js', () => ({
+  sendPasswordResetEmail,
+  isEmailConfigured: () => true,
+}));
 
 // loginRateLimiter/forgotPasswordRateLimiter key by IP (app.ts sets `trust
 // proxy: 1`, so X-Forwarded-For is honored). Each test below is given its own
