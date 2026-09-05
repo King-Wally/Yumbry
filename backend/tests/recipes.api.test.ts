@@ -342,13 +342,15 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
     expect(afterDelete.body).toEqual([]);
   });
 
-  describe('per-user isolation', () => {
+  // Two separately registered users are each in their own personal family, so
+  // these still assert isolation — now between families rather than users.
+  describe('per-family isolation', () => {
     it('rejects unauthenticated requests with 401', async () => {
       const res = await request(app).get('/api/recipes');
       expect(res.status).toBe(401);
     });
 
-    it("does not let one user see, edit, or delete another user's recipe", async () => {
+    it('does not let a user outside the family see, edit, or delete a recipe', async () => {
       const created = await agent
         .post('/api/recipes')
         .send({ title: "Owner's Recipe", servings: 1, tags: ['private'] });
@@ -376,7 +378,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
       expect(otherTags.body).toEqual([]);
     });
 
-    it("does not let one user see another user's categories", async () => {
+    it('does not let a user outside the family see its categories', async () => {
       await agent
         .post('/api/recipes')
         .send({ title: "Owner's Recipe", servings: 1, category: 'Private Category' });
@@ -387,7 +389,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
       expect(otherCategories.body).toEqual([]);
     });
 
-    it("does not let one user upload to or view another user's recipe photo", async () => {
+    it('does not let a user outside the family upload to or view a recipe photo', async () => {
       const created = await agent
         .post('/api/recipes')
         .send({ title: "Owner's Recipe", servings: 1 });
@@ -417,7 +419,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
       expect(ownView.status).toBe(200);
     });
 
-    it("does not delete another user's still-referenced tag when this user's last reference to the same name is removed", async () => {
+    it("does not delete another family's still-referenced tag when this family's last reference to the same name is removed", async () => {
       const mine = await agent
         .post('/api/recipes')
         .send({ title: 'Mine', servings: 1, tags: ['vegan'] });

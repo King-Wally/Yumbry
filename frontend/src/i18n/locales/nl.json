@@ -42,9 +42,24 @@
       "saving": "Opslaan...",
       "savePassword": "Wachtwoord opslaan"
     },
+    "family": {
+      "title": "Familie",
+      "description": "Iedereen in je familie deelt één receptenverzameling — alle recepten, tags en categorieën zijn zichtbaar voor elk lid, en elk lid kan ze aanpassen.",
+      "members": "Leden",
+      "you": "(jij)",
+      "inviteLabel": "Uitnodigingslink",
+      "copyLink": "Link kopiëren",
+      "copied": "Gekopieerd!",
+      "inviteHint": "Wie deze link opent en zich aanmeldt, komt in je familie terecht. Deel hem alleen met je huishouden.",
+      "leave": "Familie verlaten",
+      "leaveDialogTitle": "Deze familie verlaten?",
+      "leaveDialogDescription": "De gedeelde recepten blijven bij de familie — je begint opnieuw met een eigen, lege verzameling.",
+      "confirmLeave": "Familie verlaten",
+      "leaving": "Bezig met verlaten..."
+    },
     "dangerZone": {
       "title": "Gevarenzone",
-      "description": "Verwijder je account en alles erin permanent — recepten, tags, categorieën en instellingen. Dit kan niet ongedaan worden gemaakt.",
+      "description": "Verwijder je account en je instellingen permanent. Recepten, tags en categorieën die je familie deelt blijven bij de familie; ben je het enige lid, dan worden ze samen met de familie verwijderd. Dit kan niet ongedaan worden gemaakt.",
       "deleteAccount": "Account verwijderen",
       "dialogTitle": "Account verwijderen?",
       "confirmPassword": "Bevestig je wachtwoord",
@@ -218,5 +233,13 @@
     "servings": "Porties: {{count}}",
     "ingredients": "Ingrediënten",
     "instructions": "Bereidingswijze"
+  },
+  "joinFamily": {
+    "title": "Word lid van deze familie",
+    "description": "Je bent uitgenodigd om een receptenverzameling te delen. Je eigen recepten, tags en categorieën gaan mee en worden samengevoegd met die van de familie.",
+    "join": "Lid worden",
+    "logInToJoin": "Log in om lid te worden",
+    "joining": "Bezig met toevoegen...",
+    "joinedToast": "Je bent lid geworden van de familie"
   }
 }

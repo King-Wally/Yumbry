@@ -42,9 +42,24 @@
       "saving": "Saving...",
       "savePassword": "Save password"
     },
+    "family": {
+      "title": "Family",
+      "description": "Everyone in your family shares one recipe collection — all recipes, tags and categories are visible to every member, and any member can edit them.",
+      "members": "Members",
+      "you": "(you)",
+      "inviteLabel": "Invite link",
+      "copyLink": "Copy link",
+      "copied": "Copied!",
+      "inviteHint": "Anyone who opens this link and signs in joins your family. Only share it with your household.",
+      "leave": "Leave family",
+      "leaveDialogTitle": "Leave this family?",
+      "leaveDialogDescription": "The shared recipes stay with the family — you will start again with an empty collection of your own.",
+      "confirmLeave": "Leave family",
+      "leaving": "Leaving..."
+    },
     "dangerZone": {
       "title": "Danger zone",
-      "description": "Permanently delete your account and everything in it — recipes, tags, categories, and settings. This cannot be undone.",
+      "description": "Permanently delete your account and your settings. Recipes, tags and categories your family shares stay with the family; if you are its only member, they are deleted with it. This cannot be undone.",
       "deleteAccount": "Delete account",
       "dialogTitle": "Delete account?",
       "confirmPassword": "Confirm your password",
@@ -218,5 +233,13 @@
     "servings": "Servings: {{count}}",
     "ingredients": "Ingredients",
     "instructions": "Instructions"
+  },
+  "joinFamily": {
+    "title": "Join this family",
+    "description": "You've been invited to share a recipe collection. Your own recipes, tags and categories come with you and are merged into the family's collection.",
+    "join": "Join family",
+    "logInToJoin": "Log in to join",
+    "joining": "Joining...",
+    "joinedToast": "You've joined the family"
   }
 }

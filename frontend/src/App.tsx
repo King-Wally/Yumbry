@@ -7,6 +7,7 @@ import ImportPage from './pages/ImportPage';
 import UrlImportPage from './pages/UrlImportPage';
 import AiChatPage from './pages/AiChatPage';
 import SettingsPage from './pages/SettingsPage';
+import JoinFamilyPage from './pages/JoinFamilyPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
@@ -166,6 +167,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/join-family/:token" element={<JoinFamilyPage />} />
           <Route
             path="/settings"
             element={

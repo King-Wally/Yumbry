@@ -7,7 +7,7 @@ import type {
   RecipeSummary,
   Tag,
 } from '../types';
-import type { SmallVolumeStyle, SupportedLocale, UnitSystem } from 'yumbry-shared';
+import type { Family, SmallVolumeStyle, SupportedLocale, UnitSystem } from 'yumbry-shared';
 
 interface ApiErrorBody {
   error?: string;
@@ -183,4 +183,16 @@ export function changePassword(currentPassword: string, newPassword: string) {
     method: 'POST',
     body: JSON.stringify({ currentPassword, newPassword }),
   });
+}
+
+export function getFamily() {
+  return request<Family>('/family');
+}
+
+export function joinFamily(token: string) {
+  return request<null>('/family/join', { method: 'POST', body: JSON.stringify({ token }) });
+}
+
+export function leaveFamily() {
+  return request<null>('/family/leave', { method: 'POST' });
 }

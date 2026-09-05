@@ -3,6 +3,10 @@ declare global {
     interface Request {
       /** Set by requireAuth from the session; only present on authenticated requests. */
       userId?: number;
+      /** The user's household, and the scope for every recipe/tag/category query.
+       * Read fresh from the DB on each request rather than carried in the JWT,
+       * since joining or leaving a family changes it mid-session. */
+      familyId?: number;
       /** Set by requireAuth alongside userId, from the same DB row it already
        * fetches to check tokenVersion — lets controllers that only need
        * these fields (getMe, postAiChat) skip a redundant re-fetch. */
@@ -12,6 +16,7 @@ declare global {
         locale: string;
         unitSystem: string;
         smallVolumes: string;
+        familyId: number;
       };
     }
   }

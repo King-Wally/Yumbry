@@ -2,13 +2,16 @@ import type { Queryable } from '../db/transaction.js';
 import { prisma } from '../db/prisma.js';
 import type { CategoryRef, TagRef } from './recipe.types.js';
 
+/** Prunes tags/categories the family no longer references anywhere. Under
+ * family scoping this spans every member's recipes, so one member's edit can
+ * retire a name another member introduced — correct for a shared collection. */
 export async function deleteOrphaned(
   client: Queryable,
   table: 'tags' | 'categories',
   referencedIds: number[],
-  userId: number
+  familyId: number
 ): Promise<void> {
-  const where = { userId, id: { notIn: referencedIds } };
+  const where = { familyId, id: { notIn: referencedIds } };
   if (table === 'tags') {
     await client.tag.deleteMany({ where });
   } else {
@@ -20,7 +23,7 @@ export async function upsertTags(
   client: Queryable,
   recipeId: number,
   tagNames: string[],
-  userId: number
+  familyId: number
 ): Promise<void> {
   const normalized = [...new Set(tagNames.map((name) => name.trim().toLowerCase()))].filter(
     Boolean
@@ -28,12 +31,12 @@ export async function upsertTags(
   if (normalized.length === 0) return;
 
   await client.tag.createMany({
-    data: normalized.map((name) => ({ userId, name })),
+    data: normalized.map((name) => ({ familyId, name })),
     skipDuplicates: true,
   });
 
   const tags = await client.tag.findMany({
-    where: { userId, name: { in: normalized } },
+    where: { familyId, name: { in: normalized } },
     select: { id: true },
   });
 
@@ -46,23 +49,23 @@ export async function upsertTags(
 export async function upsertCategory(
   client: Queryable,
   name: string | null | undefined,
-  userId: number
+  familyId: number
 ): Promise<number | null> {
   if (!name) return null;
   const normalized = name.trim().toLowerCase();
   const category = await client.category.upsert({
-    where: { userId_name: { userId, name: normalized } },
-    create: { userId, name: normalized },
+    where: { familyId_name: { familyId, name: normalized } },
+    create: { familyId, name: normalized },
     update: { name: normalized },
     select: { id: true },
   });
   return category.id;
 }
 
-export async function listTags(userId: number): Promise<TagRef[]> {
-  return prisma.tag.findMany({ where: { userId }, orderBy: { name: 'asc' } });
+export async function listTags(familyId: number): Promise<TagRef[]> {
+  return prisma.tag.findMany({ where: { familyId }, orderBy: { name: 'asc' } });
 }
 
-export async function listCategories(userId: number): Promise<CategoryRef[]> {
-  return prisma.category.findMany({ where: { userId }, orderBy: { name: 'asc' } });
+export async function listCategories(familyId: number): Promise<CategoryRef[]> {
+  return prisma.category.findMany({ where: { familyId }, orderBy: { name: 'asc' } });
 }

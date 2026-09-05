@@ -19,6 +19,7 @@ export const requireAuth = asyncHandler(async (req: Request, res, next) => {
       locale: true,
       unitSystem: true,
       smallVolumes: true,
+      familyId: true,
     },
   });
   if (!user || user.tokenVersion !== verified.tokenVersion) {
@@ -27,12 +28,14 @@ export const requireAuth = asyncHandler(async (req: Request, res, next) => {
   }
 
   req.userId = verified.userId;
+  req.familyId = user.familyId;
   req.user = {
     id: verified.userId,
     email: user.email,
     locale: user.locale,
     unitSystem: user.unitSystem,
     smallVolumes: user.smallVolumes,
+    familyId: user.familyId,
   };
   next();
 });

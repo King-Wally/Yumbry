@@ -42,9 +42,24 @@
       "saving": "Enregistrement...",
       "savePassword": "Enregistrer le mot de passe"
     },
+    "family": {
+      "title": "Famille",
+      "description": "Tous les membres de votre famille partagent une seule collection de recettes — toutes les recettes, tags et catégories sont visibles par chacun, et chacun peut les modifier.",
+      "members": "Membres",
+      "you": "(vous)",
+      "inviteLabel": "Lien d'invitation",
+      "copyLink": "Copier le lien",
+      "copied": "Copié !",
+      "inviteHint": "Toute personne qui ouvre ce lien et se connecte rejoint votre famille. Ne le partagez qu'avec votre foyer.",
+      "leave": "Quitter la famille",
+      "leaveDialogTitle": "Quitter cette famille ?",
+      "leaveDialogDescription": "Les recettes partagées restent avec la famille — vous repartirez avec votre propre collection vide.",
+      "confirmLeave": "Quitter la famille",
+      "leaving": "Départ en cours..."
+    },
     "dangerZone": {
       "title": "Zone de danger",
-      "description": "Supprimez définitivement votre compte et tout son contenu — recettes, tags, catégories et paramètres. Cette action est irréversible.",
+      "description": "Supprimez définitivement votre compte et vos paramètres. Les recettes, tags et catégories partagés par votre famille restent avec la famille ; si vous en êtes le seul membre, ils sont supprimés avec elle. Cette action est irréversible.",
       "deleteAccount": "Supprimer le compte",
       "dialogTitle": "Supprimer le compte ?",
       "confirmPassword": "Confirmez votre mot de passe",
@@ -218,5 +233,13 @@
     "servings": "Portions : {{count}}",
     "ingredients": "Ingrédients",
     "instructions": "Préparation"
+  },
+  "joinFamily": {
+    "title": "Rejoindre cette famille",
+    "description": "Vous êtes invité à partager une collection de recettes. Vos propres recettes, tags et catégories vous suivent et sont fusionnés avec ceux de la famille.",
+    "join": "Rejoindre la famille",
+    "logInToJoin": "Se connecter pour rejoindre",
+    "joining": "Adhésion en cours...",
+    "joinedToast": "Vous avez rejoint la famille"
   }
 }

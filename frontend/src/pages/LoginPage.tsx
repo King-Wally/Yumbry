@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 
@@ -11,6 +11,10 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Set by ProtectedRoute when it bounced an unauthenticated visitor, so an
+  // invite link followed while signed out resumes after signing in.
+  const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? '/';
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -18,7 +22,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
     try {
       await login(email, password);
-      navigate('/');
+      navigate(from, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : t('auth.login.error'));
     } finally {
@@ -64,7 +68,9 @@ export default function LoginPage() {
 
       <p className="text-sm text-stone-500">
         {t('auth.login.noAccount')}{' '}
-        <Link to="/register" className="text-clay hover:underline">
+        {/* Forwards `state` so a visitor without an account who followed an
+            invite link here still lands back on it after registering. */}
+        <Link to="/register" state={location.state} className="text-clay hover:underline">
           {t('auth.login.registerLink')}
         </Link>
       </p>

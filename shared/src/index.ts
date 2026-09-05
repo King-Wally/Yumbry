@@ -3,4 +3,5 @@ export * from './units/index.js';
 export * from './ai-recipe-draft.js';
 export * from './ai-provider-error.js';
 export * from './recipe-dto.js';
+export * from './family-dto.js';
 export * from './quantity.js';

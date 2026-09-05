@@ -11,7 +11,7 @@ import {
   uploadRecipePhoto,
 } from '../controllers/recipes.controller.js';
 import { uploadJsonFile, uploadPhoto } from '../middleware/upload.js';
-import { requireRecipeOwner } from '../middleware/require-recipe-owner.js';
+import { requireRecipeAccess } from '../middleware/require-recipe-access.js';
 import { urlImportRateLimiter } from '../middleware/rate-limit.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
@@ -27,7 +27,7 @@ recipesRouter.put('/:id', asyncHandler(putRecipe));
 recipesRouter.delete('/:id', asyncHandler(removeRecipe));
 recipesRouter.post(
   '/:id/photo',
-  asyncHandler(requireRecipeOwner),
+  asyncHandler(requireRecipeAccess),
   uploadPhoto.single('photo'),
   asyncHandler(uploadRecipePhoto)
 );

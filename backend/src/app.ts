@@ -6,10 +6,11 @@ import { authRouter } from './routes/auth.routes.js';
 import { recipesRouter } from './routes/recipes.routes.js';
 import { tagsRouter } from './routes/tags.routes.js';
 import { categoriesRouter } from './routes/categories.routes.js';
+import { familyRouter } from './routes/family.routes.js';
 import { aiRouter } from './routes/ai.routes.js';
 import { UPLOADS_DIR } from './middleware/upload.js';
 import { requireAuth } from './middleware/require-auth.js';
-import { requirePhotoOwner } from './middleware/require-photo-owner.js';
+import { requirePhotoAccess } from './middleware/require-photo-access.js';
 import { apiRateLimiter } from './middleware/rate-limit.js';
 import { asyncHandler } from './utils/async-handler.js';
 
@@ -23,7 +24,7 @@ app.use(cookieParser());
 
 app.use('/api', apiRateLimiter);
 
-app.use('/uploads', requireAuth, asyncHandler(requirePhotoOwner), express.static(UPLOADS_DIR));
+app.use('/uploads', requireAuth, asyncHandler(requirePhotoAccess), express.static(UPLOADS_DIR));
 
 app.get('/api/health', (_req, res) => res.status(200).json({ status: 'ok' }));
 
@@ -31,6 +32,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/recipes', requireAuth, recipesRouter);
 app.use('/api/tags', requireAuth, tagsRouter);
 app.use('/api/categories', requireAuth, categoriesRouter);
+app.use('/api/family', requireAuth, familyRouter);
 app.use('/api/ai', requireAuth, aiRouter);
 
 // The shell and the service worker must always be revalidated, otherwise a stale

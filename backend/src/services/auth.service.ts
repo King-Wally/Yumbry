@@ -3,6 +3,8 @@ import { Prisma } from '../generated/prisma/client.js';
 import { prisma } from '../db/prisma.js';
 import { withTransaction } from '../db/transaction.js';
 import { generateResetToken, hashResetToken } from '../utils/reset-token.js';
+import { generateInviteToken } from '../utils/invite-token.js';
+import { deleteFamilyIfEmpty, lockFamilies, removeRecipeUploads } from './family.service.js';
 import { sendPasswordResetEmail } from './email.service.js';
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
@@ -62,7 +64,19 @@ export async function findUserById(id: number): Promise<UserRow | null> {
 }
 
 export async function deleteUser(id: number): Promise<void> {
-  await prisma.user.delete({ where: { id } });
+  // Recipes belong to the family, not to their author, so deleting an account
+  // only nulls recipes.author_id (SetNull) and leaves the collection for the
+  // remaining members. The family itself goes only once nobody is left in it.
+  const orphanedRecipeIds = await withTransaction(async (tx) => {
+    const user = await tx.user.findUnique({ where: { id }, select: { familyId: true } });
+    if (!user) return [];
+
+    await lockFamilies(tx, [user.familyId]);
+    await tx.user.delete({ where: { id } });
+    return deleteFamilyIfEmpty(tx, user.familyId);
+  });
+
+  await removeRecipeUploads(orphanedRecipeIds);
 }
 
 // Generalised rather than given a sibling per column: Prisma ignores `undefined` keys, so a
@@ -93,7 +107,16 @@ export async function registerUser(email: string, password: string): Promise<Use
   return withTransaction(async (tx) => {
     let user;
     try {
-      user = await tx.user.create({ data: { email, passwordHash } });
+      // Nested create: every user starts in a personal family of one, so
+      // users.family_id is never null and no "user without a family" state
+      // exists for the rest of the app to handle.
+      user = await tx.user.create({
+        data: {
+          email,
+          passwordHash,
+          family: { create: { inviteToken: generateInviteToken() } },
+        },
+      });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         return null;

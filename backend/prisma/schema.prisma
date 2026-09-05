@@ -7,6 +7,25 @@ datasource db {
   provider = "postgresql"
 }
 
+/// A household. Recipes, tags and categories are scoped to a family, not to a
+/// single user — every member sees and edits the same collection. Every user
+/// gets a personal family of one at registration, so familyId is never absent.
+model Family {
+  id Int @id @default(autoincrement())
+  /// Stored raw rather than hashed (unlike PasswordResetToken.tokenHash): the
+  /// settings page has to re-display the same stable invite link on every
+  /// visit, which a one-way hash cannot support.
+  inviteToken String   @unique @map("invite_token")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  members    User[]
+  recipes    Recipe[]
+  tags       Tag[]
+  categories Category[]
+
+  @@map("families")
+}
+
 model User {
   id           Int      @id @default(autoincrement())
   email        String   @unique
@@ -15,13 +34,16 @@ model User {
   locale       String   @default("en") @map("locale")
   unitSystem   String   @default("metric") @map("unit_system")
   smallVolumes String   @default("spoons") @map("small_volumes")
+  familyId     Int      @map("family_id")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  recipes             Recipe[]
-  tags                Tag[]
-  categories          Category[]
+  // Restrict, not Cascade: deleting a family must never delete its members.
+  // Families are only ever deleted once their member count reaches zero.
+  family              Family               @relation(fields: [familyId], references: [id], onDelete: Restrict)
+  authoredRecipes     Recipe[]             @relation("RecipeAuthor")
   passwordResetTokens PasswordResetToken[]
 
+  @@index([familyId], map: "idx_users_family_id")
   @@map("users")
 }
 
@@ -35,18 +57,24 @@ model Recipe {
   totalTimeMinutes Int?     @map("total_time_minutes")
   servings         Decimal  @default(1)
   categoryId       Int?     @map("category_id")
-  userId           Int      @map("user_id")
+  familyId         Int      @map("family_id")
+  /// Provenance only — nothing authorises on this. Access is decided by
+  /// familyId, and the recipe outlives its author (SetNull) so that leaving or
+  /// deleting an account doesn't take the family's recipes with it.
+  authorId         Int?     @map("author_id")
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime @default(now()) @map("updated_at") @db.Timestamptz
 
   category     Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family       Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  author       User?         @relation("RecipeAuthor", fields: [authorId], references: [id], onDelete: SetNull)
   ingredients  Ingredient[]
   instructions Instruction[]
   recipeTags   RecipeTag[]
 
   @@index([categoryId], map: "idx_recipes_category_id")
-  @@index([userId], map: "idx_recipes_user_id")
+  @@index([familyId], map: "idx_recipes_family_id")
+  @@index([authorId], map: "idx_recipes_author_id")
   @@map("recipes")
 }
 
@@ -79,15 +107,15 @@ model Instruction {
 }
 
 model Tag {
-  id     Int    @id @default(autoincrement())
-  name   String
-  userId Int    @map("user_id")
+  id       Int    @id @default(autoincrement())
+  name     String
+  familyId Int    @map("family_id")
 
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family     Family      @relation(fields: [familyId], references: [id], onDelete: Cascade)
   recipeTags RecipeTag[]
 
-  @@unique([userId, name], map: "tags_user_id_name_key")
-  @@index([userId], map: "idx_tags_user_id")
+  @@unique([familyId, name], map: "tags_family_id_name_key")
+  @@index([familyId], map: "idx_tags_family_id")
   @@map("tags")
 }
 
@@ -104,15 +132,15 @@ model RecipeTag {
 }
 
 model Category {
-  id     Int    @id @default(autoincrement())
-  name   String
-  userId Int    @map("user_id")
+  id       Int    @id @default(autoincrement())
+  name     String
+  familyId Int    @map("family_id")
 
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family  Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
   recipes Recipe[]
 
-  @@unique([userId, name], map: "categories_user_id_name_key")
-  @@index([userId], map: "idx_categories_user_id")
+  @@unique([familyId, name], map: "categories_family_id_name_key")
+  @@index([familyId], map: "idx_categories_family_id")
   @@map("categories")
 }
 

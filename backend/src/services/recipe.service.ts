@@ -93,12 +93,12 @@ const RECIPE_WITH_TAGS_INCLUDE = {
 } as const;
 
 export async function listRecipes(
-  userId: number,
+  familyId: number,
   { search, tag, category }: { search?: string; tag?: string; category?: string } = {}
 ): Promise<(RecipeRow & { tags: TagRef[]; category: CategoryRef | null })[]> {
   const recipes = await prisma.recipe.findMany({
     where: {
-      userId,
+      familyId,
       ...(search && {
         OR: [
           { title: { contains: search, mode: 'insensitive' } },
@@ -117,10 +117,10 @@ export async function listRecipes(
 
 export async function getRecipeById(
   id: string | number,
-  userId: number
+  familyId: number
 ): Promise<RecipeWithRelations | null> {
   const recipe = await prisma.recipe.findFirst({
-    where: { id: Number(id), userId },
+    where: { id: Number(id), familyId },
     include: {
       ...RECIPE_WITH_TAGS_INCLUDE,
       ingredients: { orderBy: { sortOrder: 'asc' } },
@@ -172,30 +172,33 @@ async function insertInstructions(
   });
 }
 
-async function referencedTagIds(client: Queryable, userId: number): Promise<number[]> {
+async function referencedTagIds(client: Queryable, familyId: number): Promise<number[]> {
   const rows = await client.recipeTag.findMany({
-    where: { tag: { userId } },
+    where: { tag: { familyId } },
     select: { tagId: true },
     distinct: ['tagId'],
   });
   return rows.map((row) => row.tagId);
 }
 
-async function referencedCategoryIds(client: Queryable, userId: number): Promise<number[]> {
+async function referencedCategoryIds(client: Queryable, familyId: number): Promise<number[]> {
   const rows = await client.recipe.findMany({
-    where: { userId, categoryId: { not: null } },
+    where: { familyId, categoryId: { not: null } },
     select: { categoryId: true },
     distinct: ['categoryId'],
   });
   return rows.map((row) => row.categoryId as number);
 }
 
+/** The one write that needs both scopes: `familyId` decides who can see and
+ * edit the recipe, `authorId` is provenance only and survives as NULL once the
+ * author's account is gone. */
 export async function createRecipe(
   data: RecipeInput,
-  userId: number
+  { familyId, authorId }: { familyId: number; authorId: number }
 ): Promise<RecipeWithRelations | null> {
   const recipeId = await withTransaction(async (client) => {
-    const categoryId = await upsertCategory(client, data.category, userId);
+    const categoryId = await upsertCategory(client, data.category, familyId);
 
     const recipe = await client.recipe.create({
       data: {
@@ -207,37 +210,38 @@ export async function createRecipe(
         totalTimeMinutes: data.total_time_minutes ?? null,
         servings: data.servings ?? 1,
         categoryId,
-        userId,
+        familyId,
+        authorId,
       },
       select: { id: true },
     });
 
     await insertIngredients(client, recipe.id, data.ingredients ?? []);
     await insertInstructions(client, recipe.id, data.instructions ?? []);
-    await upsertTags(client, recipe.id, data.tags ?? [], userId);
+    await upsertTags(client, recipe.id, data.tags ?? [], familyId);
 
     return recipe.id;
   });
 
-  return getRecipeById(recipeId, userId);
+  return getRecipeById(recipeId, familyId);
 }
 
 export async function updateRecipe(
   id: string,
   data: RecipeInput,
-  userId: number
+  familyId: number
 ): Promise<RecipeWithRelations | null> {
   const result = await withTransaction(async (client) => {
-    const categoryId = await upsertCategory(client, data.category, userId);
+    const categoryId = await upsertCategory(client, data.category, familyId);
     const recipeId = Number(id);
 
     const existing = await client.recipe.findFirst({
-      where: { id: recipeId, userId },
+      where: { id: recipeId, familyId },
       select: { imagePath: true },
     });
 
     const { count } = await client.recipe.updateMany({
-      where: { id: recipeId, userId },
+      where: { id: recipeId, familyId },
       data: {
         title: data.title,
         description: data.description ?? null,
@@ -259,10 +263,15 @@ export async function updateRecipe(
 
     await insertIngredients(client, recipeId, data.ingredients ?? []);
     await insertInstructions(client, recipeId, data.instructions ?? []);
-    await upsertTags(client, recipeId, data.tags ?? [], userId);
+    await upsertTags(client, recipeId, data.tags ?? [], familyId);
 
-    await deleteOrphaned(client, 'tags', await referencedTagIds(client, userId), userId);
-    await deleteOrphaned(client, 'categories', await referencedCategoryIds(client, userId), userId);
+    await deleteOrphaned(client, 'tags', await referencedTagIds(client, familyId), familyId);
+    await deleteOrphaned(
+      client,
+      'categories',
+      await referencedCategoryIds(client, familyId),
+      familyId
+    );
 
     return { previousImagePath: existing?.imagePath ?? null };
   });
@@ -274,16 +283,21 @@ export async function updateRecipe(
     await deleteUploadedFile(result.previousImagePath);
   }
 
-  return getRecipeById(id, userId);
+  return getRecipeById(id, familyId);
 }
 
-export async function deleteRecipe(id: string, userId: number): Promise<boolean> {
+export async function deleteRecipe(id: string, familyId: number): Promise<boolean> {
   const recipeId = Number(id);
 
   const deleted = await withTransaction(async (client) => {
-    const { count } = await client.recipe.deleteMany({ where: { id: recipeId, userId } });
-    await deleteOrphaned(client, 'tags', await referencedTagIds(client, userId), userId);
-    await deleteOrphaned(client, 'categories', await referencedCategoryIds(client, userId), userId);
+    const { count } = await client.recipe.deleteMany({ where: { id: recipeId, familyId } });
+    await deleteOrphaned(client, 'tags', await referencedTagIds(client, familyId), familyId);
+    await deleteOrphaned(
+      client,
+      'categories',
+      await referencedCategoryIds(client, familyId),
+      familyId
+    );
     return count > 0;
   });
 
@@ -294,16 +308,16 @@ export async function deleteRecipe(id: string, userId: number): Promise<boolean>
 export async function setRecipePhoto(
   id: string,
   imagePath: string,
-  userId: number
+  familyId: number
 ): Promise<{ id: number } | null> {
   const existing = await prisma.recipe.findFirst({
-    where: { id: Number(id), userId },
+    where: { id: Number(id), familyId },
     select: { imagePath: true },
   });
   if (!existing) return null;
 
   const { count } = await prisma.recipe.updateMany({
-    where: { id: Number(id), userId },
+    where: { id: Number(id), familyId },
     data: { imagePath, updatedAt: new Date() },
   });
   if (count === 0) return null;

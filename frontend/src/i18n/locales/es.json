@@ -42,9 +42,24 @@
       "saving": "Guardando...",
       "savePassword": "Guardar contraseña"
     },
+    "family": {
+      "title": "Familia",
+      "description": "Todos los miembros de tu familia comparten una sola colección de recetas — todas las recetas, etiquetas y categorías son visibles para cada miembro, y cualquiera puede editarlas.",
+      "members": "Miembros",
+      "you": "(tú)",
+      "inviteLabel": "Enlace de invitación",
+      "copyLink": "Copiar enlace",
+      "copied": "¡Copiado!",
+      "inviteHint": "Cualquiera que abra este enlace e inicie sesión se unirá a tu familia. Compártelo solo con tu hogar.",
+      "leave": "Salir de la familia",
+      "leaveDialogTitle": "¿Salir de esta familia?",
+      "leaveDialogDescription": "Las recetas compartidas se quedan con la familia — volverás a empezar con tu propia colección vacía.",
+      "confirmLeave": "Salir de la familia",
+      "leaving": "Saliendo..."
+    },
     "dangerZone": {
       "title": "Zona de peligro",
-      "description": "Elimina permanentemente tu cuenta y todo su contenido — recetas, etiquetas, categorías y ajustes. Esta acción no se puede deshacer.",
+      "description": "Elimina permanentemente tu cuenta y tus ajustes. Las recetas, etiquetas y categorías que comparte tu familia se quedan con la familia; si eres su único miembro, se eliminan con ella. Esta acción no se puede deshacer.",
       "deleteAccount": "Eliminar cuenta",
       "dialogTitle": "¿Eliminar cuenta?",
       "confirmPassword": "Confirma tu contraseña",
@@ -218,5 +233,13 @@
     "servings": "Raciones: {{count}}",
     "ingredients": "Ingredientes",
     "instructions": "Preparación"
+  },
+  "joinFamily": {
+    "title": "Únete a esta familia",
+    "description": "Te han invitado a compartir una colección de recetas. Tus propias recetas, etiquetas y categorías te acompañan y se combinan con las de la familia.",
+    "join": "Unirse a la familia",
+    "logInToJoin": "Inicia sesión para unirte",
+    "joining": "Uniéndose...",
+    "joinedToast": "Te has unido a la familia"
   }
 }
