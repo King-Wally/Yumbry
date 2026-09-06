@@ -10,6 +10,9 @@ export default {
         cream: '#fdfaf6',
         clay: '#b5603f',
       },
+      maxWidth: {
+        settings: '640px',
+      },
     },
   },
   plugins: [],
