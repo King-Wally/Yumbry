@@ -137,8 +137,15 @@
     }
   },
   "recipeForm": {
+    "eyebrow": "Recette",
     "editTitle": "Modifier la recette",
     "addTitle": "Ajouter une recette",
+    "detailsTitle": "Détails de la recette",
+    "detailsDescription": "L'essentiel — titre, description et photo.",
+    "timingTitle": "Temps & portions",
+    "timingDescription": "Le temps que cela prend à préparer, et pour combien de personnes.",
+    "categoryTagsTitle": "Catégorie & tags",
+    "categoryTagsDescription": "Aidez cette recette à apparaître dans les recherches et les filtres.",
     "reviewingUrlDraft": "Vous examinez une recette importée depuis une URL — vérifiez-la attentivement avant d'enregistrer.",
     "reviewingAiDraft": "Vous examinez un brouillon généré par l'IA — vérifiez-le attentivement avant d'enregistrer.",
     "titlePlaceholder": "Titre",

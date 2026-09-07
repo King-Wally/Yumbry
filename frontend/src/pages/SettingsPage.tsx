@@ -7,6 +7,7 @@ import { queryKeys } from '../api/queryKeys';
 import { useAuth } from '../hooks/useAuth';
 import { useFamily } from '../hooks/useFamily';
 import { useInvalidateFamilyData } from '../hooks/useInvalidateFamilyData';
+import Card from '../components/Card';
 import Dialog from '../components/Dialog';
 import { SUPPORTED_LOCALES, type SupportedLocale } from 'yumbry-shared';
 
@@ -17,42 +18,6 @@ const LOCALE_LABELS: Record<SupportedLocale, string> = {
   fr: 'Français',
   es: 'Español',
 };
-
-function SectionHeader({
-  icon,
-  title,
-  description,
-  danger = false,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  danger?: boolean;
-}) {
-  return (
-    <div
-      className={`mb-5 flex items-start gap-3.5 border-b pb-4 ${
-        danger ? 'border-red-600/15' : 'border-stone-100'
-      }`}
-    >
-      <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
-          danger ? 'bg-red-200 text-red-700' : 'bg-clay/10 text-clay'
-        }`}
-      >
-        {icon}
-      </div>
-      <div>
-        <h2
-          className={`font-serif text-lg font-bold ${danger ? 'text-red-900' : 'text-stone-900'}`}
-        >
-          {title}
-        </h2>
-        <p className="mt-0.5 text-[13px] text-stone-500">{description}</p>
-      </div>
-    </div>
-  );
-}
 
 export default function SettingsPage() {
   const { t } = useTranslation();
@@ -131,8 +96,8 @@ export default function SettingsPage() {
 
       <div className="flex flex-col gap-6">
         {/* Language */}
-        <section className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-          <SectionHeader
+        <Card>
+          <Card.Header
             icon={<Globe size={20} strokeWidth={2} />}
             title={t('settings.language.title')}
             description={t('settings.language.description')}
@@ -159,11 +124,11 @@ export default function SettingsPage() {
           {localeMutation.isError && (
             <p className="mt-2.5 text-[13px] text-red-600">{localeMutation.error?.message}</p>
           )}
-        </section>
+        </Card>
 
         {/* Password */}
-        <section className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-          <SectionHeader
+        <Card>
+          <Card.Header
             icon={<Lock size={20} strokeWidth={2} />}
             title={t('settings.password.title')}
             description={t('settings.password.description')}
@@ -229,12 +194,12 @@ export default function SettingsPage() {
               </button>
             </div>
           </form>
-        </section>
+        </Card>
 
         {/* Family */}
         {family && (
-          <section className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-            <SectionHeader
+          <Card>
+            <Card.Header
               icon={<Users size={20} strokeWidth={2} />}
               title={t('settings.family.title')}
               description={t('settings.family.description')}
@@ -294,12 +259,12 @@ export default function SettingsPage() {
                 {t('settings.family.leave')}
               </button>
             )}
-          </section>
+          </Card>
         )}
 
         {/* Danger zone */}
-        <section className="rounded-xl border border-red-300 bg-red-50/60 p-6 shadow-sm">
-          <SectionHeader
+        <Card danger>
+          <Card.Header
             danger
             icon={<TriangleAlert size={20} strokeWidth={2} />}
             title={t('settings.dangerZone.title')}
@@ -313,7 +278,7 @@ export default function SettingsPage() {
           >
             {t('settings.dangerZone.deleteAccount')}
           </button>
-        </section>
+        </Card>
       </div>
 
       <Dialog

@@ -137,8 +137,15 @@
     }
   },
   "recipeForm": {
+    "eyebrow": "Recipe",
     "editTitle": "Edit recipe",
     "addTitle": "Add a recipe",
+    "detailsTitle": "Recipe details",
+    "detailsDescription": "The basics — title, description, and photo.",
+    "timingTitle": "Timing & servings",
+    "timingDescription": "How long this takes to make, and how many it serves.",
+    "categoryTagsTitle": "Category & tags",
+    "categoryTagsDescription": "Help this recipe surface in search and filters.",
     "reviewingUrlDraft": "Reviewing a recipe imported from a URL — check it carefully before saving.",
     "reviewingAiDraft": "Reviewing an AI-generated draft — check it carefully before saving.",
     "titlePlaceholder": "Title",

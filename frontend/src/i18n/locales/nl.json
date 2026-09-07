@@ -137,8 +137,15 @@
     }
   },
   "recipeForm": {
+    "eyebrow": "Recept",
     "editTitle": "Recept bewerken",
     "addTitle": "Recept toevoegen",
+    "detailsTitle": "Receptdetails",
+    "detailsDescription": "De basis — titel, beschrijving en foto.",
+    "timingTitle": "Tijd & porties",
+    "timingDescription": "Hoe lang dit duurt om te maken, en voor hoeveel personen.",
+    "categoryTagsTitle": "Categorie & tags",
+    "categoryTagsDescription": "Help dit recept vindbaar te maken in zoekopdrachten en filters.",
     "reviewingUrlDraft": "Je bekijkt een recept dat vanaf een URL is geïmporteerd — controleer het zorgvuldig voordat je opslaat.",
     "reviewingAiDraft": "Je bekijkt een door AI gegenereerd concept — controleer het zorgvuldig voordat je opslaat.",
     "titlePlaceholder": "Titel",
