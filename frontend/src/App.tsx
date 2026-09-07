@@ -17,6 +17,7 @@ import { useAuth } from './hooks/useAuth';
 import { useAiStatus } from './hooks/useAiStatus';
 import { version } from '../package.json';
 import * as NavigationMenuPrimitive from '@radix-ui/react-navigation-menu';
+import { UserCircle } from 'lucide-react';
 
 export default function App() {
   const { t } = useTranslation();
@@ -38,7 +39,7 @@ export default function App() {
               <NavigationMenuPrimitive.Root className="relative flex items-center gap-2">
                 <NavigationMenuPrimitive.List>
                   <NavigationMenuPrimitive.Item>
-                    <NavigationMenuPrimitive.Trigger className="px-3 py-1.5 rounded-md transition hover:bg-stone-100 hover:text-clay data-[state=open]:bg-stone-100 data-[state=open]:text-clay">
+                    <NavigationMenuPrimitive.Trigger className="px-3 py-1.5 rounded-md transition bg-clay text-white hover:bg-clay/90 data-[state=open]:bg-clay/90 ">
                       {t('nav.addRecipe')}
                     </NavigationMenuPrimitive.Trigger>
                     <NavigationMenuPrimitive.Content className="absolute top-full left-1/2 transform -translate-x-1/2 text-nowrap mt-2 rounded-md bg-white shadow-lg border border-stone-200">
@@ -71,8 +72,8 @@ export default function App() {
                 </NavigationMenuPrimitive.List>
                 <NavigationMenuPrimitive.List>
                   <NavigationMenuPrimitive.Item>
-                    <NavigationMenuPrimitive.Trigger className="px-3 py-1.5 rounded-md transition hover:bg-stone-100 hover:text-clay data-[state=open]:bg-stone-100 data-[state=open]:text-clay">
-                      {t('nav.profile')}
+                    <NavigationMenuPrimitive.Trigger className="rounded-full border border-gray-300 p-1.5 transition hover:bg-stone-100 hover:text-clay data-[state=open]:bg-stone-100 data-[state=open]:text-clay">
+                      <UserCircle className="h-5 w-5" />
                     </NavigationMenuPrimitive.Trigger>
                     <NavigationMenuPrimitive.Content className="absolute top-full right-0 mt-2 text-nowrap rounded-md bg-white shadow-lg border border-stone-200">
                       <div className="flex flex-col">
