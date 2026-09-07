@@ -12,6 +12,7 @@ import IngredientListEditor from '../components/IngredientListEditor';
 import InstructionListEditor, { type InstructionDraft } from '../components/InstructionListEditor';
 import ServingsStepper from '../components/ServingsStepper';
 import { useCategories } from '../hooks/useCategories';
+import { useTags } from '../hooks/useTags';
 import { toNumber } from '../utils/numeric';
 import type { RecipeInput } from '../types';
 
@@ -55,6 +56,7 @@ export default function RecipeFormPage() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [formForRecipeId, setFormForRecipeId] = useState<number | null>(null);
   const [tagInput, setTagInput] = useState('');
+  const [tagInputFocused, setTagInputFocused] = useState(false);
   const [aiDraftApplied, setAiDraftApplied] = useState(false);
 
   const draftState = location.state as { aiDraft?: RecipeInput; draftSource?: 'ai' | 'url' } | null;
@@ -68,6 +70,16 @@ export default function RecipeFormPage() {
   });
 
   const { data: categories } = useCategories();
+  const { data: existingTags } = useTags();
+
+  const tagSuggestions =
+    tagInput.trim().length > 0
+      ? (existingTags ?? []).filter(
+          (t) =>
+            t.name.toLowerCase().includes(tagInput.toLowerCase()) &&
+            !form.tags.some((added) => added.toLowerCase() === t.name.toLowerCase())
+        )
+      : [];
 
   // Form hydration in render (not useEffect) to avoid stale-value flash
   if (existingRecipe && formForRecipeId !== existingRecipe.id && !aiDraft) {
@@ -134,8 +146,7 @@ export default function RecipeFormPage() {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
-  function addTag() {
-    const name = tagInput.trim();
+  function addTag(name = tagInput.trim()) {
     if (name && !form.tags.some((tag) => tag.toLowerCase() === name.toLowerCase())) {
       setForm((f) => ({ ...f, tags: [...f.tags, name] }));
     }
@@ -328,11 +339,13 @@ export default function RecipeFormPage() {
                   ))}
                 </div>
               )}
-              <div className="flex gap-2">
+              <div className="relative flex gap-2">
                 <input
                   type="text"
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
+                  onFocus={() => setTagInputFocused(true)}
+                  onBlur={() => setTagInputFocused(false)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -344,11 +357,29 @@ export default function RecipeFormPage() {
                 />
                 <button
                   type="button"
-                  onClick={addTag}
+                  onClick={() => addTag()}
                   className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
                 >
                   {t('common.add')}
                 </button>
+                {tagInputFocused && tagSuggestions.length > 0 && (
+                  <ul className="absolute left-0 top-full z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-stone-200 bg-white shadow-md">
+                    {tagSuggestions.map((tag) => (
+                      <li key={tag.id}>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            addTag(tag.name);
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm capitalize text-stone-700 hover:bg-stone-100"
+                        >
+                          {tag.name}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
           </div>
