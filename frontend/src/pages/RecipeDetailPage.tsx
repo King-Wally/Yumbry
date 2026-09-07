@@ -110,16 +110,16 @@ export default function RecipeDetailPage() {
         <div className="flex flex-col gap-4 rounded-xl border border-stone-200 bg-white p-5 shadow-sm lg:col-span-1">
           <div>
             <h1 className="font-serif text-3xl text-stone-900">{recipe.title}</h1>
-            {recipe.category && (
-              <span className="mt-2 inline-block rounded-full bg-clay px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
-                {recipe.category.name}
-              </span>
-            )}
             {recipe.description && <p className="mt-2 text-stone-600">{recipe.description}</p>}
           </div>
 
-          {recipe.tags && recipe.tags.length > 0 && (
+          {(recipe.tags || recipe.category) && (
             <div className="flex flex-wrap gap-2">
+              {recipe.category && (
+                <span className="rounded-full bg-clay px-3 py-1 text-xs font-semibold capitalize tracking-wide text-white">
+                  {recipe.category.name}
+                </span>
+              )}
               {recipe.tags.map((tag) => (
                 <span
                   key={tag.id}
