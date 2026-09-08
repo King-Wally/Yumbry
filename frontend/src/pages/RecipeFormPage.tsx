@@ -75,10 +75,10 @@ export default function RecipeFormPage() {
   const tagSuggestions =
     tagInput.trim().length > 0
       ? (existingTags ?? []).filter(
-        (t) =>
-          t.name.toLowerCase().includes(tagInput.toLowerCase()) &&
-          !form.tags.some((added) => added.toLowerCase() === t.name.toLowerCase())
-      )
+          (t) =>
+            t.name.toLowerCase().includes(tagInput.toLowerCase()) &&
+            !form.tags.some((added) => added.toLowerCase() === t.name.toLowerCase())
+        )
       : [];
 
   // Form hydration in render (not useEffect) to avoid stale-value flash

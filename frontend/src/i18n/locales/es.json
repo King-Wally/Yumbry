@@ -176,14 +176,17 @@
   },
   "importJson": {
     "title": "Importar una receta",
-    "description": "Pega el JSON-LD de la etiqueta de script <0>application/ld+json</0> de un sitio de recetas, o sube un archivo <1>.json</1>.",
+    "cardTitle": "Pega el JSON-LD",
+    "cardDescription": "Copia los datos estructurados de la receta y pégalos a continuación.",
     "importingText": "Importando...",
     "importFromText": "Importar desde texto",
     "uploadJsonFile": "Haz clic para subir un archivo .json"
   },
   "importUrl": {
     "title": "Importar una receta desde una URL",
-    "description": "Pega la URL de una página de receta — la buscaremos y extraeremos la receta.",
+    "cardTitle": "Pega un enlace",
+    "cardDescription": "Indica a Yumbry una página de receta y revisa un borrador antes de guardarlo.",
+    "urlLabel": "URL de la receta",
     "fetching": "Buscando...",
     "importFromUrl": "Importar desde URL"
   },

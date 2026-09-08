@@ -176,14 +176,17 @@
   },
   "importJson": {
     "title": "Import a recipe",
-    "description": "Paste the JSON-LD from a recipe site's <0>application/ld+json</0> script tag, or upload a <1>.json</1> file.",
+    "cardTitle": "Paste JSON-LD",
+    "cardDescription": "Copy the recipe's structured data and paste it below.",
     "importingText": "Importing...",
     "importFromText": "Import from text",
     "uploadJsonFile": "Click to upload a .json file"
   },
   "importUrl": {
     "title": "Import from URL",
-    "description": "Paste a recipe page URL — we'll fetch it and pull out the recipe.",
+    "cardTitle": "Paste a link",
+    "cardDescription": "Point Yumbry at a recipe page and review a draft before saving it.",
+    "urlLabel": "Recipe URL",
     "fetching": "Fetching...",
     "importFromUrl": "Import from URL"
   },
