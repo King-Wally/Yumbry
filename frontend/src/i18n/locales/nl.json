@@ -235,9 +235,6 @@
   "recipePreview": {
     "empty": "Je recept verschijnt hier zodra je begint te chatten.",
     "untitled": "Naamloos recept",
-    "prep": "Voorbereiding: {{minutes}} min",
-    "cook": "Bereiding: {{minutes}} min",
-    "total": "Totaal: {{minutes}} min",
     "servings": "Porties: {{count}}",
     "ingredients": "Ingrediënten",
     "instructions": "Bereidingswijze"

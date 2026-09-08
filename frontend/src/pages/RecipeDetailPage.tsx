@@ -13,6 +13,9 @@ import { useAiStatus } from '../hooks/useAiStatus';
 import { toNumber } from '../utils/numeric';
 import CollapsibleActions from '../components/CollapsibleActions';
 import ConfirmDialog from '../components/ConfirmDialog';
+import IngredientList from '../components/IngredientList';
+import InstructionList from '../components/InstructionList';
+import RecipeTagBadges from '../components/RecipeTagBadges';
 
 export default function RecipeDetailPage() {
   const { t } = useTranslation();
@@ -54,14 +57,14 @@ export default function RecipeDetailPage() {
   if (!recipe) return <p className="text-stone-500">{t('recipes.detail.notFound')}</p>;
 
   return (
-    <article className="space-y-8">
+    <article className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <Link
           to="/"
-          className="flex items-center gap-1 rounded-md px-2 py-1.5 text-sm text-stone-600 transition-colors hover:text-stone-900"
+          aria-label={t('common.back')}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-300 text-stone-600 hover:bg-stone-100"
         >
-          <ArrowLeft className="h-4 w-4" />
-          {t('common.back')}
+          <ArrowLeft size={18} />
         </Link>
         <CollapsibleActions>
           <a
@@ -113,23 +116,10 @@ export default function RecipeDetailPage() {
             {recipe.description && <p className="mt-2 text-stone-600">{recipe.description}</p>}
           </div>
 
-          {(recipe.tags || recipe.category) && (
-            <div className="flex flex-wrap gap-2">
-              {recipe.category && (
-                <span className="rounded-full bg-clay px-3 py-1 text-xs font-semibold capitalize tracking-wide text-white">
-                  {recipe.category.name}
-                </span>
-              )}
-              {recipe.tags.map((tag) => (
-                <span
-                  key={tag.id}
-                  className="rounded-full border border-clay/25 bg-clay/10 px-3 py-1 text-xs font-medium tracking-wide text-clay capitalize"
-                >
-                  {tag.name}
-                </span>
-              ))}
-            </div>
-          )}
+          <RecipeTagBadges
+            category={recipe.category?.name}
+            tags={recipe.tags.map((tag) => tag.name)}
+          />
 
           <div className="flex flex-wrap gap-3 lg:flex-col">
             {recipe.prep_time_minutes != null && (
@@ -167,32 +157,27 @@ export default function RecipeDetailPage() {
             <h2 className="font-serif text-xl text-stone-900">{t('recipes.detail.ingredients')}</h2>
           </div>
           <ServingsStepper value={servings} onChange={setServings} />
-          <ul className="mt-4 divide-y divide-stone-100">
-            {scaledIngredients.map((ingredient) => (
-              <li key={ingredient.id} className="flex items-start gap-2.5 py-2 text-stone-700">
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-clay/60" />
-                <span>{ingredient.displayText}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-4">
+            <IngredientList
+              items={scaledIngredients.map((ingredient) => ({
+                key: ingredient.id,
+                text: ingredient.displayText,
+              }))}
+            />
+          </div>
         </section>
 
         <section className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm lg:col-span-2">
           <h2 className="mb-3 font-serif text-xl text-stone-900">
             {t('recipes.detail.instructions')}
           </h2>
-          <ol className="space-y-5">
-            {recipe.instructions?.map((step) => (
-              <li key={step.id} className="flex gap-4">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-clay text-sm font-medium text-white">
-                  {step.step_number}
-                </span>
-                <div className="flex-1">
-                  <p className="text-stone-700">{step.text}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
+          <InstructionList
+            items={(recipe.instructions ?? []).map((step) => ({
+              key: step.id,
+              step_number: step.step_number,
+              text: step.text,
+            }))}
+          />
         </section>
       </div>
     </article>

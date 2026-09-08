@@ -235,9 +235,6 @@
   "recipePreview": {
     "empty": "Votre recette apparaîtra ici dès que vous commencerez à discuter.",
     "untitled": "Recette sans titre",
-    "prep": "Préparation : {{minutes}} min",
-    "cook": "Cuisson : {{minutes}} min",
-    "total": "Total : {{minutes}} min",
     "servings": "Portions : {{count}}",
     "ingredients": "Ingrédients",
     "instructions": "Préparation"

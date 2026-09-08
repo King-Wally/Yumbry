@@ -178,7 +178,7 @@ export default function RecipeFormPage() {
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-3xl pb-4">
-      <div className="mb-8 flex items-center gap-3">
+      <div className="mb-4 flex items-center gap-3">
         <Link
           to={backTo}
           aria-label={t('common.back')}
@@ -405,7 +405,13 @@ export default function RecipeFormPage() {
       )}
 
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-stone-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl items-center justify-end gap-3 px-6 py-4">
+        <div className="mx-auto flex max-w-3xl items-center justify-center gap-3 px-6 py-4">
+          <Link
+            to={backTo}
+            className="rounded-md border border-stone-300 px-4 py-2 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
+          >
+            {t('common.cancel')}
+          </Link>
           <button
             type="submit"
             disabled={saveMutation.isPending}
@@ -413,12 +419,6 @@ export default function RecipeFormPage() {
           >
             {saveMutation.isPending ? t('recipeForm.saving') : t('recipeForm.saveButton')}
           </button>
-          <Link
-            to={backTo}
-            className="rounded-md border border-stone-300 px-4 py-2 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
-          >
-            {t('common.cancel')}
-          </Link>
         </div>
       </div>
     </form>

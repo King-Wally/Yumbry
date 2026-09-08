@@ -235,9 +235,6 @@
   "recipePreview": {
     "empty": "Your recipe will appear here once you start chatting.",
     "untitled": "Untitled recipe",
-    "prep": "Prep: {{minutes}} min",
-    "cook": "Cook: {{minutes}} min",
-    "total": "Total: {{minutes}} min",
     "servings": "Servings: {{count}}",
     "ingredients": "Ingredients",
     "instructions": "Instructions"

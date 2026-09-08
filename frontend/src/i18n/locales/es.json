@@ -235,9 +235,6 @@
   "recipePreview": {
     "empty": "Tu receta aparecerá aquí en cuanto empieces a chatear.",
     "untitled": "Receta sin título",
-    "prep": "Preparación: {{minutes}} min",
-    "cook": "Cocción: {{minutes}} min",
-    "total": "Total: {{minutes}} min",
     "servings": "Raciones: {{count}}",
     "ingredients": "Ingredientes",
     "instructions": "Preparación"

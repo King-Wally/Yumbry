@@ -127,15 +127,33 @@ export default function AiChatPage() {
                 key={index}
                 className={
                   message.role === 'user'
-                    ? 'ml-auto max-w-[80%] rounded-lg bg-clay px-3 py-2 text-sm text-white'
-                    : 'mr-auto max-w-[80%] rounded-lg bg-stone-100 px-3 py-2 text-sm text-stone-700'
+                    ? 'ml-auto max-w-[80%] w-fit rounded-lg bg-clay px-3 py-2 text-sm text-white'
+                    : 'mr-auto max-w-[80%] w-fit rounded-lg bg-stone-100 px-3 py-2 text-sm text-stone-700'
                 }
               >
                 {message.content}
               </div>
             ))}
             {chatMutation.isPending && (
-              <p className="text-sm text-stone-400">{t('aiChat.thinking')}</p>
+              <div
+                className="mr-auto w-fit flex items-center gap-1 rounded-lg bg-stone-100 px-3 py-2"
+                role="status"
+              >
+                <span className="sr-only">{t('aiChat.thinking')}</span>
+                <span
+                  className="h-2 w-2 animate-custom-bounce rounded-full bg-stone-400 "
+                  style={{ animationDelay: '0ms' }}
+                />
+
+                <span
+                  className="h-2 w-2 animate-custom-bounce rounded-full bg-stone-400"
+                  style={{ animationDelay: '150ms' }}
+                />
+                <span
+                  className="h-2 w-2 animate-custom-bounce rounded-full bg-stone-400"
+                  style={{ animationDelay: '300ms' }}
+                />
+              </div>
             )}
           </div>
 
