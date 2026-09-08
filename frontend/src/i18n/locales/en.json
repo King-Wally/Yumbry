@@ -189,7 +189,7 @@
   },
   "aiChat": {
     "loadingRecipe": "Loading recipe...",
-    "improveTitle": "Improve \"{{title}}\" with AI",
+    "improveTitle": "Improve with AI",
     "createTitle": "Create with AI",
     "improveDescription": "Describe what you'd like to change — the preview always shows the current recipe.",
     "createDescription": "Describe the dish you'd like to make — a live preview builds as you chat.",
@@ -235,7 +235,7 @@
   "recipePreview": {
     "empty": "Your recipe will appear here once you start chatting.",
     "untitled": "Untitled recipe",
-    "servings": "Servings: {{count}}",
+    "servings": "Servings",
     "ingredients": "Ingredients",
     "instructions": "Instructions"
   },

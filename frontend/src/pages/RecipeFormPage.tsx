@@ -75,10 +75,10 @@ export default function RecipeFormPage() {
   const tagSuggestions =
     tagInput.trim().length > 0
       ? (existingTags ?? []).filter(
-          (t) =>
-            t.name.toLowerCase().includes(tagInput.toLowerCase()) &&
-            !form.tags.some((added) => added.toLowerCase() === t.name.toLowerCase())
-        )
+        (t) =>
+          t.name.toLowerCase().includes(tagInput.toLowerCase()) &&
+          !form.tags.some((added) => added.toLowerCase() === t.name.toLowerCase())
+      )
       : [];
 
   // Form hydration in render (not useEffect) to avoid stale-value flash
@@ -186,18 +186,13 @@ export default function RecipeFormPage() {
         >
           <ArrowLeft size={18} />
         </Link>
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-stone-400">
-            {t('recipeForm.eyebrow')}
-          </p>
-          <h1 className="font-serif text-2xl text-stone-900">
-            {isEditing ? t('recipeForm.editTitle') : t('recipeForm.addTitle')}
-          </h1>
-        </div>
+        <h1 className="font-serif text-2xl text-stone-900 font-bold">
+          {isEditing ? t('recipeForm.editTitle') : t('recipeForm.addTitle')}
+        </h1>
       </div>
 
       {aiDraft && (
-        <p className="mb-8 rounded-md border border-clay/25 bg-clay/10 px-3 py-2 text-sm text-clay">
+        <p className="mb-4 rounded-md border border-clay/25 bg-clay/10 px-3 py-2 text-sm text-clay">
           {draftSource === 'url'
             ? t('recipeForm.reviewingUrlDraft')
             : t('recipeForm.reviewingAiDraft')}

@@ -4,6 +4,7 @@ import InstructionList from './InstructionList';
 import RecipeTagBadges from './RecipeTagBadges';
 import TimeStat from './TimeStat';
 import type { RecipeInput } from '../types';
+import { Users } from 'lucide-react';
 
 interface RecipePreviewProps {
   draft: RecipeInput | null;
@@ -48,7 +49,15 @@ export default function RecipePreview({ draft }: RecipePreviewProps) {
             minutes={draft.total_time_minutes}
           />
         )}
-        <span>{t('recipePreview.servings', { count: draft.servings })}</span>
+        <div className="flex items-center gap-2 text-stone-600">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-clay/10 text-clay">
+            <Users size={16} strokeWidth={2} />
+          </span>
+          <div className="leading-tight">
+            <div className="text-xs text-stone-400">{t('recipePreview.servings')}</div>
+            <div className="text-sm font-medium text-stone-700">{draft.servings}</div>
+          </div>
+        </div>
       </div>
 
       <section>

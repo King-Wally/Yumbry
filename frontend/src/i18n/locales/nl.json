@@ -189,7 +189,7 @@
   },
   "aiChat": {
     "loadingRecipe": "Recept laden...",
-    "improveTitle": "\"{{title}}\" verbeteren met AI",
+    "improveTitle": "Verbeteren met AI",
     "createTitle": "Maken met AI",
     "improveDescription": "Beschrijf wat je wilt veranderen — de voorvertoning toont altijd het huidige recept.",
     "createDescription": "Beschrijf het gerecht dat je wilt maken — een live voorvertoning wordt opgebouwd terwijl je chat.",
@@ -235,7 +235,7 @@
   "recipePreview": {
     "empty": "Je recept verschijnt hier zodra je begint te chatten.",
     "untitled": "Naamloos recept",
-    "servings": "Porties: {{count}}",
+    "servings": "Porties",
     "ingredients": "Ingrediënten",
     "instructions": "Bereidingswijze"
   },

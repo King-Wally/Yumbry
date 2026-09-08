@@ -189,7 +189,7 @@
   },
   "aiChat": {
     "loadingRecipe": "Cargando receta...",
-    "improveTitle": "Mejorar \"{{title}}\" con IA",
+    "improveTitle": "Mejorar con IA",
     "createTitle": "Crear con IA",
     "improveDescription": "Describe lo que te gustaría cambiar — la vista previa siempre muestra la receta actual.",
     "createDescription": "Describe el plato que te gustaría preparar — se genera una vista previa en directo mientras chateas.",
@@ -235,7 +235,7 @@
   "recipePreview": {
     "empty": "Tu receta aparecerá aquí en cuanto empieces a chatear.",
     "untitled": "Receta sin título",
-    "servings": "Raciones: {{count}}",
+    "servings": "Raciones",
     "ingredients": "Ingredientes",
     "instructions": "Preparación"
   },

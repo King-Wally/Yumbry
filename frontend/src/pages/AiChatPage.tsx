@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -17,6 +17,7 @@ import { useAuth } from '../hooks/useAuth';
 import { renderDraftForReader } from '../utils/render-draft';
 import { toRecipeInput } from '../utils/recipe-mapping';
 import type { AiChatMessage, AiRecipeDraft } from '../types';
+import { ArrowLeft } from 'lucide-react';
 
 export default function AiChatPage() {
   const { t, i18n } = useTranslation();
@@ -25,6 +26,7 @@ export default function AiChatPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const backTo = isImproving ? `/recipes/${id}` : '/';
 
   const { data: recipe } = useQuery({
     queryKey: queryKeys.recipe(id!),
@@ -101,16 +103,18 @@ export default function AiChatPage() {
   if (isImproving && !recipe) return <p className="text-stone-500">{t('aiChat.loadingRecipe')}</p>;
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="font-serif text-2xl text-stone-900">
-          {isImproving
-            ? t('aiChat.improveTitle', { title: recipe!.title })
-            : t('aiChat.createTitle')}
+    <div className="space-y-4 pb-4">
+      <div className="mb-4 flex items-center gap-3">
+        <Link
+          to={backTo}
+          aria-label={t('common.back')}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-300 text-stone-600 hover:bg-stone-100"
+        >
+          <ArrowLeft size={18} />
+        </Link>
+        <h1 className="font-serif text-2xl text-stone-900 font-bold">
+          {isImproving ? t('aiChat.improveTitle') : t('aiChat.createTitle')}
         </h1>
-        <p className="mt-1 text-sm text-stone-500">
-          {isImproving ? t('aiChat.improveDescription') : t('aiChat.createDescription')}
-        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
@@ -235,15 +239,23 @@ export default function AiChatPage() {
         </div>
       </div>
 
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={!shownDraft}
-          className="rounded-md bg-clay px-4 py-2 text-white disabled:opacity-50"
-        >
-          {t('aiChat.saveAndReview')}
-        </button>
+      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-stone-200 bg-white/90 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-center gap-3 px-6 py-4">
+          <Link
+            to={backTo}
+            className="rounded-md border border-stone-300 px-4 py-2 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
+          >
+            {t('common.cancel')}
+          </Link>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={!shownDraft}
+            className="rounded-md bg-clay px-4 py-2 text-sm text-white disabled:opacity-50"
+          >
+            {t('aiChat.saveAndReview')}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Globe, Lock, TriangleAlert, Users } from 'lucide-react';
+import { ArrowLeft, Globe, Lock, TriangleAlert, Users } from 'lucide-react';
 import { changePassword, deleteAccount, leaveFamily, updateProfile } from '../api/client';
 import { queryKeys } from '../api/queryKeys';
 import { useAuth } from '../hooks/useAuth';
@@ -10,6 +10,7 @@ import { useInvalidateFamilyData } from '../hooks/useInvalidateFamilyData';
 import Card from '../components/Card';
 import Dialog from '../components/Dialog';
 import { SUPPORTED_LOCALES, type SupportedLocale } from 'yumbry-shared';
+import { Link } from 'react-router-dom';
 
 // Native-language names — always shown as-is, regardless of the active UI language.
 const LOCALE_LABELS: Record<SupportedLocale, string> = {
@@ -87,12 +88,18 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-settings">
-      <h1 className="font-serif text-[28px] font-bold text-stone-900">
-        {t('settings.title', 'Settings')}
-      </h1>
-      <p className="mt-1 mb-8 text-sm text-stone-500">
-        {t('settings.subtitle', 'Manage your account, family, and security.')}
-      </p>
+      <div className="mb-4 flex items-center gap-3">
+        <Link
+          to="/"
+          aria-label={t('common.back')}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-300 text-stone-600 hover:bg-stone-100"
+        >
+          <ArrowLeft size={18} />
+        </Link>
+        <h1 className="font-serif text-2xl font-bold text-stone-900">
+          {t('settings.title', 'Settings')}
+        </h1>
+      </div>
 
       <div className="flex flex-col gap-6">
         {/* Language */}

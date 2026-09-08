@@ -189,7 +189,7 @@
   },
   "aiChat": {
     "loadingRecipe": "Chargement de la recette...",
-    "improveTitle": "Améliorer « {{title}} » avec l'IA",
+    "improveTitle": "Améliorer avec l'IA",
     "createTitle": "Créer avec l'IA",
     "improveDescription": "Décrivez ce que vous souhaitez changer — l'aperçu affiche toujours la recette actuelle.",
     "createDescription": "Décrivez le plat que vous souhaitez préparer — un aperçu en direct se construit au fil de la conversation.",
@@ -235,7 +235,7 @@
   "recipePreview": {
     "empty": "Votre recette apparaîtra ici dès que vous commencerez à discuter.",
     "untitled": "Recette sans titre",
-    "servings": "Portions : {{count}}",
+    "servings": "Portions",
     "ingredients": "Ingrédients",
     "instructions": "Préparation"
   },
