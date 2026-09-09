@@ -192,7 +192,7 @@ export default function RecipeFormPage() {
       </div>
 
       {aiDraft && (
-        <p className="mb-4 rounded-md border border-clay/25 bg-clay/10 px-3 py-2 text-sm text-clay">
+        <p className="border-clay/25 bg-clay/10 text-clay mb-4 rounded-md border px-3 py-2 text-sm">
           {draftSource === 'url'
             ? t('recipeForm.reviewingUrlDraft')
             : t('recipeForm.reviewingAiDraft')}
@@ -217,7 +217,7 @@ export default function RecipeFormPage() {
                 value={form.title}
                 onChange={(e) => updateField('title', e.target.value)}
                 placeholder={t('recipeForm.titlePlaceholder')}
-                className="w-full rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none"
+                className="focus:border-clay w-full rounded-md border border-stone-300 px-3 py-2 focus:outline-none"
               />
             </div>
             <div>
@@ -229,7 +229,7 @@ export default function RecipeFormPage() {
                 onChange={(e) => updateField('description', e.target.value)}
                 placeholder={t('recipeForm.descriptionPlaceholder')}
                 rows={2}
-                className="w-full rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none"
+                className="focus:border-clay w-full rounded-md border border-stone-300 px-3 py-2 focus:outline-none"
               />
             </div>
             {isEditing && (
@@ -261,7 +261,7 @@ export default function RecipeFormPage() {
                 min="0"
                 value={form.prep_time_minutes}
                 onChange={(e) => updateField('prep_time_minutes', e.target.value)}
-                className="mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5 focus:border-clay focus:outline-none"
+                className="focus:border-clay mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5 focus:outline-none"
               />
             </label>
             <label className="text-sm text-stone-600">
@@ -271,7 +271,7 @@ export default function RecipeFormPage() {
                 min="0"
                 value={form.cook_time_minutes}
                 onChange={(e) => updateField('cook_time_minutes', e.target.value)}
-                className="mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5 focus:border-clay focus:outline-none"
+                className="focus:border-clay mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5 focus:outline-none"
               />
             </label>
             <label className="text-sm text-stone-600">
@@ -281,7 +281,7 @@ export default function RecipeFormPage() {
                 min="0"
                 value={form.total_time_minutes}
                 onChange={(e) => updateField('total_time_minutes', e.target.value)}
-                className="mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5 focus:border-clay focus:outline-none"
+                className="focus:border-clay mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5 focus:outline-none"
               />
             </label>
           </div>
@@ -319,7 +319,7 @@ export default function RecipeFormPage() {
                   {form.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="flex items-center gap-1 rounded-full bg-stone-100 px-2.5 py-1 text-xs capitalize text-stone-600"
+                      className="flex items-center gap-1 rounded-full bg-stone-100 px-2.5 py-1 text-xs text-stone-600 capitalize"
                     >
                       {tag}
                       <button
@@ -348,7 +348,7 @@ export default function RecipeFormPage() {
                     }
                   }}
                   placeholder={t('recipeForm.addTagPlaceholder')}
-                  className="flex-1 rounded-md border border-stone-300 px-3 py-1.5 focus:border-clay focus:outline-none"
+                  className="focus:border-clay flex-1 rounded-md border border-stone-300 px-3 py-1.5 focus:outline-none"
                 />
                 <button
                   type="button"
@@ -358,7 +358,7 @@ export default function RecipeFormPage() {
                   {t('common.add')}
                 </button>
                 {tagInputFocused && tagSuggestions.length > 0 && (
-                  <ul className="absolute left-0 top-full z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-stone-200 bg-white shadow-md">
+                  <ul className="absolute top-full left-0 z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-stone-200 bg-white shadow-md">
                     {tagSuggestions.map((tag) => (
                       <li key={tag.id}>
                         <button
@@ -367,7 +367,7 @@ export default function RecipeFormPage() {
                             e.preventDefault();
                             addTag(tag.name);
                           }}
-                          className="w-full px-3 py-2 text-left text-sm capitalize text-stone-700 hover:bg-stone-100"
+                          className="w-full px-3 py-2 text-left text-sm text-stone-700 capitalize hover:bg-stone-100"
                         >
                           {tag.name}
                         </button>
@@ -410,7 +410,7 @@ export default function RecipeFormPage() {
           <button
             type="submit"
             disabled={saveMutation.isPending}
-            className="rounded-md bg-clay px-4 py-2 text-sm text-white disabled:opacity-50"
+            className="bg-clay rounded-md px-4 py-2 text-sm text-white disabled:opacity-50"
           >
             {saveMutation.isPending ? t('recipeForm.saving') : t('recipeForm.saveButton')}
           </button>

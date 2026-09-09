@@ -50,7 +50,7 @@ export default function RecipePreview({ draft }: RecipePreviewProps) {
           />
         )}
         <div className="flex items-center gap-2 text-stone-600">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-clay/10 text-clay">
+          <span className="bg-clay/10 text-clay flex h-9 w-9 items-center justify-center rounded-full">
             <Users size={16} strokeWidth={2} />
           </span>
           <div className="leading-tight">

@@ -55,13 +55,13 @@ export default function UrlImportPage() {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://example.com/some-recipe"
-              className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-clay focus:outline-none"
+              className="focus:border-clay w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:outline-none"
             />
           </div>
           <button
             type="submit"
             disabled={!url.trim() || urlMutation.isPending}
-            className="rounded-md bg-clay px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="bg-clay rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             {urlMutation.isPending ? t('importUrl.fetching') : t('importUrl.importFromUrl')}
           </button>

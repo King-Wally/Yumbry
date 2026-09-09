@@ -87,7 +87,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-settings">
+    <div className="max-w-settings mx-auto">
       <div className="mb-4 flex items-center gap-3">
         <Link
           to="/"
@@ -116,7 +116,7 @@ export default function SettingsPage() {
               value={user?.locale ?? 'en'}
               onChange={(e) => localeMutation.mutate(e.target.value as SupportedLocale)}
               disabled={localeMutation.isPending}
-              className="mt-1.5 w-full rounded-md border border-stone-300 px-3 py-2 text-sm text-stone-900 focus:border-clay focus:outline-none disabled:opacity-50"
+              className="focus:border-clay mt-1.5 w-full rounded-md border border-stone-300 px-3 py-2 text-sm text-stone-900 focus:outline-none disabled:opacity-50"
             >
               {SUPPORTED_LOCALES.map((key) => (
                 <option key={key} value={key}>
@@ -150,7 +150,7 @@ export default function SettingsPage() {
                 autoComplete="current-password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                className="mt-1.5 w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-clay focus:outline-none"
+                className="focus:border-clay mt-1.5 w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:outline-none"
               />
             </label>
 
@@ -163,7 +163,7 @@ export default function SettingsPage() {
                 autoComplete="new-password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="mt-1.5 w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-clay focus:outline-none"
+                className="focus:border-clay mt-1.5 w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:outline-none"
               />
             </label>
 
@@ -175,7 +175,7 @@ export default function SettingsPage() {
                 autoComplete="new-password"
                 value={confirmNewPassword}
                 onChange={(e) => setConfirmNewPassword(e.target.value)}
-                className="mt-1.5 w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-clay focus:outline-none"
+                className="focus:border-clay mt-1.5 w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:outline-none"
               />
             </label>
 
@@ -193,7 +193,7 @@ export default function SettingsPage() {
               <button
                 type="submit"
                 disabled={changePasswordMutation.isPending || passwordMismatch}
-                className="rounded-md bg-clay px-4 py-2 text-sm text-white disabled:opacity-50"
+                className="bg-clay rounded-md px-4 py-2 text-sm text-white disabled:opacity-50"
               >
                 {changePasswordMutation.isPending
                   ? t('settings.password.saving')
@@ -244,12 +244,12 @@ export default function SettingsPage() {
                   readOnly
                   value={inviteUrl}
                   onFocus={(e) => e.currentTarget.select()}
-                  className="w-full rounded-md border border-stone-300 bg-stone-50 px-3 py-2 text-[13px] text-stone-600 focus:border-clay focus:outline-none"
+                  className="focus:border-clay w-full rounded-md border border-stone-300 bg-stone-50 px-3 py-2 text-[13px] text-stone-600 focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={handleCopyInvite}
-                  className="shrink-0 rounded-md bg-clay px-4 py-2 text-[13px] text-white"
+                  className="bg-clay shrink-0 rounded-md px-4 py-2 text-[13px] text-white"
                 >
                   {copied ? t('settings.family.copied') : t('settings.family.copyLink')}
                 </button>
@@ -304,7 +304,7 @@ export default function SettingsPage() {
               type="button"
               onClick={() => leaveFamilyMutation.mutate()}
               disabled={leaveFamilyMutation.isPending}
-              className="rounded-md bg-clay px-4 py-2 text-white disabled:opacity-50"
+              className="bg-clay rounded-md px-4 py-2 text-white disabled:opacity-50"
             >
               {leaveFamilyMutation.isPending
                 ? t('settings.family.leaving')
@@ -339,7 +339,7 @@ export default function SettingsPage() {
               autoFocus
               value={deletePassword}
               onChange={(e) => setDeletePassword(e.target.value)}
-              className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none"
+              className="focus:border-clay mt-1 w-full rounded-md border border-stone-300 px-3 py-2 focus:outline-none"
             />
           </label>
 

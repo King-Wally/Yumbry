@@ -22,7 +22,7 @@ export default function IngredientListEditor({ ingredients, onChange }: Ingredie
           value={line}
           onChange={(e) => update(e.target.value)}
           placeholder={t('recipeForm.ingredients.placeholder')}
-          className="flex-1 rounded-md border border-stone-300 px-3 py-1.5 focus:border-clay focus:outline-none"
+          className="focus:border-clay flex-1 rounded-md border border-stone-300 px-3 py-1.5 focus:outline-none"
         />
       )}
     />

@@ -9,14 +9,14 @@ export default function RecipeTagBadges({ category, tags }: RecipeTagBadgesProps
   return (
     <div className="flex flex-wrap gap-2">
       {category && (
-        <span className="rounded-full bg-clay px-3 py-1 text-xs font-semibold capitalize tracking-wide text-white">
+        <span className="bg-clay rounded-full px-3 py-1 text-xs font-semibold tracking-wide text-white capitalize">
           {category}
         </span>
       )}
       {tags.map((tag) => (
         <span
           key={tag}
-          className="rounded-full border border-clay/25 bg-clay/10 px-3 py-1 text-xs font-medium capitalize tracking-wide text-clay"
+          className="border-clay/25 bg-clay/10 text-clay rounded-full border px-3 py-1 text-xs font-medium tracking-wide capitalize"
         >
           {tag}
         </span>

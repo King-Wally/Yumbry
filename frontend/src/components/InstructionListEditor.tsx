@@ -36,7 +36,7 @@ export default function InstructionListEditor({
               onChange={(e) => update({ ...step, text: e.target.value })}
               rows={2}
               placeholder={t('recipeForm.instructions.placeholder')}
-              className="w-full rounded-md border border-stone-300 px-3 py-1.5 focus:border-clay focus:outline-none"
+              className="focus:border-clay w-full rounded-md border border-stone-300 px-3 py-1.5 focus:outline-none"
             />
           </div>
         </>

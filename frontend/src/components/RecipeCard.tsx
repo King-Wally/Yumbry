@@ -12,7 +12,7 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
   return (
     <Link
       to={`/recipes/${recipe.id}`}
-      className="group block overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-clay/30 hover:shadow-lg"
+      className="group hover:border-clay/30 block overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-lg"
     >
       <div className="aspect-[4/3] w-full overflow-hidden bg-stone-100">
         {recipe.image_path ? (
@@ -32,11 +32,11 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
       </div>
       <div className="p-4">
         {recipe.category && (
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-clay">
+          <p className="text-clay mb-1 text-xs font-semibold tracking-wide uppercase">
             {recipe.category.name}
           </p>
         )}
-        <h3 className="font-serif text-lg text-stone-900 transition-colors group-hover:text-clay">
+        <h3 className="group-hover:text-clay font-serif text-lg text-stone-900 transition-colors">
           {recipe.title}
         </h3>
         {recipe.description && (
@@ -46,7 +46,7 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
           {recipe.tags?.map((tag) => (
             <span
               key={tag.id}
-              className="rounded-full bg-stone-100 px-2 py-0.5 text-xs capitalize text-stone-600"
+              className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600 capitalize"
             >
               {tag.name}
             </span>

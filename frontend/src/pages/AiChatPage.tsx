@@ -131,7 +131,7 @@ export default function AiChatPage() {
                 key={index}
                 className={
                   message.role === 'user'
-                    ? 'ml-auto w-fit max-w-[80%] rounded-lg bg-clay px-3 py-2 text-sm text-white'
+                    ? 'bg-clay ml-auto w-fit max-w-[80%] rounded-lg px-3 py-2 text-sm text-white'
                     : 'mr-auto w-fit max-w-[80%] rounded-lg bg-stone-100 px-3 py-2 text-sm text-stone-700'
                 }
               >
@@ -145,16 +145,16 @@ export default function AiChatPage() {
               >
                 <span className="sr-only">{t('aiChat.thinking')}</span>
                 <span
-                  className="h-2 w-2 animate-custom-bounce rounded-full bg-stone-400"
+                  className="animate-custom-bounce h-2 w-2 rounded-full bg-stone-400"
                   style={{ animationDelay: '0ms' }}
                 />
 
                 <span
-                  className="h-2 w-2 animate-custom-bounce rounded-full bg-stone-400"
+                  className="animate-custom-bounce h-2 w-2 rounded-full bg-stone-400"
                   style={{ animationDelay: '150ms' }}
                 />
                 <span
-                  className="h-2 w-2 animate-custom-bounce rounded-full bg-stone-400"
+                  className="animate-custom-bounce h-2 w-2 rounded-full bg-stone-400"
                   style={{ animationDelay: '300ms' }}
                 />
               </div>
@@ -171,7 +171,7 @@ export default function AiChatPage() {
                   isImproving ? t('aiChat.changePlaceholder') : t('aiChat.cookPlaceholder')
                 }
                 disabled={chatMutation.isPending}
-                className="flex-1 rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none disabled:opacity-50"
+                className="focus:border-clay flex-1 rounded-md border border-stone-300 px-3 py-2 focus:outline-none disabled:opacity-50"
               />
               <button
                 type="submit"
@@ -199,7 +199,7 @@ export default function AiChatPage() {
                   preferenceMutation.mutate({ unitSystem: e.target.value as UnitSystem })
                 }
                 disabled={preferenceMutation.isPending}
-                className="mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5 text-sm text-stone-700 focus:border-clay focus:outline-none disabled:opacity-50"
+                className="focus:border-clay mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5 text-sm text-stone-700 focus:outline-none disabled:opacity-50"
               >
                 {UNIT_SYSTEMS.map((key) => (
                   <option key={key} value={key}>
@@ -222,7 +222,7 @@ export default function AiChatPage() {
                 // Imperial has no alternative to spoons at these sizes, so the control would have
                 // nothing to do.
                 disabled={preferenceMutation.isPending || unitSystem === 'imperial'}
-                className="mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5 text-sm text-stone-700 focus:border-clay focus:outline-none disabled:opacity-50"
+                className="focus:border-clay mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5 text-sm text-stone-700 focus:outline-none disabled:opacity-50"
               >
                 {SMALL_VOLUME_STYLES.map((key) => (
                   <option key={key} value={key}>
@@ -251,7 +251,7 @@ export default function AiChatPage() {
             type="button"
             onClick={handleSave}
             disabled={!shownDraft}
-            className="rounded-md bg-clay px-4 py-2 text-sm text-white disabled:opacity-50"
+            className="bg-clay rounded-md px-4 py-2 text-sm text-white disabled:opacity-50"
           >
             {t('aiChat.saveAndReview')}
           </button>

@@ -62,7 +62,7 @@ export default function CategoryPicker({ categories, value, onChange }: Category
       {value && (
         <p className="mt-1.5 text-xs text-stone-500">
           {t('categoryPicker.selected')}{' '}
-          <span className="font-medium capitalize text-stone-700">{value}</span>{' '}
+          <span className="font-medium text-stone-700 capitalize">{value}</span>{' '}
           <button
             type="button"
             onClick={() => onChange(null)}

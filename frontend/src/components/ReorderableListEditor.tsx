@@ -191,7 +191,7 @@ export default function ReorderableListEditor<T>({
       <button
         type="button"
         onClick={addItem}
-        className="rounded-md border border-dashed border-stone-300 px-3 py-1.5 text-sm text-stone-500 hover:border-clay hover:text-clay"
+        className="hover:border-clay hover:text-clay rounded-md border border-dashed border-stone-300 px-3 py-1.5 text-sm text-stone-500"
       >
         {addLabel}
       </button>

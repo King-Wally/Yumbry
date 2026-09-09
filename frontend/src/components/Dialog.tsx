@@ -14,7 +14,7 @@ export default function Dialog({ open, onOpenChange, title, description, childre
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
         <RadixDialog.Overlay className="fixed inset-0 bg-stone-900/40" />
-        <RadixDialog.Content className="fixed left-1/2 top-1/2 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-lg focus:outline-none">
+        <RadixDialog.Content className="fixed top-1/2 left-1/2 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-lg focus:outline-none">
           <RadixDialog.Title className="font-serif text-xl text-stone-900">
             {title}
           </RadixDialog.Title>

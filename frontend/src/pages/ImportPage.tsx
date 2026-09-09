@@ -59,12 +59,12 @@ export default function ImportPage() {
               onChange={(e) => setJsonLd(e.target.value)}
               rows={12}
               placeholder='{ "@context": "https://schema.org", "@type": "Recipe", ... }'
-              className="w-full rounded-md border border-stone-300 px-3 py-2 font-mono text-sm focus:border-clay focus:outline-none"
+              className="focus:border-clay w-full rounded-md border border-stone-300 px-3 py-2 font-mono text-sm focus:outline-none"
             />
             <button
               type="submit"
               disabled={!jsonLd.trim() || mutation.isPending}
-              className="rounded-md bg-clay px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="bg-clay rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
               {mutation.isPending ? t('importJson.importingText') : t('importJson.importFromText')}
             </button>
@@ -78,7 +78,7 @@ export default function ImportPage() {
         </div>
 
         <Card>
-          <label className="block cursor-pointer rounded-lg border border-dashed border-stone-300 px-4 py-8 text-center text-sm text-stone-500 hover:border-clay hover:text-clay">
+          <label className="hover:border-clay hover:text-clay block cursor-pointer rounded-lg border border-dashed border-stone-300 px-4 py-8 text-center text-sm text-stone-500">
             <input
               type="file"
               accept="application/json,.json"

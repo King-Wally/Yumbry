@@ -21,7 +21,7 @@ export default function TimeStat({ icon, label, minutes }: TimeStatProps) {
   const { t } = useTranslation();
   return (
     <div className="flex items-center gap-2 text-stone-600">
-      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-clay/10 text-clay">
+      <span className="bg-clay/10 text-clay flex h-9 w-9 items-center justify-center rounded-full">
         <StatIcon icon={icon} />
       </span>
       <div className="leading-tight">

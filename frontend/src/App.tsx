@@ -25,12 +25,12 @@ export default function App() {
   const { data: aiStatus } = useAiStatus({ enabled: Boolean(user) });
 
   return (
-    <div className="flex min-h-screen flex-col bg-cream">
+    <div className="bg-cream flex min-h-screen flex-col">
       <header className="sticky top-0 z-10 border-b border-stone-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <Link
             to="/"
-            className="font-serif text-2xl tracking-tight text-stone-900 transition-colors hover:text-clay"
+            className="hover:text-clay font-serif text-2xl tracking-tight text-stone-900 transition-colors"
           >
             Yumbry
           </Link>
@@ -39,10 +39,10 @@ export default function App() {
               <NavigationMenuPrimitive.Root className="relative flex items-center gap-2">
                 <NavigationMenuPrimitive.List>
                   <NavigationMenuPrimitive.Item>
-                    <NavigationMenuPrimitive.Trigger className="rounded-md bg-clay px-3 py-1.5 text-white transition hover:bg-clay/90 data-[state=open]:bg-clay/90">
+                    <NavigationMenuPrimitive.Trigger className="bg-clay hover:bg-clay/90 data-[state=open]:bg-clay/90 rounded-md px-3 py-1.5 text-white transition">
                       {t('nav.addRecipe')}
                     </NavigationMenuPrimitive.Trigger>
-                    <NavigationMenuPrimitive.Content className="absolute left-1/2 top-full mt-2 -translate-x-1/2 transform text-nowrap rounded-md border border-stone-200 bg-white shadow-lg">
+                    <NavigationMenuPrimitive.Content className="absolute top-full left-1/2 mt-2 -translate-x-1/2 transform rounded-md border border-stone-200 bg-white text-nowrap shadow-lg">
                       <div className="flex flex-col">
                         <Link to="/recipes/new" className="px-5 py-2 transition hover:bg-stone-100">
                           {t('nav.manually')}
@@ -72,10 +72,10 @@ export default function App() {
                 </NavigationMenuPrimitive.List>
                 <NavigationMenuPrimitive.List>
                   <NavigationMenuPrimitive.Item>
-                    <NavigationMenuPrimitive.Trigger className="rounded-full border border-gray-300 p-1.5 transition hover:bg-stone-100 hover:text-clay data-[state=open]:bg-stone-100 data-[state=open]:text-clay">
+                    <NavigationMenuPrimitive.Trigger className="hover:text-clay data-[state=open]:text-clay rounded-full border border-gray-300 p-1.5 transition hover:bg-stone-100 data-[state=open]:bg-stone-100">
                       <UserCircle className="h-5 w-5" />
                     </NavigationMenuPrimitive.Trigger>
-                    <NavigationMenuPrimitive.Content className="absolute right-0 top-full mt-2 text-nowrap rounded-md border border-stone-200 bg-white shadow-lg">
+                    <NavigationMenuPrimitive.Content className="absolute top-full right-0 mt-2 rounded-md border border-stone-200 bg-white text-nowrap shadow-lg">
                       <div className="flex flex-col">
                         <Link to="/settings" className="px-5 py-2 transition hover:bg-stone-100">
                           {t('nav.settings')}

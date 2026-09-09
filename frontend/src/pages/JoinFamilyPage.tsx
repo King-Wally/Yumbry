@@ -59,7 +59,7 @@ export default function JoinFamilyPage() {
           type="button"
           onClick={handleJoinClick}
           disabled={joinMutation.isPending}
-          className="rounded-md bg-clay px-4 py-2 text-white disabled:opacity-50"
+          className="bg-clay rounded-md px-4 py-2 text-white disabled:opacity-50"
         >
           {joinMutation.isPending
             ? t('joinFamily.joining')
