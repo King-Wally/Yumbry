@@ -48,10 +48,7 @@ function renderCreate() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter
-        initialEntries={['/create-with-ai']}
-        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-      >
+      <MemoryRouter initialEntries={['/create-with-ai']}>
         <AuthProvider>
           <Routes>
             <Route path="/create-with-ai" element={<AiChatPage />} />
@@ -67,10 +64,7 @@ function renderImprove() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter
-        initialEntries={['/recipes/1/ai-improve']}
-        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-      >
+      <MemoryRouter initialEntries={['/recipes/1/ai-improve']}>
         <AuthProvider>
           <Routes>
             <Route path="/recipes/:id/ai-improve" element={<AiChatPage />} />

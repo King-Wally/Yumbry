@@ -29,10 +29,7 @@ function renderForm(id = '7') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter
-        initialEntries={[`/recipes/${id}/edit`]}
-        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-      >
+      <MemoryRouter initialEntries={[`/recipes/${id}/edit`]}>
         <Routes>
           <Route path="/recipes/:id/edit" element={<RecipeFormPage />} />
         </Routes>
@@ -81,10 +78,7 @@ describe('RecipeFormPage AI draft hydration', () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     return render(
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter
-          initialEntries={[{ pathname: '/recipes/new', state: { aiDraft } }]}
-          future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-        >
+        <MemoryRouter initialEntries={[{ pathname: '/recipes/new', state: { aiDraft } }]}>
           <Routes>
             <Route path="/recipes/new" element={<RecipeFormPage />} />
           </Routes>
@@ -130,7 +124,6 @@ describe('RecipeFormPage AI draft hydration', () => {
               },
             },
           ]}
-          future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
         >
           <Routes>
             <Route path="/recipes/:id/edit" element={<RecipeFormPage />} />
@@ -155,10 +148,7 @@ describe('RecipeFormPage AI draft hydration', () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter
-          initialEntries={['/recipes/new']}
-          future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-        >
+        <MemoryRouter initialEntries={['/recipes/new']}>
           <Routes>
             <Route path="/recipes/new" element={<RecipeFormPage />} />
           </Routes>

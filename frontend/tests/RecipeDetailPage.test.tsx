@@ -40,10 +40,7 @@ function renderDetail() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter
-        initialEntries={['/recipes/1']}
-        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-      >
+      <MemoryRouter initialEntries={['/recipes/1']}>
         <Routes>
           <Route path="/recipes/:id" element={<RecipeDetailPage />} />
         </Routes>

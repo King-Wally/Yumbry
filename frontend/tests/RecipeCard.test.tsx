@@ -21,7 +21,7 @@ const recipe: RecipeSummary = {
 
 function renderCard() {
   return render(
-    <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <MemoryRouter>
       <RecipeCard recipe={recipe} />
     </MemoryRouter>
   );
