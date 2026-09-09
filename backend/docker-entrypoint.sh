@@ -1,6 +1,6 @@
 #!/bin/sh
 set -e
 
-node_modules/.bin/prisma migrate deploy
+npx --no-install prisma migrate deploy
 
 exec node dist/index.js
