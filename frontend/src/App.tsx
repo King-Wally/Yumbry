@@ -43,21 +43,18 @@ export default function App() {
                       {t('nav.addRecipe')}
                     </NavigationMenuPrimitive.Trigger>
                     <NavigationMenuPrimitive.Content className="absolute top-full left-1/2 mt-2 -translate-x-1/2 transform rounded-md border border-stone-200 bg-white text-nowrap shadow-lg">
-                      <div className="flex flex-col">
+                      <div className="flex flex-col divide-y divide-stone-200">
                         <Link to="/recipes/new" className="px-5 py-2 transition hover:bg-stone-100">
                           {t('nav.manually')}
                         </Link>
-                        <hr className="h-px bg-stone-200" />
                         <Link to="/import" className="px-5 py-2 transition hover:bg-stone-100">
                           {t('nav.import')}
                         </Link>
-                        <hr className="h-px bg-stone-200" />
                         <Link to="/import/url" className="px-5 py-2 transition hover:bg-stone-100">
                           {t('nav.paste')}
                         </Link>
                         {aiStatus?.configured && (
                           <>
-                            <hr className="h-px bg-stone-200" />
                             <Link
                               to="/create-with-ai"
                               className="px-5 py-2 transition hover:bg-stone-100"
@@ -76,11 +73,10 @@ export default function App() {
                       <UserCircle className="h-5 w-5" />
                     </NavigationMenuPrimitive.Trigger>
                     <NavigationMenuPrimitive.Content className="absolute top-full right-0 mt-2 rounded-md border border-stone-200 bg-white text-nowrap shadow-lg">
-                      <div className="flex flex-col">
+                      <div className="flex flex-col divide-y divide-stone-200">
                         <Link to="/settings" className="px-5 py-2 transition hover:bg-stone-100">
                           {t('nav.settings')}
                         </Link>
-                        <hr className="h-px bg-stone-200" />
                         <button
                           type="button"
                           onClick={() => logout()}
