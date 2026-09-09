@@ -14,7 +14,7 @@ export default defineConfig({
       },
       manifest: {
         name: 'Yumbry',
-        short_name: 'Recipes',
+        short_name: 'Yumbry',
         description: 'Personal recipe manager and cookbook.',
         theme_color: '#b5603f',
         background_color: '#fdfaf6',
