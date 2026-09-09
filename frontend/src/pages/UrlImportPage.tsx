@@ -35,7 +35,7 @@ export default function UrlImportPage() {
         >
           <ArrowLeft size={18} />
         </Link>
-        <h1 className="font-serif text-2xl text-stone-900 font-bold">{t('importUrl.title')}</h1>
+        <h1 className="font-serif text-2xl font-bold text-stone-900">{t('importUrl.title')}</h1>
       </div>
 
       <Card>

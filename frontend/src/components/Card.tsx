@@ -9,7 +9,7 @@ interface CardProps {
 function Card({ children, className = '', danger = false }: CardProps) {
   return (
     <section
-      className={`rounded-xl border p-6 shadow-sm ${
+      className={`rounded-xl border p-4 shadow-sm sm:p-5 ${
         danger ? 'border-red-300 bg-red-50/60' : 'border-stone-200 bg-white'
       } ${className}`}
     >

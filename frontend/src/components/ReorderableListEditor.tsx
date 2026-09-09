@@ -93,12 +93,12 @@ function SortableRow({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`${className}${isDragging ? ' relative z-10 opacity-60' : ''}`}
+      className={`${className}${isDragging ? 'relative z-10 opacity-60' : ''}`}
     >
       <button
         type="button"
         aria-label={dragHandleLabel}
-        className={`touch-none cursor-grab text-stone-400 hover:text-stone-700 active:cursor-grabbing${
+        className={`cursor-grab touch-none text-stone-400 hover:text-stone-700 active:cursor-grabbing${
           handleClassName ? ` ${handleClassName}` : ''
         }`}
         {...attributes}

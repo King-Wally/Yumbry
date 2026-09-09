@@ -16,7 +16,7 @@ export default function RecipeTagBadges({ category, tags }: RecipeTagBadgesProps
       {tags.map((tag) => (
         <span
           key={tag}
-          className="rounded-full border border-clay/25 bg-clay/10 px-3 py-1 text-xs font-medium tracking-wide text-clay capitalize"
+          className="rounded-full border border-clay/25 bg-clay/10 px-3 py-1 text-xs font-medium capitalize tracking-wide text-clay"
         >
           {tag}
         </span>

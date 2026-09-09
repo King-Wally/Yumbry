@@ -110,7 +110,7 @@ export default function RecipeDetailPage() {
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="flex flex-col gap-4 rounded-xl border border-stone-200 bg-white p-5 shadow-sm lg:col-span-1">
+        <div className="flex flex-col gap-4 rounded-xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5 lg:col-span-1">
           <div>
             <h1 className="font-serif text-3xl text-stone-900">{recipe.title}</h1>
             {recipe.description && <p className="mt-2 text-stone-600">{recipe.description}</p>}
@@ -152,7 +152,7 @@ export default function RecipeDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <section className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm lg:col-span-1">
+        <section className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5 lg:col-span-1">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-serif text-xl text-stone-900">{t('recipes.detail.ingredients')}</h2>
           </div>
@@ -167,7 +167,7 @@ export default function RecipeDetailPage() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm lg:col-span-2">
+        <section className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5 lg:col-span-2">
           <h2 className="mb-3 font-serif text-xl text-stone-900">
             {t('recipes.detail.instructions')}
           </h2>

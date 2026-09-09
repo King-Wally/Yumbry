@@ -24,12 +24,12 @@ export default function InstructionListEditor({
       label={t('recipeForm.instructions.label')}
       addLabel={t('recipeForm.instructions.addButton')}
       dragHandleLabel={t('recipeForm.instructions.dragHandle')}
-      rowClassName="flex items-start gap-2"
+      rowClassName="flex items-center gap-2 "
       controlsClassName="mt-2 flex items-center gap-2"
       handleClassName="mt-2"
       renderItem={(step, update, index) => (
         <>
-          <span className="mt-2 w-6 text-sm text-stone-400">{index + 1}.</span>
+          <span className="mt-2 w-4 text-sm text-stone-400">{index + 1}</span>
           <div className="flex-1 space-y-2">
             <textarea
               value={step.text}

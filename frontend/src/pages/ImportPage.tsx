@@ -43,7 +43,7 @@ export default function ImportPage() {
         >
           <ArrowLeft size={18} />
         </Link>
-        <h1 className="font-serif text-2xl text-stone-900 font-bold">{t('importJson.title')}</h1>
+        <h1 className="font-serif text-2xl font-bold text-stone-900">{t('importJson.title')}</h1>
       </div>
 
       <div className="space-y-6">

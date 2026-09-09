@@ -39,10 +39,10 @@ export default function App() {
               <NavigationMenuPrimitive.Root className="relative flex items-center gap-2">
                 <NavigationMenuPrimitive.List>
                   <NavigationMenuPrimitive.Item>
-                    <NavigationMenuPrimitive.Trigger className="px-3 py-1.5 rounded-md transition bg-clay text-white hover:bg-clay/90 data-[state=open]:bg-clay/90 ">
+                    <NavigationMenuPrimitive.Trigger className="rounded-md bg-clay px-3 py-1.5 text-white transition hover:bg-clay/90 data-[state=open]:bg-clay/90">
                       {t('nav.addRecipe')}
                     </NavigationMenuPrimitive.Trigger>
-                    <NavigationMenuPrimitive.Content className="absolute top-full left-1/2 transform -translate-x-1/2 text-nowrap mt-2 rounded-md bg-white shadow-lg border border-stone-200">
+                    <NavigationMenuPrimitive.Content className="absolute left-1/2 top-full mt-2 -translate-x-1/2 transform text-nowrap rounded-md border border-stone-200 bg-white shadow-lg">
                       <div className="flex flex-col">
                         <Link to="/recipes/new" className="px-5 py-2 transition hover:bg-stone-100">
                           {t('nav.manually')}
@@ -75,7 +75,7 @@ export default function App() {
                     <NavigationMenuPrimitive.Trigger className="rounded-full border border-gray-300 p-1.5 transition hover:bg-stone-100 hover:text-clay data-[state=open]:bg-stone-100 data-[state=open]:text-clay">
                       <UserCircle className="h-5 w-5" />
                     </NavigationMenuPrimitive.Trigger>
-                    <NavigationMenuPrimitive.Content className="absolute top-full right-0 mt-2 text-nowrap rounded-md bg-white shadow-lg border border-stone-200">
+                    <NavigationMenuPrimitive.Content className="absolute right-0 top-full mt-2 text-nowrap rounded-md border border-stone-200 bg-white shadow-lg">
                       <div className="flex flex-col">
                         <Link to="/settings" className="px-5 py-2 transition hover:bg-stone-100">
                           {t('nav.settings')}

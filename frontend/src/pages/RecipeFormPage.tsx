@@ -186,7 +186,7 @@ export default function RecipeFormPage() {
         >
           <ArrowLeft size={18} />
         </Link>
-        <h1 className="font-serif text-2xl text-stone-900 font-bold">
+        <h1 className="font-serif text-2xl font-bold text-stone-900">
           {isEditing ? t('recipeForm.editTitle') : t('recipeForm.addTitle')}
         </h1>
       </div>
