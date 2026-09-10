@@ -11,7 +11,7 @@ datasource db {
 /// single user — every member sees and edits the same collection. Every user
 /// gets a personal family of one at registration, so familyId is never absent.
 model Family {
-  id Int @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   /// Stored raw rather than hashed (unlike PasswordResetToken.tokenHash): the
   /// settings page has to re-display the same stable invite link on every
   /// visit, which a one-way hash cannot support.
@@ -27,15 +27,16 @@ model Family {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  tokenVersion Int      @default(0) @map("token_version")
-  locale       String   @default("en") @map("locale")
-  unitSystem   String   @default("metric") @map("unit_system")
-  smallVolumes String   @default("spoons") @map("small_volumes")
-  familyId     Int      @map("family_id")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  id                      Int      @id @default(autoincrement())
+  email                   String   @unique
+  passwordHash            String   @map("password_hash")
+  tokenVersion            Int      @default(0) @map("token_version")
+  locale                  String   @default("en") @map("locale")
+  unitSystem              String   @default("metric") @map("unit_system")
+  smallVolumes            String   @default("spoons") @map("small_volumes")
+  jsonImportExportEnabled Boolean  @default(false) @map("json_import_export_enabled")
+  familyId                Int      @map("family_id")
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   // Restrict, not Cascade: deleting a family must never delete its members.
   // Families are only ever deleted once their member count reaches zero.

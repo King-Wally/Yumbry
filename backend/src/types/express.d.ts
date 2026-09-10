@@ -16,6 +16,7 @@ declare global {
         locale: string;
         unitSystem: string;
         smallVolumes: string;
+        jsonImportExportEnabled: boolean;
         familyId: number;
       };
     }

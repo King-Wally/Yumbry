@@ -189,7 +189,7 @@ export default function AiChatPage() {
         <div className="flex h-[60vh] flex-col rounded-xl border border-stone-200 bg-white shadow-sm md:h-[70vh]">
           <div className="flex flex-wrap gap-3 border-b border-stone-200 p-3">
             <label
-              className="min-w-[8rem] flex-1 text-xs font-medium text-stone-600"
+              className="min-w-32 flex-1 text-xs font-medium text-stone-600"
               title={t('aiChat.units.description')}
             >
               {t('aiChat.units.label')}
@@ -210,7 +210,7 @@ export default function AiChatPage() {
             </label>
 
             <label
-              className="min-w-[8rem] flex-1 text-xs font-medium text-stone-600"
+              className="min-w-32 flex-1 text-xs font-medium text-stone-600"
               title={t('aiChat.smallVolumes.description')}
             >
               {t('aiChat.smallVolumes.label')}

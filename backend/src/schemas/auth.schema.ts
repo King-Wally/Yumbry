@@ -50,6 +50,7 @@ export const UpdateProfileBodySchema = z
     locale: LocaleSchema.optional(),
     unitSystem: UnitSystemSchema.optional(),
     smallVolumes: SmallVolumesSchema.optional(),
+    jsonImportExportEnabled: z.boolean().optional(),
   })
   .refine((body) => Object.values(body).some((value) => value !== undefined), {
     message: 'Provide at least one preference to update.',

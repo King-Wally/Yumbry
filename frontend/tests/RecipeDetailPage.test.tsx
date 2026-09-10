@@ -4,9 +4,20 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import RecipeDetailPage from '../src/pages/RecipeDetailPage';
 import * as apiClient from '../src/api/client';
+import type { CurrentUser } from '../src/api/client';
+import { AuthProvider } from '../src/context/AuthContext';
 import type { Recipe } from '../src/types';
 
 vi.mock('../src/api/client');
+
+const currentUser: CurrentUser = {
+  id: 1,
+  email: 'a@example.com',
+  locale: 'en',
+  unitSystem: 'metric',
+  smallVolumes: 'spoons',
+  jsonImportExportEnabled: false,
+};
 
 const recipe: Recipe = {
   id: 1,
@@ -41,9 +52,11 @@ function renderDetail() {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={['/recipes/1']}>
-        <Routes>
-          <Route path="/recipes/:id" element={<RecipeDetailPage />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/recipes/:id" element={<RecipeDetailPage />} />
+          </Routes>
+        </AuthProvider>
       </MemoryRouter>
     </QueryClientProvider>
   );
@@ -52,6 +65,7 @@ function renderDetail() {
 describe('RecipeDetailPage render-time state sync', () => {
   it('initializes the servings stepper from the recipe base servings (a string from the API)', async () => {
     vi.mocked(apiClient.getRecipe).mockResolvedValue(recipe);
+    vi.mocked(apiClient.getCurrentUser).mockResolvedValue(currentUser);
     renderDetail();
 
     expect(await screen.findByText('2 cups flour')).toBeInTheDocument();
@@ -60,6 +74,7 @@ describe('RecipeDetailPage render-time state sync', () => {
 
   it('rescales ingredient amounts when the user adjusts servings', async () => {
     vi.mocked(apiClient.getRecipe).mockResolvedValue(recipe);
+    vi.mocked(apiClient.getCurrentUser).mockResolvedValue(currentUser);
     renderDetail();
 
     await screen.findByText('2 cups flour');

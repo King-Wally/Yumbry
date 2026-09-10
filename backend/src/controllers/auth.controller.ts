@@ -34,6 +34,7 @@ interface PublicUser {
   locale: string;
   unitSystem: string;
   smallVolumes: string;
+  jsonImportExportEnabled: boolean;
 }
 
 function toPublicUser(user: PublicUser): PublicUser {
@@ -43,6 +44,7 @@ function toPublicUser(user: PublicUser): PublicUser {
     locale: user.locale,
     unitSystem: user.unitSystem,
     smallVolumes: user.smallVolumes,
+    jsonImportExportEnabled: user.jsonImportExportEnabled,
   };
 }
 
@@ -54,6 +56,7 @@ function publicUserFromRow(user: UserRow): PublicUser {
     locale: user.locale,
     unitSystem: user.unit_system,
     smallVolumes: user.small_volumes,
+    jsonImportExportEnabled: user.json_import_export_enabled,
   });
 }
 

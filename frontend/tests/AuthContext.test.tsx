@@ -43,6 +43,7 @@ describe('AuthProvider locale sync', () => {
       locale: 'en',
       unitSystem: 'metric',
       smallVolumes: 'spoons',
+      jsonImportExportEnabled: false,
     });
     const queryClient = renderWithProvider();
 
@@ -57,6 +58,7 @@ describe('AuthProvider locale sync', () => {
       locale: 'fr',
       unitSystem: 'metric',
       smallVolumes: 'spoons',
+      jsonImportExportEnabled: false,
     });
     await act(() => queryClient.invalidateQueries({ queryKey: queryKeys.authMe }));
 

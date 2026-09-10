@@ -42,6 +42,11 @@
       "saving": "Guardando...",
       "savePassword": "Guardar contraseña"
     },
+    "jsonImportExport": {
+      "title": "Importar/exportar JSON",
+      "description": "Muestra las opciones para importar una receta desde JSON-LD y exportar una receta como JSON en los menús de la aplicación.",
+      "label": "Activar importar/exportar JSON"
+    },
     "family": {
       "title": "Familia",
       "description": "Todos los miembros de tu familia comparten una sola colección de recetas — todas las recetas, etiquetas y categorías son visibles para cada miembro, y cualquiera puede editarlas.",

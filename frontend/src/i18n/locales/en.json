@@ -42,6 +42,11 @@
       "saving": "Saving...",
       "savePassword": "Save password"
     },
+    "jsonImportExport": {
+      "title": "JSON import/export",
+      "description": "Show the options to import a recipe from JSON-LD and to export a recipe as JSON in the app's menus.",
+      "label": "Enable JSON import/export"
+    },
     "family": {
       "title": "Family",
       "description": "Everyone in your family shares one recipe collection — all recipes, tags and categories are visible to every member, and any member can edit them.",

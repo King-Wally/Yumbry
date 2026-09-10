@@ -82,6 +82,7 @@ const currentUser: CurrentUser = {
   locale: 'en',
   unitSystem: 'metric',
   smallVolumes: 'spoons',
+  jsonImportExportEnabled: false,
 };
 
 const padThaiEnvelope = {

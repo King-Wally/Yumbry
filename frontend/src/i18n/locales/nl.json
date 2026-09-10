@@ -42,6 +42,11 @@
       "saving": "Opslaan...",
       "savePassword": "Wachtwoord opslaan"
     },
+    "jsonImportExport": {
+      "title": "JSON-import/export",
+      "description": "Toon de opties om een recept te importeren uit JSON-LD en te exporteren als JSON in de menu's van de app.",
+      "label": "JSON-import/export inschakelen"
+    },
     "family": {
       "title": "Familie",
       "description": "Iedereen in je familie deelt één receptenverzameling — alle recepten, tags en categorieën zijn zichtbaar voor elk lid, en elk lid kan ze aanpassen.",

@@ -14,7 +14,7 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
       to={`/recipes/${recipe.id}`}
       className="group hover:border-clay/30 block overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-lg"
     >
-      <div className="aspect-[4/3] w-full overflow-hidden bg-stone-100">
+      <div className="aspect-4/3 w-full overflow-hidden bg-stone-100">
         {recipe.image_path ? (
           <img
             src={recipe.image_path}

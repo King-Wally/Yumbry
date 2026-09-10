@@ -10,6 +10,7 @@ import ServingsStepper from '../components/ServingsStepper';
 import TimeStat from '../components/TimeStat';
 import { useScaledIngredients } from '../hooks/useScaledIngredients';
 import { useAiStatus } from '../hooks/useAiStatus';
+import { useAuth } from '../hooks/useAuth';
 import { toNumber } from '../utils/numeric';
 import CollapsibleActions from '../components/CollapsibleActions';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -28,6 +29,7 @@ export default function RecipeDetailPage() {
     queryFn: () => getRecipe(id!),
   });
   const { data: aiStatus } = useAiStatus();
+  const { user } = useAuth();
 
   const [servings, setServings] = useState(1);
   const [servingsForRecipeId, setServingsForRecipeId] = useState<number | null>(null);
@@ -67,13 +69,15 @@ export default function RecipeDetailPage() {
           <ArrowLeft size={18} />
         </Link>
         <CollapsibleActions>
-          <a
-            href={getRecipeExportUrl(id!)}
-            download
-            className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
-          >
-            {t('recipes.detail.export')}
-          </a>
+          {user?.jsonImportExportEnabled && (
+            <a
+              href={getRecipeExportUrl(id!)}
+              download
+              className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
+            >
+              {t('recipes.detail.export')}
+            </a>
+          )}
           <Link
             to={`/recipes/${id}/edit`}
             className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"

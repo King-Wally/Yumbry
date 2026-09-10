@@ -33,6 +33,7 @@ describe('SettingsPage', () => {
       locale: 'en',
       unitSystem: 'metric',
       smallVolumes: 'spoons',
+      jsonImportExportEnabled: false,
     });
     vi.mocked(apiClient.updateProfile).mockResolvedValue({
       id: 1,
@@ -40,6 +41,7 @@ describe('SettingsPage', () => {
       locale: 'fr',
       unitSystem: 'metric',
       smallVolumes: 'spoons',
+      jsonImportExportEnabled: false,
     });
     renderSettings();
 

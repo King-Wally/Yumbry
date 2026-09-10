@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Globe, Lock, TriangleAlert, Users } from 'lucide-react';
+import { ArrowLeft, FileBraces, Globe, Lock, TriangleAlert, Users } from 'lucide-react';
+import * as SwitchPrimitive from '@radix-ui/react-switch';
 import { changePassword, deleteAccount, leaveFamily, updateProfile } from '../api/client';
 import { queryKeys } from '../api/queryKeys';
 import { useAuth } from '../hooks/useAuth';
@@ -40,6 +41,13 @@ export default function SettingsPage() {
 
   const localeMutation = useMutation({
     mutationFn: (locale: SupportedLocale) => updateProfile({ locale }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.authMe });
+    },
+  });
+
+  const jsonImportExportMutation = useMutation({
+    mutationFn: (jsonImportExportEnabled: boolean) => updateProfile({ jsonImportExportEnabled }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.authMe });
     },
@@ -212,7 +220,7 @@ export default function SettingsPage() {
               description={t('settings.family.description')}
             />
 
-            <div className="mb-[18px]">
+            <div className="mb-4.5">
               <h3 className="mb-1.5 text-[13px] font-medium text-stone-700">
                 {t('settings.family.members')}
               </h3>
@@ -230,7 +238,7 @@ export default function SettingsPage() {
               </ul>
             </div>
 
-            <div className="mb-[18px]">
+            <div className="mb-4.5">
               <label
                 className="mb-1.5 block text-sm font-medium text-stone-700"
                 htmlFor="invite-link"
@@ -268,6 +276,32 @@ export default function SettingsPage() {
             )}
           </Card>
         )}
+
+        {/* JSON import/export */}
+        <Card>
+          <Card.Header
+            icon={<FileBraces size={20} strokeWidth={2} />}
+            title={t('settings.jsonImportExport.title')}
+            description={t('settings.jsonImportExport.description')}
+          />
+
+          <label className="flex items-center justify-between gap-3 text-sm font-medium text-stone-700">
+            {t('settings.jsonImportExport.label')}
+            <SwitchPrimitive.Root
+              checked={user?.jsonImportExportEnabled ?? false}
+              onCheckedChange={(checked) => jsonImportExportMutation.mutate(checked)}
+              disabled={jsonImportExportMutation.isPending}
+              className="data-[state=checked]:bg-clay relative h-6 w-11 shrink-0 rounded-full bg-stone-300 transition-colors disabled:opacity-50"
+            >
+              <SwitchPrimitive.Thumb className="block h-5 w-5 translate-x-0.5 rounded-full bg-white shadow transition-transform data-[state=checked]:translate-x-5.5" />
+            </SwitchPrimitive.Root>
+          </label>
+          {jsonImportExportMutation.isError && (
+            <p className="mt-2.5 text-[13px] text-red-600">
+              {jsonImportExportMutation.error?.message}
+            </p>
+          )}
+        </Card>
 
         {/* Danger zone */}
         <Card danger>

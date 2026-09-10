@@ -19,6 +19,7 @@ export const requireAuth = asyncHandler(async (req: Request, res, next) => {
       locale: true,
       unitSystem: true,
       smallVolumes: true,
+      jsonImportExportEnabled: true,
       familyId: true,
     },
   });
@@ -35,6 +36,7 @@ export const requireAuth = asyncHandler(async (req: Request, res, next) => {
     locale: user.locale,
     unitSystem: user.unitSystem,
     smallVolumes: user.smallVolumes,
+    jsonImportExportEnabled: user.jsonImportExportEnabled,
     familyId: user.familyId,
   };
   next();

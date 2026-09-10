@@ -17,6 +17,7 @@ export interface UserRow {
   locale: string;
   unit_system: string;
   small_volumes: string;
+  json_import_export_enabled: boolean;
   created_at: Date;
 }
 
@@ -31,6 +32,7 @@ function toUserRow(user: {
   locale: string;
   unitSystem: string;
   smallVolumes: string;
+  jsonImportExportEnabled: boolean;
   createdAt: Date;
 }): UserRow {
   return {
@@ -41,6 +43,7 @@ function toUserRow(user: {
     locale: user.locale,
     unit_system: user.unitSystem,
     small_volumes: user.smallVolumes,
+    json_import_export_enabled: user.jsonImportExportEnabled,
     created_at: user.createdAt,
   };
 }
@@ -83,7 +86,12 @@ export async function deleteUser(id: number): Promise<void> {
 // partial update needs no branching, and the next preference to be added needs no third function.
 export async function updateUserProfile(
   userId: number,
-  data: { locale?: string; unitSystem?: string; smallVolumes?: string }
+  data: {
+    locale?: string;
+    unitSystem?: string;
+    smallVolumes?: string;
+    jsonImportExportEnabled?: boolean;
+  }
 ): Promise<UserRow> {
   const user = await prisma.user.update({
     where: { id: userId },

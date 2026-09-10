@@ -126,6 +126,7 @@ export interface CurrentUser {
   locale: SupportedLocale;
   unitSystem: UnitSystem;
   smallVolumes: SmallVolumeStyle;
+  jsonImportExportEnabled: boolean;
 }
 
 export function getCurrentUser() {
@@ -138,6 +139,7 @@ export function updateProfile(data: {
   locale?: SupportedLocale;
   unitSystem?: UnitSystem;
   smallVolumes?: SmallVolumeStyle;
+  jsonImportExportEnabled?: boolean;
 }) {
   return request<CurrentUser>('/auth/me', { method: 'PATCH', body: JSON.stringify(data) });
 }
