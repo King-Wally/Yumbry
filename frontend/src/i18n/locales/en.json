@@ -254,5 +254,67 @@
     "logInToJoin": "Log in to join",
     "joining": "Joining...",
     "joinedToast": "You've joined the family"
+  },
+  "onboarding": {
+    "stepCounter": "Step {{step}} of {{total}}",
+    "next": "Next",
+    "finish": "Finish",
+    "language": {
+      "title": "Welcome to Yumbry",
+      "description": "Let's set a few things up. First, choose your language."
+    },
+    "create": {
+      "title": "Ways to add a recipe",
+      "description": "Pick whichever fits — you can mix and match any time.",
+      "hint": "Find \"Add recipe\" in the top right of any page. It opens straight into whichever way you'd like to start.",
+      "manual": {
+        "title": "Write it manually",
+        "description": "Type up ingredients and steps yourself, from scratch."
+      },
+      "url": {
+        "title": "Import from a URL",
+        "description": "Paste a link and Yumbry pulls in the recipe for you."
+      },
+      "ai": {
+        "title": "Generate with AI",
+        "description": "Describe a dish and let AI draft the recipe."
+      }
+    },
+    "family": {
+      "title": "Cook together",
+      "description": "When you join a family, everyone's recipes come together into one shared collection.",
+      "hint": "You can create or join a family any time from Settings."
+    },
+    "pwa": {
+      "title": "Add Yumbry to your home screen",
+      "description": "Install Yumbry like an app so it's one tap away.",
+      "steps": {
+        "iosSafari": [
+          "Tap the Share icon in Safari's toolbar.",
+          "Scroll down and tap \"Add to Home Screen\".",
+          "Tap \"Add\" in the top-right corner."
+        ],
+        "iosOther": [
+          "Open this page in Safari — other iOS browsers can't install apps to the home screen."
+        ],
+        "androidChrome": [
+          "Tap the menu (⋮) in Chrome.",
+          "Tap \"Install app\" (or \"Add to Home screen\").",
+          "Confirm by tapping \"Install\"."
+        ],
+        "androidOther": [
+          "Look for \"Install app\" or \"Add to Home screen\" in your browser's menu."
+        ],
+        "desktop": [
+          "Look for an install icon in the address bar (or the browser menu).",
+          "Click \"Install\" to add Yumbry as an app on this device."
+        ]
+      }
+    },
+    "done": {
+      "title": "You're all set",
+      "description": "Your kitchen is ready. Start by adding your first recipe.",
+      "cta": "Start cooking"
+    }
   }
 }

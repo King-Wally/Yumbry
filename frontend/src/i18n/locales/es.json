@@ -254,5 +254,67 @@
     "logInToJoin": "Inicia sesión para unirte",
     "joining": "Uniéndose...",
     "joinedToast": "Te has unido a la familia"
+  },
+  "onboarding": {
+    "stepCounter": "Paso {{step}} de {{total}}",
+    "next": "Siguiente",
+    "finish": "Finalizar",
+    "language": {
+      "title": "Bienvenido a Yumbry",
+      "description": "Configuremos algunas cosas. Primero, elige tu idioma."
+    },
+    "create": {
+      "title": "Formas de añadir una receta",
+      "description": "Elige la que mejor te convenga — puedes combinarlas cuando quieras.",
+      "hint": "Encuentra \"Añadir receta\" en la esquina superior derecha de cualquier página. Se abre directamente en la forma que elijas.",
+      "manual": {
+        "title": "Escribirla manualmente",
+        "description": "Escribe tú mismo los ingredientes y los pasos, desde cero."
+      },
+      "url": {
+        "title": "Importar desde una URL",
+        "description": "Pega un enlace y Yumbry obtiene la receta por ti."
+      },
+      "ai": {
+        "title": "Generar con IA",
+        "description": "Describe un plato y deja que la IA redacte la receta."
+      }
+    },
+    "family": {
+      "title": "Cocinar juntos",
+      "description": "Al unirte a una familia, las recetas de todos se reúnen en una sola colección compartida.",
+      "hint": "Puedes crear o unirte a una familia en cualquier momento desde Ajustes."
+    },
+    "pwa": {
+      "title": "Añade Yumbry a tu pantalla de inicio",
+      "description": "Instala Yumbry como una app para tenerla a un toque de distancia.",
+      "steps": {
+        "iosSafari": [
+          "Toca el icono de Compartir en la barra de herramientas de Safari.",
+          "Desplázate hacia abajo y toca \"Añadir a pantalla de inicio\".",
+          "Toca \"Añadir\" en la esquina superior derecha."
+        ],
+        "iosOther": [
+          "Abre esta página en Safari — otros navegadores de iOS no pueden instalar apps en la pantalla de inicio."
+        ],
+        "androidChrome": [
+          "Toca el menú (⋮) en Chrome.",
+          "Toca \"Instalar aplicación\" (o \"Añadir a pantalla de inicio\").",
+          "Confirma tocando \"Instalar\"."
+        ],
+        "androidOther": [
+          "Busca \"Instalar aplicación\" o \"Añadir a pantalla de inicio\" en el menú de tu navegador."
+        ],
+        "desktop": [
+          "Busca un icono de instalación en la barra de direcciones (o en el menú del navegador).",
+          "Haz clic en \"Instalar\" para añadir Yumbry como aplicación en este dispositivo."
+        ]
+      }
+    },
+    "done": {
+      "title": "Todo listo",
+      "description": "Tu cocina está lista. Empieza añadiendo tu primera receta.",
+      "cta": "Empezar a cocinar"
+    }
   }
 }
