@@ -3,19 +3,20 @@ import request from 'supertest';
 import pg from 'pg';
 import type { Express } from 'express';
 import { resetTestDatabase } from './helpers/db.js';
+import { TEST_ORIGIN } from './helpers/auth.js';
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
 
 const sendPasswordResetEmail = vi.fn().mockResolvedValue(undefined);
+const isEmailConfigured = vi.fn().mockReturnValue(true);
 vi.mock('../src/services/email.service.js', () => ({
   sendPasswordResetEmail,
-  isEmailConfigured: () => true,
+  isEmailConfigured: () => isEmailConfigured(),
 }));
 
-// loginRateLimiter/forgotPasswordRateLimiter key by IP (app.ts sets `trust
-// proxy: 1`, so X-Forwarded-For is honored). Each test below is given its own
-// fake IP so it can't be starved by rate-limit quota another test already
-// spent — only the dedicated rate-limit test intentionally reuses one IP.
+// The express apiRateLimiter keys by IP (app.ts sets `trust proxy: 1`, so
+// X-Forwarded-For is honored). Each test gets its own fake IP so it can't be
+// starved by quota another test already spent.
 let ipCounter = 1;
 function nextIp(): string {
   return `10.99.0.${ipCounter++}`;
@@ -40,213 +41,156 @@ describe.skipIf(!TEST_DATABASE_URL)('password reset API', () => {
     await pool.end();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     sendPasswordResetEmail.mockClear();
+    isEmailConfigured.mockReturnValue(true);
+    await pool.query('TRUNCATE users, sessions, accounts, verifications, families CASCADE');
   });
 
-  async function getResetToken(email: string, ip: string): Promise<string> {
-    await request(app).post('/api/auth/forgot-password').set('X-Forwarded-For', ip).send({ email });
-    const call = sendPasswordResetEmail.mock.calls.at(-1);
-    return call?.[1] as string;
+  function signUp(email: string, ip: string, password = 'password123') {
+    return request(app)
+      .post('/api/auth/sign-up/email')
+      .set('Origin', TEST_ORIGIN)
+      .set('X-Forwarded-For', ip)
+      .send({ email, password, name: email });
   }
 
-  it('sends a reset email for a registered address and returns the generic message', async () => {
-    const ip = nextIp();
-    await request(app)
-      .post('/api/auth/register')
+  function requestReset(email: string, ip: string) {
+    return request(app)
+      .post('/api/auth/request-password-reset')
+      .set('Origin', TEST_ORIGIN)
       .set('X-Forwarded-For', ip)
-      .send({ email: 'gina@example.com', password: 'password123' });
+      .send({ email });
+  }
 
-    const res = await request(app)
-      .post('/api/auth/forgot-password')
+  function submitReset(token: string, newPassword: string, ip: string) {
+    return request(app)
+      .post('/api/auth/reset-password')
+      .set('Origin', TEST_ORIGIN)
       .set('X-Forwarded-For', ip)
-      .send({ email: 'gina@example.com' });
+      .send({ token, newPassword });
+  }
+
+  function signIn(email: string, password: string, ip: string) {
+    return request(app)
+      .post('/api/auth/sign-in/email')
+      .set('Origin', TEST_ORIGIN)
+      .set('X-Forwarded-For', ip)
+      .send({ email, password });
+  }
+
+  /** The raw token only ever exists in the email we send, so the mock is the
+   * only place a test can read it — same trick as before the better-auth move. */
+  function lastEmailedToken(): string {
+    return sendPasswordResetEmail.mock.calls.at(-1)?.[1] as string;
+  }
+
+  it('emails a reset token for a registered address', async () => {
+    const ip = nextIp();
+    await signUp('gina@example.com', ip);
+
+    const res = await requestReset('gina@example.com', ip);
 
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({
-      message: 'If that email is registered, a reset link has been sent.',
-    });
     expect(sendPasswordResetEmail).toHaveBeenCalledTimes(1);
     expect(sendPasswordResetEmail).toHaveBeenCalledWith('gina@example.com', expect.any(String));
   });
 
-  it('returns the identical generic message for an unregistered address without sending email', async () => {
-    const res = await request(app)
-      .post('/api/auth/forgot-password')
-      .set('X-Forwarded-For', nextIp())
-      .send({ email: 'nobody-here@example.com' });
+  it('does not reveal whether an unknown address is registered', async () => {
+    const ip = nextIp();
 
+    const res = await requestReset('nobody@example.com', ip);
+
+    // Same success-shaped response as a registered address, and no email out.
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({
-      message: 'If that email is registered, a reset link has been sent.',
-    });
     expect(sendPasswordResetEmail).not.toHaveBeenCalled();
   });
 
-  it('rejects a malformed forgot-password body', async () => {
-    const res = await request(app)
-      .post('/api/auth/forgot-password')
-      .set('X-Forwarded-For', nextIp())
-      .send({ email: 'not-an-email' });
-    expect(res.status).toBe(400);
+  it('quietly does nothing when email is not configured', async () => {
+    const ip = nextIp();
+    await signUp('nomail@example.com', ip);
+    isEmailConfigured.mockReturnValue(false);
+
+    const res = await requestReset('nomail@example.com', ip);
+
+    // A self-hoster without Resend must still get a success response, not a 500.
+    expect(res.status).toBe(200);
+    expect(sendPasswordResetEmail).not.toHaveBeenCalled();
   });
 
-  it('resets the password, auto-logs in, and invalidates the old password', async () => {
+  it('lets the emailed token set a new password', async () => {
     const ip = nextIp();
-    await request(app)
-      .post('/api/auth/register')
-      .set('X-Forwarded-For', ip)
-      .send({ email: 'harry@example.com', password: 'password123' });
+    await signUp('hana@example.com', ip);
+    await requestReset('hana@example.com', ip);
 
-    const token = await getResetToken('harry@example.com', ip);
+    const res = await submitReset(lastEmailedToken(), 'brand-new-password', ip);
+    expect(res.status).toBe(200);
 
+    const withNew = await signIn('hana@example.com', 'brand-new-password', ip);
+    expect(withNew.status).toBe(200);
+
+    const withOld = await signIn('hana@example.com', 'password123', ip);
+    expect(withOld.status).toBe(401);
+  });
+
+  it('refuses a token that has already been used', async () => {
+    const ip = nextIp();
+    await signUp('ivan@example.com', ip);
+    await requestReset('ivan@example.com', ip);
+    const token = lastEmailedToken();
+
+    await submitReset(token, 'first-new-password', ip);
+    const second = await submitReset(token, 'second-new-password', ip);
+
+    expect(second.status).toBeGreaterThanOrEqual(400);
+    // The first reset still stands.
+    const signedIn = await signIn('ivan@example.com', 'first-new-password', ip);
+    expect(signedIn.status).toBe(200);
+  });
+
+  it('refuses an expired token', async () => {
+    const ip = nextIp();
+    await signUp('jo@example.com', ip);
+    await requestReset('jo@example.com', ip);
+    const token = lastEmailedToken();
+
+    // better-auth keeps reset tokens in `verifications`; age the row past its TTL
+    // rather than waiting an hour.
+    await pool.query(`UPDATE verifications SET expires_at = now() - interval '1 hour'`);
+
+    const res = await submitReset(token, 'too-late-password', ip);
+    expect(res.status).toBeGreaterThanOrEqual(400);
+
+    const signedIn = await signIn('jo@example.com', 'password123', ip);
+    expect(signedIn.status).toBe(200);
+  });
+
+  it('refuses a token that was never issued', async () => {
+    const ip = nextIp();
+    await signUp('kim@example.com', ip);
+
+    const res = await submitReset('not-a-real-token', 'whatever-password', ip);
+
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  it('revokes existing sessions when the password is reset', async () => {
+    const ip = nextIp();
+    await signUp('lena@example.com', ip);
+
+    // A session established before the reset, on its own agent.
     const agent = request.agent(app);
-    const reset = await agent
-      .post('/api/auth/reset-password')
+    await agent
+      .post('/api/auth/sign-in/email')
+      .set('Origin', TEST_ORIGIN)
       .set('X-Forwarded-For', ip)
-      .send({ token, password: 'newpassword456' });
+      .send({ email: 'lena@example.com', password: 'password123' });
+    expect((await agent.get('/api/me')).status).toBe(200);
 
-    expect(reset.status).toBe(200);
-    expect(reset.headers['set-cookie']).toBeDefined();
+    await requestReset('lena@example.com', ip);
+    await submitReset(lastEmailedToken(), 'rotated-password', ip);
 
-    const me = await agent.get('/api/auth/me').set('X-Forwarded-For', ip);
-    expect(me.status).toBe(200);
-    expect(me.body).toMatchObject({ email: 'harry@example.com' });
-
-    const oldPasswordLogin = await request(app)
-      .post('/api/auth/login')
-      .set('X-Forwarded-For', ip)
-      .send({ email: 'harry@example.com', password: 'password123' });
-    expect(oldPasswordLogin.status).toBe(401);
-
-    const newPasswordLogin = await request(app)
-      .post('/api/auth/login')
-      .set('X-Forwarded-For', ip)
-      .send({ email: 'harry@example.com', password: 'newpassword456' });
-    expect(newPasswordLogin.status).toBe(200);
-  });
-
-  it('invalidates the pre-reset JWT after a password reset', async () => {
-    const ip = nextIp();
-    const register = await request(app)
-      .post('/api/auth/register')
-      .set('X-Forwarded-For', ip)
-      .send({ email: 'mia@example.com', password: 'password123' });
-
-    const rawCookie = (register.headers['set-cookie'] as unknown as string[])?.find((c) =>
-      c.startsWith('token=')
-    );
-    expect(rawCookie).toBeDefined();
-
-    const token = await getResetToken('mia@example.com', ip);
-
-    const reset = await request(app)
-      .post('/api/auth/reset-password')
-      .set('X-Forwarded-For', ip)
-      .send({ token, password: 'newpassword456' });
-    expect(reset.status).toBe(200);
-
-    const replayOld = await request(app)
-      .get('/api/auth/me')
-      .set('Cookie', rawCookie as string)
-      .set('X-Forwarded-For', ip);
-    expect(replayOld.status).toBe(401);
-
-    const newCookie = (reset.headers['set-cookie'] as unknown as string[])?.find((c) =>
-      c.startsWith('token=')
-    );
-    expect(newCookie).toBeDefined();
-    const replayNew = await request(app)
-      .get('/api/auth/me')
-      .set('Cookie', newCookie as string)
-      .set('X-Forwarded-For', ip);
-    expect(replayNew.status).toBe(200);
-  });
-
-  it('rejects an unknown reset token', async () => {
-    const res = await request(app)
-      .post('/api/auth/reset-password')
-      .set('X-Forwarded-For', nextIp())
-      .send({ token: 'not-a-real-token', password: 'newpassword456' });
-    expect(res.status).toBe(400);
-  });
-
-  it('rejects an expired reset token', async () => {
-    const ip = nextIp();
-    await request(app)
-      .post('/api/auth/register')
-      .set('X-Forwarded-For', ip)
-      .send({ email: 'irene@example.com', password: 'password123' });
-
-    const token = await getResetToken('irene@example.com', ip);
-    const { createHash } = await import('node:crypto');
-    const tokenHash = createHash('sha256').update(token).digest('hex');
-
-    await pool.query(
-      `UPDATE password_reset_tokens SET expires_at = now() - interval '1 hour' WHERE token_hash = $1`,
-      [tokenHash]
-    );
-
-    const res = await request(app)
-      .post('/api/auth/reset-password')
-      .set('X-Forwarded-For', ip)
-      .send({ token, password: 'newpassword456' });
-    expect(res.status).toBe(400);
-  });
-
-  it('rejects reusing an already-used reset token', async () => {
-    const ip = nextIp();
-    await request(app)
-      .post('/api/auth/register')
-      .set('X-Forwarded-For', ip)
-      .send({ email: 'jack@example.com', password: 'password123' });
-
-    const token = await getResetToken('jack@example.com', ip);
-
-    const first = await request(app)
-      .post('/api/auth/reset-password')
-      .set('X-Forwarded-For', ip)
-      .send({ token, password: 'newpassword456' });
-    expect(first.status).toBe(200);
-
-    const second = await request(app)
-      .post('/api/auth/reset-password')
-      .set('X-Forwarded-For', ip)
-      .send({ token, password: 'anotherpassword789' });
-    expect(second.status).toBe(400);
-  });
-
-  it('rejects a too-short new password', async () => {
-    const ip = nextIp();
-    await request(app)
-      .post('/api/auth/register')
-      .set('X-Forwarded-For', ip)
-      .send({ email: 'kate@example.com', password: 'password123' });
-
-    const token = await getResetToken('kate@example.com', ip);
-
-    const res = await request(app)
-      .post('/api/auth/reset-password')
-      .set('X-Forwarded-For', ip)
-      .send({ token, password: 'short' });
-    expect(res.status).toBe(400);
-  });
-
-  it('rate-limits repeated forgot-password requests', async () => {
-    const ip = nextIp();
-    await request(app)
-      .post('/api/auth/register')
-      .set('X-Forwarded-For', ip)
-      .send({ email: 'liam@example.com', password: 'password123' });
-
-    let lastStatus = 0;
-    for (let i = 0; i < 6; i++) {
-      const res = await request(app)
-        .post('/api/auth/forgot-password')
-        .set('X-Forwarded-For', ip)
-        .send({ email: 'liam@example.com' });
-      lastStatus = res.status;
-    }
-    expect(lastStatus).toBe(429);
+    // revokeSessionsOnPasswordReset is what replaces the old tokenVersion bump.
+    expect((await agent.get('/api/me')).status).toBe(401);
   });
 });

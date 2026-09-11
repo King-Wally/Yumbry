@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   isSupportedLocale,
@@ -13,7 +13,8 @@ import { chatAboutRecipe, getRecipe, updateProfile } from '../api/client';
 import { queryKeys } from '../api/queryKeys';
 import AiErrorBanner from '../components/AiErrorBanner';
 import RecipePreview from '../components/RecipePreview';
-import { useAuth } from '../hooks/useAuth';
+import { refreshSession } from '../lib/auth-client';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { renderDraftForReader } from '../utils/render-draft';
 import { toRecipeInput } from '../utils/recipe-mapping';
 import type { AiChatMessage, AiRecipeDraft } from '../types';
@@ -24,8 +25,7 @@ export default function AiChatPage() {
   const { id } = useParams<{ id?: string }>();
   const isImproving = Boolean(id);
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const backTo = isImproving ? `/recipes/${id}` : '/';
 
   const { data: recipe } = useQuery({
@@ -68,7 +68,7 @@ export default function AiChatPage() {
     mutationFn: (data: { unitSystem?: UnitSystem; smallVolumes?: SmallVolumeStyle }) =>
       updateProfile(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.authMe });
+      refreshSession();
     },
   });
 

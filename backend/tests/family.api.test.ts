@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import pg from 'pg';
 import type { Express } from 'express';
-import { registerTestUser } from './helpers/auth.js';
+import { TEST_ORIGIN, registerTestUser } from './helpers/auth.js';
 import { resetTestDatabase } from './helpers/db.js';
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
@@ -38,7 +38,7 @@ describe.skipIf(!TEST_DATABASE_URL)('family API', () => {
     // Users and families are recreated per test here (unlike recipes.api.test.ts,
     // which shares one long-lived agent), so both go in the truncate list.
     await pool.query(
-      'TRUNCATE users, families, recipes, ingredients, instructions, tags, recipe_tags, categories RESTART IDENTITY CASCADE'
+      'TRUNCATE users, sessions, accounts, verifications, families, recipes, ingredients, instructions, tags, recipe_tags, categories RESTART IDENTITY CASCADE'
     );
   });
 
@@ -50,6 +50,16 @@ describe.skipIf(!TEST_DATABASE_URL)('family API', () => {
 
   function join(user: TestUser, token: string) {
     return user.agent.post('/api/family/join').set('X-Forwarded-For', nextIp()).send({ token });
+  }
+
+  // better-auth's delete-user endpoint, which runs the family-cleanup hooks.
+  // Needs an Origin header like every other state-changing auth call.
+  function deleteAccount(user: TestUser) {
+    return user.agent
+      .post('/api/auth/delete-user')
+      .set('Origin', TEST_ORIGIN)
+      .set('X-Forwarded-For', nextIp())
+      .send({ password: 'password123' });
   }
 
   it('gives a fresh user a family of one with an invite token', async () => {
@@ -234,11 +244,8 @@ describe.skipIf(!TEST_DATABASE_URL)('family API', () => {
     await join(bob, await inviteTokenOf(alice));
     await bob.agent.post('/api/recipes').send({ title: "Bob's Bread", servings: 1 });
 
-    const deleted = await bob.agent
-      .delete('/api/auth/me')
-      .set('X-Forwarded-For', nextIp())
-      .send({ password: 'password123' });
-    expect(deleted.status).toBe(204);
+    const deleted = await deleteAccount(bob);
+    expect(deleted.status).toBe(200);
 
     const remaining = await alice.agent.get('/api/recipes');
     expect(remaining.body.map((r: { title: string }) => r.title)).toEqual(["Bob's Bread"]);
@@ -252,11 +259,8 @@ describe.skipIf(!TEST_DATABASE_URL)('family API', () => {
     const alice = await registerTestUser(app);
     await alice.agent.post('/api/recipes').send({ title: 'Only Mine', servings: 1 });
 
-    const deleted = await alice.agent
-      .delete('/api/auth/me')
-      .set('X-Forwarded-For', nextIp())
-      .send({ password: 'password123' });
-    expect(deleted.status).toBe(204);
+    const deleted = await deleteAccount(alice);
+    expect(deleted.status).toBe(200);
 
     const families = await pool.query<{ count: string }>(
       'SELECT count(*)::text AS count FROM families'

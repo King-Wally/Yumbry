@@ -10,7 +10,7 @@ import ServingsStepper from '../components/ServingsStepper';
 import TimeStat from '../components/TimeStat';
 import { useScaledIngredients } from '../hooks/useScaledIngredients';
 import { useAiStatus } from '../hooks/useAiStatus';
-import { useAuth } from '../hooks/useAuth';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { toNumber } from '../utils/numeric';
 import CollapsibleActions from '../components/CollapsibleActions';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -29,7 +29,7 @@ export default function RecipeDetailPage() {
     queryFn: () => getRecipe(id!),
   });
   const { data: aiStatus } = useAiStatus();
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
 
   const [servings, setServings] = useState(1);
   const [servingsForRecipeId, setServingsForRecipeId] = useState<number | null>(null);

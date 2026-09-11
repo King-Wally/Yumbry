@@ -1,8 +1,10 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import express, { type NextFunction, type Request, type Response } from 'express';
-import cookieParser from 'cookie-parser';
-import { authRouter } from './routes/auth.routes.js';
+import { toNodeHandler } from 'better-auth/node';
+import { auth } from './auth.js';
+import { getAppConfig } from './controllers/config.controller.js';
+import { meRouter } from './routes/me.routes.js';
 import { recipesRouter } from './routes/recipes.routes.js';
 import { tagsRouter } from './routes/tags.routes.js';
 import { categoriesRouter } from './routes/categories.routes.js';
@@ -19,16 +21,26 @@ const PUBLIC_DIR = path.join(process.cwd(), 'public');
 export const app = express();
 app.set('trust proxy', 1);
 
-app.use(express.json({ limit: '2mb' }));
-app.use(cookieParser());
-
+// Body-agnostic, so it can sit above the auth handler and still cover it.
 app.use('/api', apiRateLimiter);
+
+// MUST be mounted before express.json(). toNodeHandler consumes the raw request
+// stream itself, and a body a parser has already drained makes every auth POST
+// hang or fail. Express 4 wildcard syntax — on Express 5 this becomes
+// '/api/auth/*splat'.
+app.all('/api/auth/*', toNodeHandler(auth));
+
+app.use(express.json({ limit: '2mb' }));
+// No cookie-parser: better-auth reads cookies straight off the raw headers, and
+// nothing else in the app looks at req.cookies.
 
 app.use('/uploads', requireAuth, asyncHandler(requirePhotoAccess), express.static(UPLOADS_DIR));
 
 app.get('/api/health', (_req, res) => res.status(200).json({ status: 'ok' }));
+// Not under /api/auth: that prefix belongs entirely to better-auth's catch-all.
+app.get('/api/config', getAppConfig);
 
-app.use('/api/auth', authRouter);
+app.use('/api/me', requireAuth, meRouter);
 app.use('/api/recipes', requireAuth, recipesRouter);
 app.use('/api/tags', requireAuth, tagsRouter);
 app.use('/api/categories', requireAuth, categoriesRouter);

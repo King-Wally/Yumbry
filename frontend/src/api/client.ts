@@ -121,7 +121,7 @@ export function chatAboutRecipe(data: AiChatTurnRequest) {
 }
 
 export interface CurrentUser {
-  id: number;
+  id: string;
   email: string;
   locale: SupportedLocale;
   unitSystem: UnitSystem;
@@ -129,66 +129,26 @@ export interface CurrentUser {
   jsonImportExportEnabled: boolean;
 }
 
-export function getCurrentUser() {
-  return request<CurrentUser>('/auth/me');
-}
-
 /** Partial on purpose: the settings page sends exactly the preference the reader just changed,
- *  so two independent selects can't overwrite each other's value from a stale cache. */
+ *  so two independent selects can't overwrite each other's value from a stale cache.
+ *
+ *  Stays on our own endpoint rather than better-auth's updateUser: these columns are
+ *  declared with `input: false` server-side so only this route, which validates them
+ *  against the shared enums, can write them. */
 export function updateProfile(data: {
   locale?: SupportedLocale;
   unitSystem?: UnitSystem;
   smallVolumes?: SmallVolumeStyle;
   jsonImportExportEnabled?: boolean;
 }) {
-  return request<CurrentUser>('/auth/me', { method: 'PATCH', body: JSON.stringify(data) });
+  return request<CurrentUser>('/me', { method: 'PATCH', body: JSON.stringify(data) });
 }
 
-export function login(email: string, password: string) {
-  return request<CurrentUser>('/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ email, password }),
-  });
-}
-
-export function register(email: string, password: string) {
-  return request<CurrentUser>('/auth/register', {
-    method: 'POST',
-    body: JSON.stringify({ email, password }),
-  });
-}
-
-export function logout() {
-  return request<null>('/auth/logout', { method: 'POST' });
-}
-
-export function deleteAccount(password: string) {
-  return request<null>('/auth/me', { method: 'DELETE', body: JSON.stringify({ password }) });
-}
-
-export function getAuthConfig() {
-  return request<{ passwordResetEnabled: boolean }>('/auth/config');
-}
-
-export function forgotPassword(email: string) {
-  return request<{ message: string }>('/auth/forgot-password', {
-    method: 'POST',
-    body: JSON.stringify({ email }),
-  });
-}
-
-export function resetPassword(token: string, password: string) {
-  return request<{ id: number }>('/auth/reset-password', {
-    method: 'POST',
-    body: JSON.stringify({ token, password }),
-  });
-}
-
-export function changePassword(currentPassword: string, newPassword: string) {
-  return request<null>('/auth/change-password', {
-    method: 'POST',
-    body: JSON.stringify({ currentPassword, newPassword }),
-  });
+/** Whether the server has email configured, and so whether the login page should
+ *  offer "forgot password" at all. Lives at /api/config, not /api/auth/config:
+ *  that prefix is handled entirely by better-auth. */
+export function getAppConfig() {
+  return request<{ passwordResetEnabled: boolean }>('/config');
 }
 
 export function getFamily() {

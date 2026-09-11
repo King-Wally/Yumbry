@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../hooks/useAuth';
+import { authClient } from '../lib/auth-client';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 
 export default function RegisterPage() {
   const { t } = useTranslation();
@@ -9,7 +10,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { user, register } = useAuth();
+  const { user } = useCurrentUser();
   const navigate = useNavigate();
   const location = useLocation();
   // Set by ProtectedRoute when it bounced an unauthenticated visitor, so an
@@ -24,14 +25,20 @@ export default function RegisterPage() {
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
-    try {
-      await register(email, password);
-      navigate(from, { replace: true });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('auth.register.error'));
-    } finally {
-      setIsSubmitting(false);
+    // better-auth requires a name; this app has no name field and never shows
+    // one, so the email stands in for it rather than adding a field users would
+    // have to fill in twice.
+    const { error: signUpError } = await authClient.signUp.email({
+      email,
+      password,
+      name: email,
+    });
+    setIsSubmitting(false);
+    if (signUpError) {
+      setError(signUpError.message ?? t('auth.register.error'));
+      return;
     }
+    navigate(from, { replace: true });
   }
 
   return (

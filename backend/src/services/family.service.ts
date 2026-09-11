@@ -48,7 +48,14 @@ export async function getFamily(familyId: number): Promise<Family | null> {
     select: {
       id: true,
       inviteToken: true,
-      members: { select: { id: true, email: true }, orderBy: { id: 'asc' } },
+      // By creation date, not by id: better-auth ids are random strings, so
+      // ordering by id would shuffle the member list arbitrarily between
+      // renders. createdAt preserves the "oldest account first" order the
+      // autoincrement ids used to give for free; id only breaks ties.
+      members: {
+        select: { id: true, email: true },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      },
     },
   });
   if (!family) return null;
@@ -110,7 +117,7 @@ async function mergeFamilyContent(client: Queryable, from: number, to: number): 
   await client.recipe.updateMany({ where: { familyId: from }, data: { familyId: to } });
 }
 
-export async function joinFamily(userId: number, token: string): Promise<{ familyId: number }> {
+export async function joinFamily(userId: string, token: string): Promise<{ familyId: number }> {
   return withTransaction(async (client) => {
     const target = await client.family.findUnique({
       where: { inviteToken: token },
@@ -153,7 +160,7 @@ export async function joinFamily(userId: number, token: string): Promise<{ famil
   });
 }
 
-export async function leaveFamily(userId: number): Promise<{ familyId: number }> {
+export async function leaveFamily(userId: string): Promise<{ familyId: number }> {
   return withTransaction(async (client) => {
     const me = await client.user.findUniqueOrThrow({
       where: { id: userId },
@@ -188,6 +195,15 @@ export async function deleteFamilyIfEmpty(client: Queryable, familyId: number): 
   const recipes = await client.recipe.findMany({ where: { familyId }, select: { id: true } });
   await client.family.delete({ where: { id: familyId } });
   return recipes.map((recipe) => recipe.id);
+}
+
+/** Deletes families that never gained a member. better-auth's user-create hook
+ * writes the family before the user insert, so a signup that then fails on the
+ * unique email index leaves one behind. Cheap to run at startup; deliberately
+ * not on an interval, since the window that creates them is a failed signup. */
+export async function sweepOrphanedFamilies(): Promise<number> {
+  const { count } = await prisma.family.deleteMany({ where: { members: { none: {} } } });
+  return count;
 }
 
 /** Best-effort upload cleanup, always after the transaction has committed —

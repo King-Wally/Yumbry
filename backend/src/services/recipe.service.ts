@@ -195,7 +195,7 @@ async function referencedCategoryIds(client: Queryable, familyId: number): Promi
  * author's account is gone. */
 export async function createRecipe(
   data: RecipeInput,
-  { familyId, authorId }: { familyId: number; authorId: number }
+  { familyId, authorId }: { familyId: number; authorId: string }
 ): Promise<RecipeWithRelations | null> {
   const recipeId = await withTransaction(async (client) => {
     const categoryId = await upsertCategory(client, data.category, familyId);

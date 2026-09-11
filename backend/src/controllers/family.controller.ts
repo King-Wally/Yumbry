@@ -19,7 +19,7 @@ export async function getMyFamily(req: Request, res: Response) {
 export async function postJoinFamily(req: Request, res: Response) {
   try {
     const { token } = JoinFamilyBodySchema.parse(req.body);
-    await joinFamily(req.userId as number, token);
+    await joinFamily(req.userId as string, token);
     res.status(204).end();
   } catch (err) {
     if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
@@ -29,7 +29,7 @@ export async function postJoinFamily(req: Request, res: Response) {
 
 export async function postLeaveFamily(req: Request, res: Response) {
   try {
-    await leaveFamily(req.userId as number);
+    await leaveFamily(req.userId as string);
     res.status(204).end();
   } catch (err) {
     sendKindedError(res, err, FamilyError, FAMILY_ERROR_STATUS);

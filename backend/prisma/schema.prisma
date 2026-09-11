@@ -12,8 +12,8 @@ datasource db {
 /// gets a personal family of one at registration, so familyId is never absent.
 model Family {
   id          Int      @id @default(autoincrement())
-  /// Stored raw rather than hashed (unlike PasswordResetToken.tokenHash): the
-  /// settings page has to re-display the same stable invite link on every
+  /// Stored raw rather than hashed (unlike better-auth's Verification.value):
+  /// the settings page has to re-display the same stable invite link on every
   /// visit, which a one-way hash cannot support.
   inviteToken String   @unique @map("invite_token")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
@@ -26,26 +26,90 @@ model Family {
   @@map("families")
 }
 
+/// Owned by better-auth: `id`, `name`, `email`, `emailVerified` and `image` are
+/// its core columns, and the rest are declared as `additionalFields` in
+/// src/auth.ts. The password hash lives on Account, not here.
 model User {
-  id                      Int      @id @default(autoincrement())
+  id                      String   @id
+  name                    String
   email                   String   @unique
-  passwordHash            String   @map("password_hash")
-  tokenVersion            Int      @default(0) @map("token_version")
+  emailVerified           Boolean  @default(false) @map("email_verified")
+  image                   String?
   locale                  String   @default("en") @map("locale")
   unitSystem              String   @default("metric") @map("unit_system")
   smallVolumes            String   @default("spoons") @map("small_volumes")
   jsonImportExportEnabled Boolean  @default(false) @map("json_import_export_enabled")
   familyId                Int      @map("family_id")
   createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   // Restrict, not Cascade: deleting a family must never delete its members.
   // Families are only ever deleted once their member count reaches zero.
-  family              Family               @relation(fields: [familyId], references: [id], onDelete: Restrict)
-  authoredRecipes     Recipe[]             @relation("RecipeAuthor")
-  passwordResetTokens PasswordResetToken[]
+  family          Family    @relation(fields: [familyId], references: [id], onDelete: Restrict)
+  authoredRecipes Recipe[]  @relation("RecipeAuthor")
+  sessions        Session[]
+  accounts        Account[]
 
   @@index([familyId], map: "idx_users_family_id")
   @@map("users")
+}
+
+/// better-auth session rows. These replace the old tokenVersion counter: an
+/// individual session is revoked by deleting its row, and "log out everywhere"
+/// deletes all of a user's rows.
+model Session {
+  id        String   @id
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at") @db.Timestamptz
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_sessions_user_id")
+  @@map("sessions")
+}
+
+/// A credential or linked provider for a user. With email+password as the only
+/// enabled method, each user has exactly one row here with providerId
+/// 'credential' and the scrypt hash in `password`.
+model Account {
+  id                    String    @id
+  userId                String    @map("user_id")
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at") @db.Timestamptz
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at") @db.Timestamptz
+  scope                 String?
+  idToken               String?   @map("id_token")
+  password              String?
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_accounts_user_id")
+  @@map("accounts")
+}
+
+/// Short-lived tokens — password resets, in this app. Replaces the hand-written
+/// PasswordResetToken model and its hourly cleanup interval; better-auth expires
+/// these itself.
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([identifier], map: "idx_verifications_identifier")
+  @@map("verifications")
 }
 
 model Recipe {
@@ -62,7 +126,7 @@ model Recipe {
   /// Provenance only — nothing authorises on this. Access is decided by
   /// familyId, and the recipe outlives its author (SetNull) so that leaving or
   /// deleting an account doesn't take the family's recipes with it.
-  authorId         Int?     @map("author_id")
+  authorId         String?  @map("author_id")
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime @default(now()) @map("updated_at") @db.Timestamptz
 
@@ -143,19 +207,4 @@ model Category {
   @@unique([familyId, name], map: "categories_family_id_name_key")
   @@index([familyId], map: "idx_categories_family_id")
   @@map("categories")
-}
-
-model PasswordResetToken {
-  id        Int       @id @default(autoincrement())
-  userId    Int       @map("user_id")
-  tokenHash String    @unique @map("token_hash")
-  expiresAt DateTime  @map("expires_at") @db.Timestamptz
-  usedAt    DateTime? @map("used_at") @db.Timestamptz
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId], map: "idx_password_reset_tokens_user_id")
-  @@index([expiresAt], map: "idx_password_reset_tokens_expires_at")
-  @@map("password_reset_tokens")
 }

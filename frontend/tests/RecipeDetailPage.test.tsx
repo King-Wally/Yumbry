@@ -5,13 +5,19 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import RecipeDetailPage from '../src/pages/RecipeDetailPage';
 import * as apiClient from '../src/api/client';
 import type { CurrentUser } from '../src/api/client';
-import { AuthProvider } from '../src/context/AuthContext';
+import { useSession } from '../src/lib/auth-client';
+import { sessionFor } from './helpers/auth-client';
 import type { Recipe } from '../src/types';
 
 vi.mock('../src/api/client');
+// Async factory with a dynamic import: vi.mock is hoisted above the imports,
+// so the helper cannot be referenced directly here.
+vi.mock('../src/lib/auth-client', async () =>
+  (await import('./helpers/auth-client')).authClientMock()
+);
 
 const currentUser: CurrentUser = {
-  id: 1,
+  id: 'user_1',
   email: 'a@example.com',
   locale: 'en',
   unitSystem: 'metric',
@@ -52,11 +58,9 @@ function renderDetail() {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={['/recipes/1']}>
-        <AuthProvider>
-          <Routes>
-            <Route path="/recipes/:id" element={<RecipeDetailPage />} />
-          </Routes>
-        </AuthProvider>
+        <Routes>
+          <Route path="/recipes/:id" element={<RecipeDetailPage />} />
+        </Routes>
       </MemoryRouter>
     </QueryClientProvider>
   );
@@ -65,7 +69,7 @@ function renderDetail() {
 describe('RecipeDetailPage render-time state sync', () => {
   it('initializes the servings stepper from the recipe base servings (a string from the API)', async () => {
     vi.mocked(apiClient.getRecipe).mockResolvedValue(recipe);
-    vi.mocked(apiClient.getCurrentUser).mockResolvedValue(currentUser);
+    vi.mocked(useSession).mockReturnValue(sessionFor(currentUser));
     renderDetail();
 
     expect(await screen.findByText('2 cups flour')).toBeInTheDocument();
@@ -74,7 +78,7 @@ describe('RecipeDetailPage render-time state sync', () => {
 
   it('rescales ingredient amounts when the user adjusts servings', async () => {
     vi.mocked(apiClient.getRecipe).mockResolvedValue(recipe);
-    vi.mocked(apiClient.getCurrentUser).mockResolvedValue(currentUser);
+    vi.mocked(useSession).mockReturnValue(sessionFor(currentUser));
     renderDetail();
 
     await screen.findByText('2 cups flour');

@@ -205,8 +205,8 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
       expect(promptMessages[0].content).toContain('is written in English');
     });
 
-    it('targets the locale set via PATCH /api/auth/me in the prompt', async () => {
-      await agent.patch('/api/auth/me').send({ locale: 'fr' });
+    it('targets the locale set via PATCH /api/me in the prompt', async () => {
+      await agent.patch('/api/me').send({ locale: 'fr' });
       chatWithAi.mockResolvedValue(
         JSON.stringify({ reply: 'Bonjour', recipe: { title: 'Untitled recipe' } })
       );
@@ -223,7 +223,7 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
       );
 
       // Reset for subsequent tests in this file that assume the default locale.
-      await agent.patch('/api/auth/me').send({ locale: 'en' });
+      await agent.patch('/api/me').send({ locale: 'en' });
     });
 
     it('renders the same model response in the unit system the reader chose', async () => {
@@ -254,7 +254,7 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
       expect(metric.body.recipe.ingredients).toEqual(['500 g flour', '250 g butter']);
       expect(metric.body.recipe.instructions[0].text).toBe('Bake at 200 °C.');
 
-      await agent.patch('/api/auth/me').send({ unitSystem: 'imperial' });
+      await agent.patch('/api/me').send({ unitSystem: 'imperial' });
       chatWithAi.mockResolvedValue(modelResponse);
       const imperial = await agent
         .post('/api/ai/chat')
@@ -268,7 +268,7 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
         JSON.stringify(chatWithAi.mock.calls[0][0])
       );
 
-      await agent.patch('/api/auth/me').send({ unitSystem: 'metric' });
+      await agent.patch('/api/me').send({ unitSystem: 'metric' });
     });
 
     it('writes small amounts as millilitres when the reader asked for that', async () => {
@@ -296,7 +296,7 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
         .send({ messages: [{ role: 'user', content: 'pad thai' }], current_draft: null });
       expect(spoons.body.recipe.ingredients).toEqual(['3 tbsp fish sauce']);
 
-      await agent.patch('/api/auth/me').send({ smallVolumes: 'millilitres' });
+      await agent.patch('/api/me').send({ smallVolumes: 'millilitres' });
       chatWithAi.mockResolvedValue(modelResponse);
       const millilitres = await agent
         .post('/api/ai/chat')
@@ -308,7 +308,7 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
         JSON.stringify(chatWithAi.mock.calls[0][0])
       );
 
-      await agent.patch('/api/auth/me').send({ smallVolumes: 'spoons' });
+      await agent.patch('/api/me').send({ smallVolumes: 'spoons' });
     });
 
     it('accepts a draft from a client that predates the structured side-channel', async () => {

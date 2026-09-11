@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../hooks/useAuth';
+import { authClient } from '../lib/auth-client';
 
 export default function ResetPasswordPage() {
   const { t } = useTranslation();
@@ -10,21 +10,22 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { resetPassword } = useAuth();
   const navigate = useNavigate();
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
-    try {
-      await resetPassword(token, password);
-      navigate('/');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('auth.resetPassword.error'));
-    } finally {
-      setIsSubmitting(false);
+    const { error: resetError } = await authClient.resetPassword({ token, newPassword: password });
+    setIsSubmitting(false);
+    if (resetError) {
+      setError(resetError.message ?? t('auth.resetPassword.error'));
+      return;
     }
+    // A reset no longer signs you in: revokeSessionsOnPasswordReset drops every
+    // session for the account, this one included, so send them to sign in with
+    // the password they just chose.
+    navigate('/login', { replace: true });
   }
 
   if (!token) {

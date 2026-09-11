@@ -41,7 +41,7 @@ export async function importRecipe(req: Request, res: Response) {
     const parsedRecipe = parseRecipeFromJsonLd(rawJsonLdText);
     const recipe = await createRecipe(parsedRecipe, {
       familyId: req.familyId as number,
-      authorId: req.userId as number,
+      authorId: req.userId as string,
     });
     res.status(201).json(recipe);
   } catch (err) {
@@ -115,7 +115,7 @@ export async function postRecipe(req: Request, res: Response) {
         ...body,
         ingredients: normalizeIngredients(body.ingredients),
       },
-      { familyId: req.familyId as number, authorId: req.userId as number }
+      { familyId: req.familyId as number, authorId: req.userId as string }
     );
     res.status(201).json(recipe);
   } catch (err) {

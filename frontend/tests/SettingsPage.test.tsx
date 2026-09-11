@@ -3,19 +3,23 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import SettingsPage from '../src/pages/SettingsPage';
-import { AuthProvider } from '../src/context/AuthContext';
+import { refreshSession, useSession } from '../src/lib/auth-client';
 import * as apiClient from '../src/api/client';
+import { sessionFor } from './helpers/auth-client';
 
 vi.mock('../src/api/client');
+// Async factory with a dynamic import: vi.mock is hoisted above the imports,
+// so the helper cannot be referenced directly here.
+vi.mock('../src/lib/auth-client', async () =>
+  (await import('./helpers/auth-client')).authClientMock()
+);
 
 function renderSettings() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
-        <AuthProvider>
-          <SettingsPage />
-        </AuthProvider>
+        <SettingsPage />
       </MemoryRouter>
     </QueryClientProvider>
   );
@@ -23,20 +27,13 @@ function renderSettings() {
 
 describe('SettingsPage', () => {
   beforeEach(() => {
-    vi.mocked(apiClient.getCurrentUser).mockRejectedValue(new Error('not authenticated'));
+    vi.clearAllMocks();
+    vi.mocked(useSession).mockReturnValue(sessionFor());
   });
 
-  it('saving a language choice refetches the current user via queryKeys.authMe, not a hand-written key', async () => {
-    vi.mocked(apiClient.getCurrentUser).mockResolvedValueOnce({
-      id: 1,
-      email: 'a@example.com',
-      locale: 'en',
-      unitSystem: 'metric',
-      smallVolumes: 'spoons',
-      jsonImportExportEnabled: false,
-    });
+  it('saving a language choice refreshes the session so the new locale takes effect', async () => {
     vi.mocked(apiClient.updateProfile).mockResolvedValue({
-      id: 1,
+      id: 'user_1',
       email: 'a@example.com',
       locale: 'fr',
       unitSystem: 'metric',
@@ -46,18 +43,12 @@ describe('SettingsPage', () => {
     renderSettings();
 
     await screen.findByLabelText('Language');
-    const getCurrentUserCallsBefore = vi.mocked(apiClient.getCurrentUser).mock.calls.length;
-
     fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'fr' } });
 
     await waitFor(() => expect(apiClient.updateProfile).toHaveBeenCalledWith({ locale: 'fr' }));
-    // Saving invalidates queryKeys.authMe, which re-triggers AuthContext's
-    // own getCurrentUser query — proof the mutation and the query share the
-    // same key rather than two independently hand-written literals.
-    await waitFor(() =>
-      expect(vi.mocked(apiClient.getCurrentUser).mock.calls.length).toBeGreaterThan(
-        getCurrentUserCallsBefore
-      )
-    );
+    // The preference columns are written through our own endpoint, which
+    // better-auth knows nothing about, so the session has to be re-read for
+    // useLocaleSync to see the change.
+    await waitFor(() => expect(refreshSession).toHaveBeenCalled());
   });
 });

@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { joinFamily } from '../api/client';
-import { useAuth } from '../hooks/useAuth';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useInvalidateFamilyData } from '../hooks/useInvalidateFamilyData';
 import { useToast } from '../hooks/useToast';
 
@@ -11,7 +11,7 @@ export default function JoinFamilyPage() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading } = useCurrentUser();
   const invalidateFamilyData = useInvalidateFamilyData();
   const { showToast } = useToast();
 

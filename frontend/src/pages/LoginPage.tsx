@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../hooks/useAuth';
-import { useAuthConfig } from '../hooks/useAuthConfig';
+import { authClient } from '../lib/auth-client';
+import { useCurrentUser } from '../hooks/useCurrentUser';
+import { useAppConfig } from '../hooks/useAppConfig';
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -10,8 +11,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { user, login } = useAuth();
-  const { data: authConfig } = useAuthConfig();
+  const { user } = useCurrentUser();
+  const { data: appConfig } = useAppConfig();
   const navigate = useNavigate();
   const location = useLocation();
   // Set by ProtectedRoute when it bounced an unauthenticated visitor, so an
@@ -26,14 +27,15 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
-    try {
-      await login(email, password);
-      navigate(from, { replace: true });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('auth.login.error'));
-    } finally {
-      setIsSubmitting(false);
+    // better-auth returns errors in the result rather than throwing, so there is
+    // no catch here for the expected "wrong credentials" case.
+    const { error: signInError } = await authClient.signIn.email({ email, password });
+    setIsSubmitting(false);
+    if (signInError) {
+      setError(signInError.message ?? t('auth.login.error'));
+      return;
     }
+    navigate(from, { replace: true });
   }
 
   return (
@@ -70,7 +72,7 @@ export default function LoginPage() {
 
       {error && <p className="text-red-600">{error}</p>}
 
-      {authConfig?.passwordResetEnabled && (
+      {appConfig?.passwordResetEnabled && (
         <p className="text-sm text-stone-500">
           <Link to="/forgot-password" className="text-clay hover:underline">
             {t('auth.login.forgotPasswordLink')}

@@ -8,7 +8,7 @@ Each user logs in with an email and password and only ever sees their own
 recipes, tags, and categories — there's no sharing between accounts. Anyone reaching the app can self-register; there's no invite system,
 so this is still meant for a trusted local network (household, small team),
 not the open internet, unless you put it behind your own access control.
-Logins last up to 30 days (see `JWT_SECRET` below).
+Logins last up to 30 days (see `BETTER_AUTH_SECRET` below).
 
 ## Setup
 
@@ -71,12 +71,14 @@ the backend directly means `db:5432` won't resolve, so it needs a separate
 ```sh
 cd backend
 echo 'DATABASE_URL=postgres://chef:changeme@localhost:5432/recipe_vault
-JWT_SECRET=dev-secret-not-for-production' > .env
+BETTER_AUTH_SECRET=dev-secret-not-for-production
+BETTER_AUTH_URL=http://localhost:3000' > .env
 ```
 
-(adjust user/password/db name to match whatever's in the root `.env`.) `JWT_SECRET`
-has no fallback — the app throws at startup if it's unset, so this always needs
-setting, even for local development.
+(adjust user/password/db name to match whatever's in the root `.env`.)
+`BETTER_AUTH_SECRET` is only required in production — outside it the app falls
+back to a fixed development placeholder, so local setup works without one. Set
+it anyway if you want sessions to survive a restart with a secret of your own.
 
 Recipe photos live in `backend/uploads/` on disk (`UPLOADS_DIR` defaults to
 `./uploads` relative to the backend process's cwd). This is a different

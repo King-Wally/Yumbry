@@ -3,9 +3,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, FileBraces, Globe, Lock, TriangleAlert, Users } from 'lucide-react';
 import * as SwitchPrimitive from '@radix-ui/react-switch';
-import { changePassword, deleteAccount, leaveFamily, updateProfile } from '../api/client';
-import { queryKeys } from '../api/queryKeys';
-import { useAuth } from '../hooks/useAuth';
+import { leaveFamily, updateProfile } from '../api/client';
+import { authClient, refreshSession } from '../lib/auth-client';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useFamily } from '../hooks/useFamily';
 import { useInvalidateFamilyData } from '../hooks/useInvalidateFamilyData';
 import Card from '../components/Card';
@@ -24,14 +24,22 @@ const LOCALE_LABELS: Record<SupportedLocale, string> = {
 export default function SettingsPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { clearSession, user } = useAuth();
+  const { user } = useCurrentUser();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
 
   const deleteAccountMutation = useMutation({
-    mutationFn: () => deleteAccount(deletePassword),
-    onSuccess: () => clearSession(),
+    // better-auth reports failures in the result rather than throwing, so the
+    // wrong-password case has to be turned back into a rejection for useMutation.
+    mutationFn: async () => {
+      const { error } = await authClient.deleteUser({ password: deletePassword });
+      if (error) throw new Error(error.message ?? t('common.somethingWentWrong'));
+    },
+    onSuccess: () => {
+      // The account and its session are gone; drop every cached query with it.
+      queryClient.clear();
+    },
   });
 
   function handleDeleteSubmit(e: FormEvent<HTMLFormElement>) {
@@ -42,14 +50,14 @@ export default function SettingsPage() {
   const localeMutation = useMutation({
     mutationFn: (locale: SupportedLocale) => updateProfile({ locale }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.authMe });
+      refreshSession();
     },
   });
 
   const jsonImportExportMutation = useMutation({
     mutationFn: (jsonImportExportEnabled: boolean) => updateProfile({ jsonImportExportEnabled }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.authMe });
+      refreshSession();
     },
   });
 
@@ -80,7 +88,16 @@ export default function SettingsPage() {
     newPassword.length > 0 && confirmNewPassword.length > 0 && newPassword !== confirmNewPassword;
 
   const changePasswordMutation = useMutation({
-    mutationFn: () => changePassword(currentPassword, newPassword),
+    mutationFn: async () => {
+      const { error } = await authClient.changePassword({
+        currentPassword,
+        newPassword,
+        // Matches the old behaviour: changing your password signs out every
+        // other device, which used to be a tokenVersion bump.
+        revokeOtherSessions: true,
+      });
+      if (error) throw new Error(error.message ?? t('common.somethingWentWrong'));
+    },
     onSuccess: () => {
       setCurrentPassword('');
       setNewPassword('');

@@ -41,7 +41,7 @@ npm run db:migrate:status
 ```
 
 Local dev needs `backend/.env` with its own `DATABASE_URL` (pointing at `localhost`, not the
-`db` Docker hostname) and `JWT_SECRET` — see README "Development (without Docker)" for the full
+`db` Docker hostname) and `BETTER_AUTH_SECRET` — see README "Development (without Docker)" for the full
 setup including starting just the `db` service via `docker compose up -d db`.
 
 Backend tests (from `backend/`): unit tests (`*.service.test.ts`) always run; integration tests
@@ -55,8 +55,9 @@ TEST_DATABASE_URL=postgres://chef:changeme@localhost:5432/recipe_vault_test npm 
 Never point `TEST_DATABASE_URL` at a real database — integration tests drop and recreate the
 `public` schema on every run. `vitest.config.ts` sets `fileParallelism: false` because multiple
 `*.api.test.ts` files share/reset that same DB and would race otherwise; it also injects fixed
-dummy `JWT_SECRET`/email env vars since several backend modules throw at import time if those are
-unset. `GEMINI_API_KEY` is read lazily (not at import time), so AI chat tests mock
+dummy `BETTER_AUTH_SECRET`/`BETTER_AUTH_URL`/email env vars. Auth requests from supertest must set
+an `Origin` header matching `BETTER_AUTH_URL` — better-auth rejects state-changing calls without
+one, and browsers send it automatically where supertest does not (see `tests/helpers/auth.ts`). `GEMINI_API_KEY` is read lazily (not at import time), so AI chat tests mock
 `chatWithAi` directly instead of needing a dummy key.
 
 To run a single test file: `npx vitest run tests/recipes.api.test.ts` (from `backend/` or
@@ -71,11 +72,12 @@ Routes → controllers → services → Prisma, applied loosely rather than stri
 parsing/error-shaping inline rather than through a shared validation middleware. Every
 controller is wrapped in `asyncHandler` at the route so promise rejections reach `next(err)`.
 
-`app.ts` builds the Express app; `index.ts` just imports it and listens. Middleware order:
-`express.json` → `cookieParser` → global `/api` rate limiter → static `/uploads` (behind
-`requireAuth` + `requirePhotoOwner`) → health check → feature routers, each wrapped with
-`requireAuth` at mount time (only `/api/auth` is unauthenticated) → SPA static fallback →
-one generic 4-arg error handler at the very end (logs + generic 500, no per-kind mapping).
+`app.ts` builds the Express app; `index.ts` imports it, listens, and sweeps orphaned families
+once at startup. Middleware order: global `/api` rate limiter → better-auth's `toNodeHandler`
+catch-all → `express.json` → static `/uploads` (behind `requireAuth` + `requirePhotoAccess`) →
+health check → `/api/config` → feature routers, each wrapped with `requireAuth` at mount time →
+SPA static fallback → one generic 4-arg error handler at the very end (logs + generic 500, no
+per-kind mapping). There is no `cookieParser` — better-auth reads cookies off the raw headers.
 
 Validation: Zod schemas live under `backend/src/schemas/`, called directly as
 `SomeSchema.parse(req.body)` inside each controller's try/catch, with `ZodError` manually mapped
@@ -89,13 +91,35 @@ mapped to HTTP responses via the shared generic helper `sendKindedError`
 
 ### Auth
 
-JWT in an httpOnly cookie (`AUTH_COOKIE_NAME = 'token'`), not a bearer header.
-`signAuthToken(userId, tokenVersion)` issues 30-day tokens. `JWT_SECRET` is read once at module
-load (`utils/jwt.ts`) and throws immediately if unset — a fail-fast import-time check (this is
-why tests must inject a dummy value via `vitest.config.ts`). Session invalidation ("log out
-everywhere") works via a `tokenVersion` counter on `User`: `requireAuth` re-verifies against the
-DB's current `tokenVersion` on every request, so bumping it invalidates all previously-issued
-tokens without a blocklist.
+[better-auth](https://better-auth.com) owns identity and sessions. Config lives in
+`backend/src/auth.ts` and is mounted as a catch-all at `/api/auth/*`; every endpoint under that
+prefix (`sign-up/email`, `sign-in/email`, `sign-out`, `request-password-reset`, `reset-password`,
+`change-password`, `delete-user`, `get-session`) is better-auth's, not ours. `BETTER_AUTH_SECRET`
+is required in production only — dev and test fall back to a fixed placeholder, since a secret
+that changed per boot would log everyone out on every restart.
+
+Three things about the mount are load-bearing:
+
+- **`toNodeHandler(auth)` must be registered before `express.json()`.** It consumes the raw
+  request stream itself, and a body a parser already drained makes every auth POST hang. The
+  `/api` rate limiter can sit above it (it never touches the body).
+- **Express 4 wildcard syntax** (`'/api/auth/*'`). On Express 5 this becomes `'/api/auth/*splat'`.
+- **The app's own config endpoint is `/api/config`, not `/api/auth/config`** — the latter would be
+  swallowed by the catch-all.
+
+`requireAuth` (`middleware/require-auth.ts`) calls `auth.api.getSession`, which reads the session
+and user rows from the database on every request. `session.cookieCache` is deliberately **off**:
+it would serve a stale `familyId`, letting someone who just left a family keep reading its
+recipes. Session revocation is real row deletion now — `revokeSessionsOnPasswordReset` and
+`revokeOtherSessions` replace the old `tokenVersion` counter.
+
+The app bolts five columns onto better-auth's user table as `additionalFields`: `familyId` plus
+the four preferences. All are `input: false`, so neither signup nor better-auth's `updateUser` can
+write them — preferences go through `PATCH /api/me`, which validates against the shared enums.
+`familyId` must be declared `required: false` despite its NOT NULL column: better-auth validates
+required fields against the request payload *before* `databaseHooks` runs, so a field the client
+is forbidden to send could never satisfy it. The `user.create.before` hook creates the personal
+family and supplies the id.
 
 ### AI provider
 
@@ -129,10 +153,12 @@ hot-reloads without leaking connection pools. Generated client output is customi
 `backend/src/generated/prisma` (not the default `node_modules/.prisma`) — regenerate with
 `npx prisma generate` after pulling schema changes.
 
-Core models (`backend/prisma/schema.prisma`): `User` (has `tokenVersion`, `locale`), `Recipe`
+Core models (`backend/prisma/schema.prisma`): better-auth's `User`/`Session`/`Account`/
+`Verification` (regenerate the reference with `npx @better-auth/cli generate` into a scratch file
+and hand-merge — the CLI rewrites `schema.prisma` in place and flattens the `@map` naming), `Recipe`
 (belongs to `User`/`Category`; has `Ingredient[]`/`Instruction[]`/`RecipeTag[]`), `Tag`/`Category`
 (both scoped per-user, unique on `(userId, name)`), `RecipeTag` (join table),
-`PasswordResetToken`.
+`Family`.
 
 Migration conventions: edit `schema.prisma`, run `npm run db:migrate:dev` against local Postgres,
 commit the generated migration folder. Never hand-edit an already-committed migration — write a
@@ -146,8 +172,13 @@ Routing is `react-router-dom` (classic `<Routes>/<Route>`, not file-based) — a
 inline in `App.tsx`; protected routes wrapped individually in `<ProtectedRoute>`.
 
 Server state uses `@tanstack/react-query` (thin wrapper hooks in `frontend/src/hooks/`, query
-keys centralized in `frontend/src/api/queryKeys.ts`). React Context is used only for auth
-(`context/auth-context.ts`, consumed via `hooks/useAuth.ts`) — no Redux/Zustand.
+keys centralized in `frontend/src/api/queryKeys.ts`) — no Redux/Zustand. The session is *not* in
+react-query: `frontend/src/lib/auth-client.ts` holds the better-auth client, and
+`hooks/useCurrentUser.ts` wraps its `useSession()` store. Note that `authClient` calls return
+`{ data, error }` rather than throwing, so auth pages handle errors differently from every other
+call in the app — they don't flow through `ApiError` or the global 401 handler. Preferences are
+written through `api/client.ts`'s `updateProfile`, which must be followed by `refreshSession()`
+for the session store to see the change.
 
 API calls go through one file, `frontend/src/api/client.ts`: one function per backend endpoint,
 all routed through a shared internal `request<T>()` helper (adds `credentials: 'include'` for
@@ -191,6 +222,10 @@ source isn't present in the runtime stage — see the Dockerfile's `shared-build
 - AI chat prompt/response behavior lives in `shared/src/ai-recipe-draft.ts`
   (`buildChatMessages`/`parseChatEnvelope`), consumed only by
   `backend/src/services/ai-provider.service.ts` — there's a single consumer now, not two.
-- `Recipe`, `Tag`, and `Category` are all scoped per-user — new queries/mutations must filter by
-  the authenticated `userId`, matching the existing ownership-check middleware
-  (`requireRecipeOwner`, `requirePhotoOwner`).
+- `Recipe`, `Tag`, and `Category` are all scoped per-family — new queries/mutations must filter by
+  the authenticated `familyId`, matching the existing access-check middleware
+  (`requireRecipeAccess`, `requirePhotoAccess`). `familyId` is an `Int`; user ids are `String`
+  (better-auth generates them).
+- The Family feature is entirely the app's own — better-auth's organization plugin is deliberately
+  not used. `services/family.service.ts` holds the invite token, the join-time content merge, and
+  the leave/delete rules; `tests/family.api.test.ts` is the suite that protects them.

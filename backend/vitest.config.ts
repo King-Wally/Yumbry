@@ -9,9 +9,10 @@ export default defineConfig({
     // instead.
     fileParallelism: false,
     env: {
-      // utils/jwt.ts throws at import time if this is unset; tests never touch
-      // a real deployment secret so a fixed test-only value is fine here.
-      JWT_SECRET: 'test-jwt-secret-not-for-production',
+      // better-auth signs its session cookies with this. Tests never touch a real
+      // deployment secret, so a fixed test-only value is fine here.
+      BETTER_AUTH_SECRET: 'test-better-auth-secret-not-for-production',
+      BETTER_AUTH_URL: 'http://localhost:3000',
       // services/email.service.ts throws at import time if these are unset.
       // Real sends never happen in tests — auth-reset.api.test.ts mocks
       // sendPasswordResetEmail — these just need to satisfy the fail-fast check.

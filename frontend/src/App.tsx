@@ -13,7 +13,9 @@ import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import ProtectedRoute from './components/ProtectedRoute';
-import { useAuth } from './hooks/useAuth';
+import { authClient } from './lib/auth-client';
+import { useCurrentUser } from './hooks/useCurrentUser';
+import { useLocaleSync } from './hooks/useLocaleSync';
 import { useAiStatus } from './hooks/useAiStatus';
 import { version } from '../package.json';
 import * as NavigationMenuPrimitive from '@radix-ui/react-navigation-menu';
@@ -21,7 +23,9 @@ import { UserCircle } from 'lucide-react';
 
 export default function App() {
   const { t } = useTranslation();
-  const { user, logout } = useAuth();
+  const { user } = useCurrentUser();
+  // Applies the signed-in user's stored language; lived in AuthProvider before.
+  useLocaleSync();
   const { data: aiStatus } = useAiStatus({ enabled: Boolean(user) });
 
   return (
@@ -81,7 +85,7 @@ export default function App() {
                         </Link>
                         <button
                           type="button"
-                          onClick={() => logout()}
+                          onClick={() => void authClient.signOut()}
                           className="px-5 py-2 transition hover:bg-stone-100"
                         >
                           {t('nav.logOut')}

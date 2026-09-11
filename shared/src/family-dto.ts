@@ -1,5 +1,7 @@
 export interface FamilyMember {
-  id: number;
+  /** better-auth generates user ids, so these are opaque strings, not numbers.
+   * Family ids stay numeric — only the user table moved to better-auth. */
+  id: string;
   email: string;
 }
 

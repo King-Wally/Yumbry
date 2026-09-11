@@ -5,10 +5,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AiChatPage from '../src/pages/AiChatPage';
 import * as apiClient from '../src/api/client';
 import type { CurrentUser } from '../src/api/client';
-import { AuthProvider } from '../src/context/AuthContext';
+import { useSession } from '../src/lib/auth-client';
+import { sessionFor, NO_SESSION } from './helpers/auth-client';
 import type { Recipe, RecipeInput } from '../src/types';
 
 vi.mock('../src/api/client');
+// Async factory with a dynamic import: vi.mock is hoisted above the imports,
+// so the helper cannot be referenced directly here.
+vi.mock('../src/lib/auth-client', async () =>
+  (await import('./helpers/auth-client')).authClientMock()
+);
 
 const recipe: Recipe = {
   id: 1,
@@ -49,12 +55,10 @@ function renderCreate() {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={['/create-with-ai']}>
-        <AuthProvider>
-          <Routes>
-            <Route path="/create-with-ai" element={<AiChatPage />} />
-            <Route path="/recipes/new" element={<LocationProbe />} />
-          </Routes>
-        </AuthProvider>
+        <Routes>
+          <Route path="/create-with-ai" element={<AiChatPage />} />
+          <Route path="/recipes/new" element={<LocationProbe />} />
+        </Routes>
       </MemoryRouter>
     </QueryClientProvider>
   );
@@ -65,19 +69,17 @@ function renderImprove() {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={['/recipes/1/ai-improve']}>
-        <AuthProvider>
-          <Routes>
-            <Route path="/recipes/:id/ai-improve" element={<AiChatPage />} />
-            <Route path="/recipes/:id/edit" element={<LocationProbe />} />
-          </Routes>
-        </AuthProvider>
+        <Routes>
+          <Route path="/recipes/:id/ai-improve" element={<AiChatPage />} />
+          <Route path="/recipes/:id/edit" element={<LocationProbe />} />
+        </Routes>
       </MemoryRouter>
     </QueryClientProvider>
   );
 }
 
 const currentUser: CurrentUser = {
-  id: 1,
+  id: 'user_1',
   email: 'a@example.com',
   locale: 'en',
   unitSystem: 'metric',
@@ -110,7 +112,7 @@ const padThaiEnvelope = {
 describe('AiChatPage measurement controls', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(apiClient.getCurrentUser).mockResolvedValue(currentUser);
+    vi.mocked(useSession).mockReturnValue(sessionFor(currentUser));
   });
 
   async function sendAndGetPreview() {
@@ -127,7 +129,7 @@ describe('AiChatPage measurement controls', () => {
   function setStoredPreference(patch: Partial<CurrentUser>) {
     const updated = { ...currentUser, ...patch };
     vi.mocked(apiClient.updateProfile).mockResolvedValue(updated);
-    vi.mocked(apiClient.getCurrentUser).mockResolvedValue(updated);
+    vi.mocked(useSession).mockReturnValue(sessionFor(updated));
   }
 
   it('saves a unit choice and sends only that field', async () => {
@@ -173,10 +175,7 @@ describe('AiChatPage measurement controls', () => {
 
   // Imperial has no alternative to spoons at these sizes.
   it('disables the small-amounts control for an imperial reader', async () => {
-    vi.mocked(apiClient.getCurrentUser).mockResolvedValue({
-      ...currentUser,
-      unitSystem: 'imperial',
-    });
+    vi.mocked(useSession).mockReturnValue(sessionFor({ ...currentUser, unitSystem: 'imperial' }));
     renderCreate();
 
     expect(await screen.findByLabelText('Small amounts')).toBeDisabled();
@@ -186,7 +185,7 @@ describe('AiChatPage measurement controls', () => {
 describe('AiChatPage create mode', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(apiClient.getCurrentUser).mockRejectedValue(new Error('not authenticated'));
+    vi.mocked(useSession).mockReturnValue(NO_SESSION);
   });
 
   it('sends a message and updates both the transcript and the preview from the envelope response', async () => {
@@ -264,7 +263,7 @@ describe('AiChatPage create mode', () => {
 describe('AiChatPage improve mode', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(apiClient.getCurrentUser).mockRejectedValue(new Error('not authenticated'));
+    vi.mocked(useSession).mockReturnValue(NO_SESSION);
   });
 
   it('seeds the initial preview from the fetched recipe with no chat call', async () => {

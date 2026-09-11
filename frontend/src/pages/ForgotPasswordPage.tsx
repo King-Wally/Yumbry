@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { forgotPassword } from '../api/client';
+import { authClient } from '../lib/auth-client';
 
 export default function ForgotPasswordPage() {
   const { t } = useTranslation();
@@ -14,15 +14,20 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
-    try {
-      await forgotPassword(email);
-      // Always show success to avoid leaking which emails exist
-      setSubmitted(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.somethingWentWrong'));
-    } finally {
-      setIsSubmitting(false);
+    // redirectTo is where better-auth sends the user after it validates the
+    // emailed link; the server builds the link itself, so this only has to agree
+    // with the route ResetPasswordPage is mounted on.
+    const { error: requestError } = await authClient.requestPasswordReset({
+      email,
+      redirectTo: '/reset-password',
+    });
+    setIsSubmitting(false);
+    if (requestError) {
+      setError(requestError.message ?? t('common.somethingWentWrong'));
+      return;
     }
+    // Always show success to avoid leaking which emails exist
+    setSubmitted(true);
   }
 
   if (submitted) {
