@@ -30,9 +30,17 @@ export const { useSession, signIn, signUp, signOut } = authClient;
 
 /** Re-reads the session so better-auth's store picks up a change made through
  * our own endpoints — the preference columns live on the user row but are
- * written by PATCH /api/me, which better-auth knows nothing about. */
+ * written by PATCH /api/me, which better-auth knows nothing about.
+ *
+ * Notifying the signal is what re-fetches *into the store*: `getSession()` is
+ * just a fetch through the client's path proxy, and only the paths in
+ * better-auth's own atom listener (`/sign-in/email`, `/update-user`,
+ * `/sign-out`, …) update the session atom — `/get-session` is not one of them,
+ * so its response would be discarded and `useSession()` would keep serving the
+ * stale user. The atom's refresh manager subscribes to `$sessionSignal` and
+ * refetches on every notify. */
 export function refreshSession(): void {
-  void authClient.getSession({ query: { disableCookieCache: true } });
+  authClient.$store.notify('$sessionSignal');
 }
 
 /** The session user, with the preference columns narrowed to the shared unions.

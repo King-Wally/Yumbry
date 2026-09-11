@@ -5,7 +5,7 @@ import { QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-qu
 import App from './App';
 import { ToastProvider } from './context/ToastProvider';
 import { ApiError } from './api/client';
-import { authClient } from './lib/auth-client';
+import { refreshSession } from './lib/auth-client';
 import { registerServiceWorker } from './pwa';
 import './i18n';
 import './index.css';
@@ -13,13 +13,13 @@ import './index.css';
 registerServiceWorker();
 
 // 401 from any data query: re-read the session so better-auth's store learns it
-// is gone, which sends ProtectedRoute to /login. disableCookieCache forces the
-// round-trip rather than trusting whatever the client last saw.
+// is gone, which sends ProtectedRoute to /login. It has to go through
+// refreshSession() — a bare getSession() call never reaches the session atom.
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error) => {
       if (error instanceof ApiError && error.kind === 'unauthenticated') {
-        void authClient.getSession({ query: { disableCookieCache: true } });
+        refreshSession();
       }
     },
   }),

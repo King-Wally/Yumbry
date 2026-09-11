@@ -117,7 +117,7 @@ The app bolts five columns onto better-auth's user table as `additionalFields`: 
 the four preferences. All are `input: false`, so neither signup nor better-auth's `updateUser` can
 write them — preferences go through `PATCH /api/me`, which validates against the shared enums.
 `familyId` must be declared `required: false` despite its NOT NULL column: better-auth validates
-required fields against the request payload *before* `databaseHooks` runs, so a field the client
+required fields against the request payload _before_ `databaseHooks` runs, so a field the client
 is forbidden to send could never satisfy it. The `user.create.before` hook creates the personal
 family and supplies the id.
 
@@ -172,7 +172,7 @@ Routing is `react-router-dom` (classic `<Routes>/<Route>`, not file-based) — a
 inline in `App.tsx`; protected routes wrapped individually in `<ProtectedRoute>`.
 
 Server state uses `@tanstack/react-query` (thin wrapper hooks in `frontend/src/hooks/`, query
-keys centralized in `frontend/src/api/queryKeys.ts`) — no Redux/Zustand. The session is *not* in
+keys centralized in `frontend/src/api/queryKeys.ts`) — no Redux/Zustand. The session is _not_ in
 react-query: `frontend/src/lib/auth-client.ts` holds the better-auth client, and
 `hooks/useCurrentUser.ts` wraps its `useSession()` store. Note that `authClient` calls return
 `{ data, error }` rather than throwing, so auth pages handle errors differently from every other
@@ -226,6 +226,3 @@ source isn't present in the runtime stage — see the Dockerfile's `shared-build
   the authenticated `familyId`, matching the existing access-check middleware
   (`requireRecipeAccess`, `requirePhotoAccess`). `familyId` is an `Int`; user ids are `String`
   (better-auth generates them).
-- The Family feature is entirely the app's own — better-auth's organization plugin is deliberately
-  not used. `services/family.service.ts` holds the invite token, the join-time content merge, and
-  the leave/delete rules; `tests/family.api.test.ts` is the suite that protects them.
