@@ -38,7 +38,11 @@ export default function RegisterPage() {
       setError(signUpError.message ?? t('auth.register.error'));
       return;
     }
-    navigate(from, { replace: true });
+    // A plain top-level signup goes through onboarding first; someone who
+    // registered in order to accept an invite/deep link (`from` set to
+    // somewhere other than `/`) must land back there instead, so joining a
+    // family isn't skipped.
+    navigate(from === '/' ? '/onboarding' : from, { replace: true });
   }
 
   return (

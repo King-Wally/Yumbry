@@ -254,5 +254,67 @@
     "logInToJoin": "Log in om lid te worden",
     "joining": "Bezig met toevoegen...",
     "joinedToast": "Je bent lid geworden van de familie"
+  },
+  "onboarding": {
+    "stepCounter": "Stap {{step}} van {{total}}",
+    "next": "Volgende",
+    "finish": "Voltooien",
+    "language": {
+      "title": "Welkom bij Yumbry",
+      "description": "Laten we een paar dingen instellen. Kies eerst je taal."
+    },
+    "create": {
+      "title": "Manieren om een recept toe te voegen",
+      "description": "Kies wat het beste past — je kunt ze altijd combineren.",
+      "hint": "Vind \"Recept toevoegen\" rechtsboven op elke pagina. Het opent meteen de manier die je kiest.",
+      "manual": {
+        "title": "Handmatig schrijven",
+        "description": "Typ ingrediënten en stappen zelf uit, helemaal opnieuw."
+      },
+      "url": {
+        "title": "Importeren via een URL",
+        "description": "Plak een link en Yumbry haalt het recept voor je op."
+      },
+      "ai": {
+        "title": "Genereren met AI",
+        "description": "Beschrijf een gerecht en laat AI een recept opstellen."
+      }
+    },
+    "family": {
+      "title": "Samen koken",
+      "description": "Als je lid wordt van een familie, komen ieders recepten samen in één gedeelde verzameling.",
+      "hint": "Je kunt op elk moment een familie aanmaken of lid worden via Instellingen."
+    },
+    "pwa": {
+      "title": "Zet Yumbry op je startscherm",
+      "description": "Installeer Yumbry zoals een app, zodat het altijd één tik verwijderd is.",
+      "steps": {
+        "iosSafari": [
+          "Tik op het deelicoon in de werkbalk van Safari.",
+          "Scrol naar beneden en tik op \"Zet op beginscherm\".",
+          "Tik op \"Voeg toe\" rechtsboven."
+        ],
+        "iosOther": [
+          "Open deze pagina in Safari — andere iOS-browsers kunnen geen apps op het startscherm installeren."
+        ],
+        "androidChrome": [
+          "Tik op het menu (⋮) in Chrome.",
+          "Tik op \"App installeren\" (of \"Toevoegen aan startscherm\").",
+          "Bevestig door op \"Installeren\" te tikken."
+        ],
+        "androidOther": [
+          "Zoek naar \"App installeren\" of \"Toevoegen aan startscherm\" in het menu van je browser."
+        ],
+        "desktop": [
+          "Zoek naar een installatie-icoon in de adresbalk (of het browsermenu).",
+          "Klik op \"Installeren\" om Yumbry als app op dit apparaat toe te voegen."
+        ]
+      }
+    },
+    "done": {
+      "title": "Helemaal klaar",
+      "description": "Je keuken is klaar. Begin met het toevoegen van je eerste recept.",
+      "cta": "Begin met koken"
+    }
   }
 }

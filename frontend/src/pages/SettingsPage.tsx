@@ -12,14 +12,7 @@ import Card from '../components/Card';
 import Dialog from '../components/Dialog';
 import { SUPPORTED_LOCALES, type SupportedLocale } from 'yumbry-shared';
 import { Link } from 'react-router-dom';
-
-// Native-language names — always shown as-is, regardless of the active UI language.
-const LOCALE_LABELS: Record<SupportedLocale, string> = {
-  en: 'English',
-  nl: 'Nederlands',
-  fr: 'Français',
-  es: 'Español',
-};
+import { LOCALE_LABELS } from '../i18n/localeLabels';
 
 export default function SettingsPage() {
   const { t } = useTranslation();
