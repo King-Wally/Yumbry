@@ -13,10 +13,12 @@ import {
   PlusSquare,
   Share,
   Sparkles,
+  UserCircle,
   Users,
 } from 'lucide-react';
 import { updateProfile } from '../api/client';
 import { useAiStatus } from '../hooks/useAiStatus';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useFamily } from '../hooks/useFamily';
 import { setActiveLocale } from '../i18n';
 import { LOCALE_LABELS } from '../i18n/localeLabels';
@@ -50,6 +52,7 @@ export default function OnboardingPage() {
   const navigate = useNavigate();
   const { data: aiStatus } = useAiStatus({ enabled: true });
   const { data: family } = useFamily();
+  const { user } = useCurrentUser();
 
   const [step, setStep] = useState(0);
   const [pickedLocale, setPickedLocale] = useState<SupportedLocale | null>(null);
@@ -124,6 +127,14 @@ export default function OnboardingPage() {
       : []),
   ];
 
+  // Same entries, same order and same visibility rules as the real menu.
+  const menuItems = [
+    t('nav.manually'),
+    ...(user?.jsonImportExportEnabled ? [t('nav.import')] : []),
+    t('nav.paste'),
+    ...(aiStatus?.configured ? [t('nav.createWithAi')] : []),
+  ];
+
   const pwaStepTexts = t(`onboarding.pwa.steps.${PWA_STEP_KEYS[platform]}`, {
     returnObjects: true,
   }) as string[];
@@ -150,7 +161,7 @@ export default function OnboardingPage() {
                 </h1>
                 <p className="text-[15px] text-stone-600">{t('onboarding.language.description')}</p>
               </div>
-              <div className="mx-auto flex max-w-[420px] flex-col gap-2.5">
+              <div className="mx-auto flex max-w-105 flex-col gap-2.5">
                 {SUPPORTED_LOCALES.map((locale) => {
                   const selected = pickedLocale === locale;
                   return (
@@ -187,7 +198,35 @@ export default function OnboardingPage() {
                 </h1>
                 <p className="text-[15px] text-stone-600">{t('onboarding.create.description')}</p>
               </div>
-              <div className="mx-auto flex max-w-[460px] flex-col gap-3">
+              {/* Static replica of the app header's "Add recipe" menu (App.tsx),
+                  shown open so the steps below map onto something they've seen. */}
+              <div
+                aria-hidden
+                className="mx-auto mb-8 max-w-115 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm select-none"
+              >
+                <div className="flex items-center justify-between border-b border-stone-200 bg-white/90 px-4 py-3">
+                  <span className="font-serif text-lg tracking-tight text-stone-900">Yumbry</span>
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <span className="bg-clay/90 rounded-md px-3 py-1.5 text-white">
+                      {t('nav.addRecipe')}
+                    </span>
+                    <span className="rounded-full border border-gray-300 p-1.5 text-stone-600">
+                      <UserCircle size={20} />
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-cream flex justify-end px-4 pb-6">
+                  <div className="-mt-2 mr-10 flex flex-col divide-y divide-stone-200 rounded-md border border-stone-200 bg-white text-sm font-medium text-stone-600 shadow-lg">
+                    {menuItems.map((item) => (
+                      <span key={item} className="px-5 py-2 text-nowrap">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mx-auto flex max-w-115 flex-col gap-3">
                 {createOptions.map((opt) => (
                   <div key={opt.key} className="flex items-start gap-3.5 text-left">
                     <span className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-600">
@@ -204,7 +243,7 @@ export default function OnboardingPage() {
                   </div>
                 ))}
               </div>
-              <p className="mx-auto mt-4 max-w-[460px] text-center text-[13px] leading-relaxed text-stone-400">
+              <p className="mx-auto mt-4 max-w-115 text-center text-[13px] leading-relaxed text-stone-400">
                 {t('onboarding.create.hint')}
               </p>
             </>
@@ -218,7 +257,7 @@ export default function OnboardingPage() {
                 </h1>
                 <p className="text-[15px] text-stone-600">{t('onboarding.family.description')}</p>
               </div>
-              <div className="mx-auto max-w-[460px] rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+              <div className="mx-auto max-w-115 rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
                 <div className="mb-4.5 flex items-start gap-3.5 border-b border-stone-100 pb-4.5">
                   <div className="bg-clay/10 text-clay flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
                     <Users size={18} />
@@ -268,7 +307,7 @@ export default function OnboardingPage() {
                   </>
                 )}
               </div>
-              <p className="mx-auto mt-4 max-w-[460px] text-center text-[13px] leading-relaxed text-stone-400">
+              <p className="mx-auto mt-4 max-w-115 text-center text-[13px] leading-relaxed text-stone-400">
                 {t('onboarding.family.hint')}
               </p>
             </>
@@ -282,7 +321,7 @@ export default function OnboardingPage() {
                 </h1>
                 <p className="text-[15px] text-stone-600">{t('onboarding.pwa.description')}</p>
               </div>
-              <div className="mx-auto max-w-[420px]">
+              <div className="mx-auto max-w-105">
                 {pwaStepTexts.map((text, i) => {
                   const StepIcon = pwaStepIcons[i];
                   return (
@@ -307,7 +346,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === 'done' && (
-            <div className="mx-auto mt-10 max-w-[380px] text-center">
+            <div className="mx-auto mt-10 max-w-95 text-center">
               <div className="bg-clay mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full text-white">
                 <Flame size={26} />
               </div>
