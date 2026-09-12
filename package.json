@@ -6,6 +6,9 @@
     "frontend",
     "shared"
   ],
+  "scripts": {
+    "release": "npm version $npm_config_bump --workspaces --include-workspace-root && git push --follow-tags"
+  },
   "devDependencies": {
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
