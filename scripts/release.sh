@@ -12,4 +12,4 @@ VERSION=$(node -p "require('./package.json').version")
 git add -A
 git commit -m "chore: release v$VERSION"
 git tag "v$VERSION"
-git push --follow-tags
+git push && git push --tags
