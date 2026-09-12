@@ -18,5 +18,5 @@
     "fsevents@2.3.3": true,
     "esbuild@0.21.5": true
   },
-  "version": "0.3.0"
+  "version": "0.3.1"
 }
