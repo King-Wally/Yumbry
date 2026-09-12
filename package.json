@@ -7,7 +7,7 @@
     "shared"
   ],
   "scripts": {
-    "release": "npm version $npm_config_bump --workspaces --include-workspace-root && git push --follow-tags"
+    "release": "bash scripts/release.sh"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",
@@ -18,5 +18,5 @@
     "fsevents@2.3.3": true,
     "esbuild@0.21.5": true
   },
-  "version": "0.3.1"
+  "version": "0.3.2"
 }
