@@ -10,6 +10,6 @@ npm version "$BUMP" --workspaces --include-workspace-root --no-git-tag-version
 VERSION=$(node -p "require('./package.json').version")
 
 git add -A
-git commit -m "chore: release v$VERSION"
+git commit -m "Release: v$VERSION"
 git tag "v$VERSION"
 git push && git push --tags
