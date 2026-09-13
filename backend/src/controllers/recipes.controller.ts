@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { ZodError } from 'zod';
+import { isSupportedLocale } from 'yumbry-shared';
 import { parseRecipeFromJsonLd } from '../services/jsonld-import.service.js';
 import { recipeToJsonLd } from '../services/jsonld-export.service.js';
 import { scrapeRecipeFromUrl } from '../services/url-recipe-import.service.js';
@@ -67,7 +68,8 @@ export async function importRecipeFromUrl(req: Request, res: Response) {
   let url: string | undefined;
   try {
     ({ url } = UrlImportBodySchema.parse(req.body));
-    const draft = await scrapeRecipeFromUrl(url);
+    const locale = isSupportedLocale(req.user?.locale) ? req.user.locale : undefined;
+    const draft = await scrapeRecipeFromUrl(url, locale);
     await logImportAttempt({ url, success: true });
     res.status(200).json(draft);
   } catch (err) {

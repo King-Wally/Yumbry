@@ -13,11 +13,21 @@ export interface SafeFetchOptions {
   timeoutMs?: number;
   maxBytes?: number;
   maxRedirects?: number;
+  /** `Accept-Language` header value to send, e.g. from the requesting user's app
+   * locale. Falls back to DEFAULT_ACCEPT_LANGUAGE when omitted. */
+  acceptLanguage?: string;
 }
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
-const DEFAULT_MAX_REDIRECTS = 3;
+const DEFAULT_MAX_REDIRECTS = 5;
+const DEFAULT_ACCEPT_LANGUAGE = 'en-US,en;q=0.9';
+
+// Some sites front their pages with bot-mitigation (e.g. Colruyt runs Dynatrace)
+// that serves a JS-challenge page with no recipe markup to requests that don't
+// look like an ordinary browser. A realistic User-Agent is enough to pass.
+const BROWSER_USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
 
 function parseAllowedUrl(rawUrl: string): URL {
   let url: URL;
@@ -108,6 +118,7 @@ export async function safeFetchHtml(
   const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const maxBytes = options?.maxBytes ?? DEFAULT_MAX_BYTES;
   const maxRedirects = options?.maxRedirects ?? DEFAULT_MAX_REDIRECTS;
+  const acceptLanguage = options?.acceptLanguage ?? DEFAULT_ACCEPT_LANGUAGE;
 
   let currentUrl = parseAllowedUrl(rawUrl);
   let addresses = await assertSafeTarget(currentUrl);
@@ -127,7 +138,11 @@ export async function safeFetchHtml(
           redirect: 'manual',
           signal: controller.signal,
           dispatcher: agent as unknown as NonNullable<RequestInit['dispatcher']>,
-          headers: { accept: 'text/html,application/xhtml+xml' },
+          headers: {
+            accept: 'text/html,application/xhtml+xml',
+            'accept-language': acceptLanguage,
+            'user-agent': BROWSER_USER_AGENT,
+          },
         } satisfies RequestInit);
       } catch (err) {
         if (controller.signal.aborted) {
