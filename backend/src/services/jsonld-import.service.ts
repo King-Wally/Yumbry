@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { isoDurationToMinutes } from '../utils/iso-duration.js';
+import { stripHtml } from '../utils/strip-html.js';
 import { parseIngredientLine, type ParsedIngredient } from './ingredient-parser.js';
 
 type JsonLdNode = Record<string, unknown>;
@@ -84,18 +85,18 @@ function extractTagNames(node: JsonLdNode): string[] {
     names.push(...keywords.split(','));
   }
 
-  return [...new Set(names.map((name) => name.trim()).filter(Boolean))];
+  return [...new Set(names.map((name) => stripHtml(name).trim()).filter(Boolean))];
 }
 
 function extractCategoryName(node: JsonLdNode): string | null {
   const category = node.recipeCategory;
   if (typeof category === 'string') {
-    const trimmed = category.trim();
+    const trimmed = stripHtml(category).trim();
     return trimmed || null;
   }
   if (Array.isArray(category)) {
     for (const entry of category) {
-      if (typeof entry === 'string' && entry.trim()) return entry.trim();
+      if (typeof entry === 'string' && entry.trim()) return stripHtml(entry).trim();
     }
   }
   return null;
@@ -218,9 +219,9 @@ export function parseRecipeFromJsonLd(rawJsonLdText: string): ParsedRecipeImport
     : Array.isArray(node.ingredients)
       ? node.ingredients
       : [];
-  const ingredientLines: string[] = rawIngredientLines.filter(
-    (entry): entry is string => typeof entry === 'string'
-  );
+  const ingredientLines: string[] = rawIngredientLines
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map((line) => stripHtml(line));
   const ingredients = ingredientLines.map((line, index) => ({
     ...parseIngredientLine(line),
     sort_order: index,
@@ -228,12 +229,12 @@ export function parseRecipeFromJsonLd(rawJsonLdText: string): ParsedRecipeImport
 
   const instructions = extractInstructionTexts(node.recipeInstructions).map((text, index) => ({
     step_number: index + 1,
-    text,
+    text: stripHtml(text),
   }));
 
   return {
-    title: typeof node.name === 'string' ? node.name : 'Untitled recipe',
-    description: typeof node.description === 'string' ? node.description : null,
+    title: typeof node.name === 'string' ? stripHtml(node.name) : 'Untitled recipe',
+    description: typeof node.description === 'string' ? stripHtml(node.description) : null,
     image_path: extractImageUrl(node.image),
     prep_time_minutes: prepTimeMinutes,
     cook_time_minutes: cookTimeMinutes,

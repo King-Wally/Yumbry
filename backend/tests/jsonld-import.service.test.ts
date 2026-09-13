@@ -108,6 +108,36 @@ describe('parseRecipeFromJsonLd', () => {
     ]);
   });
 
+  it('strips embedded HTML tags from instruction text (e.g. HelloFresh)', () => {
+    const node = {
+      ...bareRecipe,
+      recipeInstructions: [
+        {
+          '@type': 'HowToStep',
+          text: '<ul>\n<li>Verwarm de oven voor op 200 graden.</li>\n<li>Rol het bladerdeeg uit.</li>\n</ul>',
+        },
+        {
+          '@type': 'HowToStep',
+          text: '<p><strong>Gezondheidstip:</strong> <em>Let jij op je zoutinname?</em></p>',
+        },
+      ],
+    };
+    const recipe = parseRecipeFromJsonLd(JSON.stringify(node));
+    expect(recipe.instructions.map((i) => i.text)).toEqual([
+      '- Verwarm de oven voor op 200 graden.\n- Rol het bladerdeeg uit.',
+      'Gezondheidstip: Let jij op je zoutinname?',
+    ]);
+  });
+
+  it('strips embedded HTML tags from description', () => {
+    const node = {
+      ...bareRecipe,
+      description: 'Fluffy <strong>weekend</strong> pancakes.<br>Kid-approved!',
+    };
+    const recipe = parseRecipeFromJsonLd(JSON.stringify(node));
+    expect(recipe.description).toBe('Fluffy weekend pancakes.\nKid-approved!');
+  });
+
   it('handles image as an array of ImageObject', () => {
     const node = {
       ...bareRecipe,
