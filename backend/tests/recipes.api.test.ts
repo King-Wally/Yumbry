@@ -181,7 +181,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.title).toBe('Scraped Recipe');
-      expect(scrapeRecipeFromUrl).toHaveBeenCalledWith('https://example.com/recipe');
+      expect(scrapeRecipeFromUrl).toHaveBeenCalledWith('https://example.com/recipe', 'en');
 
       const after = await pool.query('SELECT count(*) FROM recipes');
       expect(after.rows[0].count).toBe(before.rows[0].count);
