@@ -5,6 +5,7 @@ const NAMED_ENTITIES: Record<string, string> = {
   quot: '"',
   apos: "'",
   nbsp: ' ',
+  deg: '°',
 };
 
 /**
