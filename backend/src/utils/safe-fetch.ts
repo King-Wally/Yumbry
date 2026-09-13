@@ -1,6 +1,7 @@
 import { promises as dns } from 'node:dns';
 import { Agent } from 'undici';
 import ipaddr from 'ipaddr.js';
+import { CookieJar } from 'tough-cookie';
 import { UrlImportError } from './url-import-error.js';
 
 export interface SafeFetchResult {
@@ -20,7 +21,7 @@ export interface SafeFetchOptions {
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
-const DEFAULT_MAX_REDIRECTS = 5;
+const DEFAULT_MAX_REDIRECTS = 10;
 const DEFAULT_ACCEPT_LANGUAGE = 'en-US,en;q=0.9';
 
 // Some sites front their pages with bot-mitigation (e.g. Colruyt runs Dynatrace)
@@ -90,6 +91,23 @@ function createPinnedAgent(addresses: ResolvedAddress[]): Agent {
   });
 }
 
+/** Records every `Set-Cookie` on `response` into `jar` against `url`, skipping any that
+ * fail to parse rather than letting one bad cookie abort the whole fetch. */
+async function storeCookies(jar: CookieJar, response: Response, url: URL): Promise<void> {
+  const setCookieHeaders =
+    typeof (response.headers as { getSetCookie?: () => string[] }).getSetCookie === 'function'
+      ? (response.headers as unknown as { getSetCookie(): string[] }).getSetCookie()
+      : [];
+
+  await Promise.all(
+    setCookieHeaders.map((cookie) =>
+      jar.setCookie(cookie, url.toString()).catch(() => {
+        // Malformed or rejected cookie (e.g. domain mismatch) — ignore and keep going.
+      })
+    )
+  );
+}
+
 async function readBodyWithLimit(response: Response, maxBytes: number): Promise<string> {
   if (!response.body) return '';
 
@@ -126,11 +144,14 @@ export async function safeFetchHtml(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   const agents: Agent[] = [];
+  const cookieJar = new CookieJar();
 
   try {
     for (let redirectCount = 0; ; redirectCount++) {
       const agent = createPinnedAgent(addresses);
       agents.push(agent);
+
+      const cookieHeader = await cookieJar.getCookieString(currentUrl.toString());
 
       let response: Response;
       try {
@@ -142,6 +163,7 @@ export async function safeFetchHtml(
             accept: 'text/html,application/xhtml+xml',
             'accept-language': acceptLanguage,
             'user-agent': BROWSER_USER_AGENT,
+            ...(cookieHeader ? { cookie: cookieHeader } : {}),
           },
         } satisfies RequestInit);
       } catch (err) {
@@ -158,6 +180,8 @@ export async function safeFetchHtml(
           err
         );
       }
+
+      await storeCookies(cookieJar, response, currentUrl);
 
       const location = response.headers.get('location');
       if (response.status >= 300 && response.status < 400 && location) {

@@ -145,6 +145,22 @@ describe('parseRecipeFromJsonLd', () => {
     expect(() => parseRecipeFromJsonLd('not json')).toThrow();
   });
 
+  it('repairs a raw newline left unescaped inside a JSON string value', () => {
+    // Some sites template-interpolate `description` without JSON-escaping it, leaving a
+    // literal newline inside the string - technically invalid JSON that a strict
+    // JSON.parse would reject with "Bad control character in string literal". Splice a
+    // real newline directly into the already-serialized JSON (JSON.stringify itself would
+    // correctly escape it to the two characters "\n", so build it this way instead).
+    const paragraphs = ['Fluffy weekend pancakes.', 'Second paragraph.'];
+    const malformed = JSON.stringify(bareRecipe).replace(
+      'Fluffy weekend pancakes.',
+      paragraphs.join('\n')
+    );
+
+    const recipe = parseRecipeFromJsonLd(malformed);
+    expect(recipe.description).toBe(paragraphs.join('\n'));
+  });
+
   it('drops non-string entries from recipeIngredient instead of throwing', () => {
     const node = {
       ...bareRecipe,
@@ -153,6 +169,27 @@ describe('parseRecipeFromJsonLd', () => {
     const recipe = parseRecipeFromJsonLd(JSON.stringify(node));
     expect(recipe.ingredients).toHaveLength(1);
     expect(recipe.ingredients[0].name).toBe('rice');
+  });
+
+  it('falls back to a non-standard "ingredients" key when recipeIngredient is absent', () => {
+    // Some sites emit `ingredients` instead of the schema.org
+    // standard `recipeIngredient`.
+    const node = {
+      ...bareRecipe,
+      recipeIngredient: undefined,
+      ingredients: ['2 tomatoes', '1 onion'],
+    };
+    const recipe = parseRecipeFromJsonLd(JSON.stringify(node));
+    expect(recipe.ingredients).toHaveLength(2);
+    expect(recipe.ingredients.map((i) => i.name)).toEqual(['tomatoes', 'onion']);
+  });
+
+  it('prefers recipeIngredient over ingredients when both are present', () => {
+    const node = { ...bareRecipe, ingredients: ['should be ignored'] };
+    const recipe = parseRecipeFromJsonLd(JSON.stringify(node));
+    // bareRecipe.recipeIngredient has 3 entries; the `ingredients` fallback has 1 — only
+    // the standard key's entries should show up.
+    expect(recipe.ingredients).toHaveLength(3);
   });
 
   it('drops non-string entries from keywords instead of throwing', () => {

@@ -131,8 +131,71 @@ function extractInstructionTexts(recipeInstructions: unknown): string[] {
   return [];
 }
 
+/**
+ * Some sites emit JSON-LD whose string values contain raw control characters (most often a
+ * literal newline in a multi-paragraph `description`) instead of the escaped `\n` the JSON
+ * spec requires — usually because the value was template-interpolated without proper JSON
+ * escaping. `JSON.parse` throws on those even though the document is otherwise well-formed.
+ * This repairs it by escaping any raw control character (0x00-0x1F) encountered while
+ * lexically inside a string literal, leaving whitespace between tokens (which is legal)
+ * untouched.
+ */
+function escapeControlCharsInStrings(text: string): string {
+  let result = '';
+  let inString = false;
+  let escapedNext = false;
+
+  for (const char of text) {
+    if (!inString) {
+      if (char === '"') inString = true;
+      result += char;
+      continue;
+    }
+
+    if (escapedNext) {
+      result += char;
+      escapedNext = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      result += char;
+      escapedNext = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = false;
+      result += char;
+      continue;
+    }
+
+    const code = char.charCodeAt(0);
+    if (code <= 0x1f) {
+      switch (char) {
+        case '\n':
+          result += '\\n';
+          break;
+        case '\r':
+          result += '\\r';
+          break;
+        case '\t':
+          result += '\\t';
+          break;
+        default:
+          result += `\\u${code.toString(16).padStart(4, '0')}`;
+      }
+      continue;
+    }
+
+    result += char;
+  }
+
+  return result;
+}
+
 export function parseRecipeFromJsonLd(rawJsonLdText: string): ParsedRecipeImport {
-  const rawParsed: unknown = JSON.parse(rawJsonLdText);
+  const rawParsed: unknown = JSON.parse(escapeControlCharsInStrings(rawJsonLdText));
   const parsed = JsonLdDocumentSchema.parse(rawParsed);
   const node = findRecipeNode(parsed);
 
@@ -148,9 +211,16 @@ export function parseRecipeFromJsonLd(rawJsonLdText: string): ParsedRecipeImport
       ? prepTimeMinutes + cookTimeMinutes
       : null);
 
-  const ingredientLines: string[] = Array.isArray(node.recipeIngredient)
-    ? node.recipeIngredient.filter((entry): entry is string => typeof entry === 'string')
-    : [];
+  // schema.org's Recipe type calls this `recipeIngredient`, but some sites (e.g.
+  // libelle-lekker.be) emit a non-standard `ingredients` key instead — fall back to it.
+  const rawIngredientLines = Array.isArray(node.recipeIngredient)
+    ? node.recipeIngredient
+    : Array.isArray(node.ingredients)
+      ? node.ingredients
+      : [];
+  const ingredientLines: string[] = rawIngredientLines.filter(
+    (entry): entry is string => typeof entry === 'string'
+  );
   const ingredients = ingredientLines.map((line, index) => ({
     ...parseIngredientLine(line),
     sort_order: index,
