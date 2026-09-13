@@ -242,6 +242,35 @@ describe('safeFetchHtml', () => {
     });
   });
 
+  it('rejects a Cloudflare bot-challenge interstitial served instead of the real page', async () => {
+    lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+    vi.mocked(fetch).mockResolvedValue(
+      mockResponse({
+        status: 403,
+        headers: { 'content-type': 'text/html' },
+        body: '<html><head><title>Just a moment...</title></head><body>Checking your browser...</body></html>',
+      })
+    );
+
+    await expect(safeFetchHtml('http://example.com')).rejects.toMatchObject({
+      kind: 'bot_challenge',
+    });
+  });
+
+  it('does not misclassify an ordinary 403 page as a bot challenge', async () => {
+    lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+    vi.mocked(fetch).mockResolvedValue(
+      mockResponse({
+        status: 403,
+        headers: { 'content-type': 'text/html' },
+        body: '<html><body>403 Forbidden</body></html>',
+      })
+    );
+
+    const result = await safeFetchHtml('http://example.com');
+    expect(result.html).toContain('403 Forbidden');
+  });
+
   it('rejects a response body larger than the configured limit', async () => {
     lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
     vi.mocked(fetch).mockResolvedValue(

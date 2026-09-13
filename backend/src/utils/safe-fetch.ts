@@ -108,6 +108,21 @@ async function storeCookies(jar: CookieJar, response: Response, url: URL): Promi
   );
 }
 
+// Cloudflare (and similar CDN-level bot management) intercepts the request before it ever
+// reaches the origin site and returns an interstitial "checking your browser" page — a JS
+// challenge (and sometimes a Turnstile CAPTCHA) that a plain server-side fetch can never pass,
+// since it doesn't execute JavaScript. That page is ordinary text/html with a 403 (or 503)
+// status and none of the target site's own markup, so it looks to the rest of the pipeline like
+// a page that simply has no JSON-LD. Recognize it up front and fail with an honest message
+// instead of the misleading "no structured data found" one.
+const BOT_CHALLENGE_STATUSES = new Set([403, 503]);
+const BOT_CHALLENGE_MARKERS = [/just a moment/i, /challenges\.cloudflare\.com/i, /cf-chl/i];
+
+function looksLikeBotChallenge(status: number, html: string): boolean {
+  if (!BOT_CHALLENGE_STATUSES.has(status)) return false;
+  return BOT_CHALLENGE_MARKERS.some((marker) => marker.test(html));
+}
+
 async function readBodyWithLimit(response: Response, maxBytes: number): Promise<string> {
   if (!response.body) return '';
 
@@ -202,6 +217,14 @@ export async function safeFetchHtml(
       }
 
       const html = await readBodyWithLimit(response, maxBytes);
+
+      if (looksLikeBotChallenge(response.status, html)) {
+        throw new UrlImportError(
+          "That site's bot protection blocked automatic import. Try pasting the recipe's JSON-LD manually instead.",
+          'bot_challenge'
+        );
+      }
+
       return { html, contentType, finalUrl: currentUrl.toString() };
     }
   } finally {

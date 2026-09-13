@@ -9,6 +9,7 @@ export type UrlImportErrorKind =
   | 'unsupported_content_type'
   | 'too_large'
   | 'too_many_redirects'
+  | 'bot_challenge'
   | 'no_jsonld'
   | 'no_recipe_found';
 
@@ -30,6 +31,7 @@ const STATUS_BY_KIND: Record<UrlImportErrorKind, number> = {
   unsupported_content_type: 400,
   too_large: 400,
   too_many_redirects: 400,
+  bot_challenge: 502,
   no_jsonld: 400,
   no_recipe_found: 400,
 };
