@@ -44,7 +44,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
 
   beforeEach(async () => {
     await pool.query(
-      'TRUNCATE recipes, ingredients, instructions, tags, recipe_tags, categories RESTART IDENTITY CASCADE'
+      'TRUNCATE recipes, ingredients, instructions, tags, recipe_tags, categories, recipe_import_attempts RESTART IDENTITY CASCADE'
     );
   });
 
@@ -185,12 +185,27 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
 
       const after = await pool.query('SELECT count(*) FROM recipes');
       expect(after.rows[0].count).toBe(before.rows[0].count);
+
+      const attempts = await pool.query(
+        'SELECT url, hostname, success, error_kind FROM recipe_import_attempts'
+      );
+      expect(attempts.rows).toEqual([
+        {
+          url: 'https://example.com/recipe',
+          hostname: 'example.com',
+          success: true,
+          error_kind: null,
+        },
+      ]);
     });
 
     it('rejects an invalid URL without calling the scraper', async () => {
       const res = await agent.post('/api/recipes/import-url').send({ url: 'not-a-url' });
       expect(res.status).toBe(400);
       expect(scrapeRecipeFromUrl).not.toHaveBeenCalled();
+
+      const attempts = await pool.query('SELECT success, error_kind FROM recipe_import_attempts');
+      expect(attempts.rows).toEqual([{ success: false, error_kind: 'validation_error' }]);
     });
 
     it('maps a no_recipe_found scrape error to 400', async () => {
@@ -205,6 +220,17 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
 
       expect(res.status).toBe(400);
       expect(res.body.kind).toBe('no_recipe_found');
+
+      const attempts = await pool.query(
+        'SELECT success, error_kind, error_message FROM recipe_import_attempts'
+      );
+      expect(attempts.rows).toEqual([
+        {
+          success: false,
+          error_kind: 'no_recipe_found',
+          error_message: 'No schema.org Recipe was found on that page.',
+        },
+      ]);
     });
 
     it('maps a blocked_url scrape error to 400', async () => {

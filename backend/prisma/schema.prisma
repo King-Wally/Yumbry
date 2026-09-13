@@ -208,3 +208,31 @@ model Category {
   @@index([familyId], map: "idx_categories_family_id")
   @@map("categories")
 }
+
+/// One row per attempted recipe-import-from-URL, success or failure. Site-level
+/// analytics only — no userId/familyId — so this never carries who attempted
+/// the import, only what was attempted and how it went. errorKind mirrors
+/// UrlImportErrorKind (src/utils/url-import-error.ts) as a plain string, the
+/// same way the rest of this schema avoids Prisma enums; it's null on success.
+model RecipeImportAttempt {
+  id           Int      @id @default(autoincrement())
+  /// Full attempted URL. Text rather than a capped Varchar: import URLs can
+  /// carry long query strings, and this table is analytics-only, not a
+  /// foreign-keyed identifier needing a fixed size.
+  url          String   @db.Text
+  /// Hostname parsed out of `url` at write time (e.g. "www.allrecipes.com"),
+  /// kept as its own column so per-site success-rate queries can GROUP BY it
+  /// without parsing the URL in SQL.
+  hostname     String
+  success      Boolean
+  errorKind    String?  @map("error_kind")
+  /// Short raw message for debugging, truncated by the caller before insert.
+  errorMessage String?  @map("error_message") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([hostname], map: "idx_recipe_import_attempts_hostname")
+  @@index([success], map: "idx_recipe_import_attempts_success")
+  @@index([errorKind], map: "idx_recipe_import_attempts_error_kind")
+  @@index([createdAt], map: "idx_recipe_import_attempts_created_at")
+  @@map("recipe_import_attempts")
+}

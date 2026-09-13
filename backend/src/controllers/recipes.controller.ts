@@ -16,7 +16,8 @@ import type { IngredientInput } from '../services/recipe.types.js';
 import { publicUploadPath } from '../middleware/upload.js';
 import { RecipeBodySchema, type RecipeBody } from '../schemas/recipe.schema.js';
 import { UrlImportBodySchema } from '../schemas/url-import.schema.js';
-import { sendUrlImportError } from '../utils/url-import-error.js';
+import { sendUrlImportError, UrlImportError } from '../utils/url-import-error.js';
+import { logImportAttempt } from '../services/import-log.service.js';
 
 function normalizeIngredients(ingredients: RecipeBody['ingredients']): IngredientInput[] {
   if (!Array.isArray(ingredients)) return [];
@@ -63,14 +64,43 @@ export async function importRecipe(req: Request, res: Response) {
 }
 
 export async function importRecipeFromUrl(req: Request, res: Response) {
+  let url: string | undefined;
   try {
-    const { url } = UrlImportBodySchema.parse(req.body);
+    ({ url } = UrlImportBodySchema.parse(req.body));
     const draft = await scrapeRecipeFromUrl(url);
+    await logImportAttempt({ url, success: true });
     res.status(200).json(draft);
   } catch (err) {
     if (err instanceof ZodError) {
+      // req.body.url may not be a string at all (e.g. missing/non-string) —
+      // fall back to a placeholder rather than logging something misleading.
+      const attemptedUrl =
+        typeof req.body?.url === 'string' ? req.body.url : '(invalid request body)';
+      await logImportAttempt({
+        url: attemptedUrl,
+        success: false,
+        errorKind: 'validation_error',
+        errorMessage: 'Provide a valid recipe page URL.',
+      });
       return res.status(400).json({ error: 'Provide a valid recipe page URL.' });
     }
+
+    if (err instanceof UrlImportError) {
+      await logImportAttempt({
+        url: url ?? '(unknown url)',
+        success: false,
+        errorKind: err.kind,
+        errorMessage: err.message,
+      });
+    } else {
+      await logImportAttempt({
+        url: url ?? '(unknown url)',
+        success: false,
+        errorKind: 'unknown',
+        errorMessage: String(err).slice(0, 500),
+      });
+    }
+
     sendUrlImportError(res, err);
   }
 }
