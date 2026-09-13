@@ -257,6 +257,21 @@ describe('safeFetchHtml', () => {
     });
   });
 
+  it('rejects a Cloudflare WAF block page served instead of the real page', async () => {
+    lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+    vi.mocked(fetch).mockResolvedValue(
+      mockResponse({
+        status: 403,
+        headers: { 'content-type': 'text/html' },
+        body: '<html><head><title>Attention Required! | Cloudflare</title></head><body><div id="cf-error-details">Sorry, you have been blocked</div></body></html>',
+      })
+    );
+
+    await expect(safeFetchHtml('http://example.com')).rejects.toMatchObject({
+      kind: 'bot_challenge',
+    });
+  });
+
   it('does not misclassify an ordinary 403 page as a bot challenge', async () => {
     lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
     vi.mocked(fetch).mockResolvedValue(

@@ -116,7 +116,16 @@ async function storeCookies(jar: CookieJar, response: Response, url: URL): Promi
 // a page that simply has no JSON-LD. Recognize it up front and fail with an honest message
 // instead of the misleading "no structured data found" one.
 const BOT_CHALLENGE_STATUSES = new Set([403, 503]);
-const BOT_CHALLENGE_MARKERS = [/just a moment/i, /challenges\.cloudflare\.com/i, /cf-chl/i];
+const BOT_CHALLENGE_MARKERS = [
+  /just a moment/i,
+  /challenges\.cloudflare\.com/i,
+  /cf-chl/i,
+  // Cloudflare's WAF "you have been blocked" page — a different response shape from the JS
+  // interstitial above (no challenge to solve, just a hard block), served with its own
+  // distinctive title and error-page markup.
+  /attention required[^<]*\|\s*cloudflare/i,
+  /cf-error-details/i,
+];
 
 function looksLikeBotChallenge(status: number, html: string): boolean {
   if (!BOT_CHALLENGE_STATUSES.has(status)) return false;
@@ -220,7 +229,7 @@ export async function safeFetchHtml(
 
       if (looksLikeBotChallenge(response.status, html)) {
         throw new UrlImportError(
-          "That site's bot protection blocked automatic import. Try pasting the recipe's JSON-LD manually instead.",
+          "That site's bot protection blocked automatic import.",
           'bot_challenge'
         );
       }
