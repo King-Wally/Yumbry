@@ -316,5 +316,10 @@
       "description": "Je keuken is klaar. Begin met het toevoegen van je eerste recept.",
       "cta": "Begin met koken"
     }
+  },
+  "notFound": {
+    "title": "Pagina niet gevonden",
+    "description": "De pagina die je zoekt bestaat niet of is mogelijk verplaatst.",
+    "backHome": "Terug naar home"
   }
 }

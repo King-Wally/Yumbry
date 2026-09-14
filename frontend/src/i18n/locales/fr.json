@@ -316,5 +316,10 @@
       "description": "Votre cuisine est prête. Commencez par ajouter votre première recette.",
       "cta": "Commencer à cuisiner"
     }
+  },
+  "notFound": {
+    "title": "Page introuvable",
+    "description": "La page que vous recherchez n'existe pas ou a peut-être été déplacée.",
+    "backHome": "Retour à l'accueil"
   }
 }
