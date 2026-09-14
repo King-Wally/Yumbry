@@ -123,6 +123,7 @@
       "loading": "Loading recipe...",
       "notFound": "Recipe not found.",
       "export": "Export",
+      "exportError": "Couldn't prepare the recipe for export.",
       "edit": "Edit",
       "improveWithAi": "Improve with AI",
       "deleteDialogTitle": "Delete this recipe?",

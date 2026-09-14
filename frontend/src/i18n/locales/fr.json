@@ -123,6 +123,7 @@
       "loading": "Chargement de la recette...",
       "notFound": "Recette introuvable.",
       "export": "Exporter",
+      "exportError": "Impossible de préparer la recette pour l'exportation.",
       "edit": "Modifier",
       "improveWithAi": "Améliorer avec l'IA",
       "deleteDialogTitle": "Supprimer cette recette ?",

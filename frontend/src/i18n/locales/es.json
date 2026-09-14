@@ -123,6 +123,7 @@
       "loading": "Cargando receta...",
       "notFound": "Receta no encontrada.",
       "export": "Exportar",
+      "exportError": "No se pudo preparar la receta para exportar.",
       "edit": "Editar",
       "improveWithAi": "Mejorar con IA",
       "deleteDialogTitle": "¿Eliminar esta receta?",

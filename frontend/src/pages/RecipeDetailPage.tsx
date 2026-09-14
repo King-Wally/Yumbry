@@ -5,12 +5,15 @@ import { ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { deleteRecipe, getRecipe, getRecipeExportUrl } from '../api/client';
 import { queryKeys } from '../api/queryKeys';
+import AiErrorBanner from '../components/AiErrorBanner';
 import RecipeHero from '../components/RecipeHero';
 import ServingsStepper from '../components/ServingsStepper';
 import TimeStat from '../components/TimeStat';
 import { useScaledIngredients } from '../hooks/useScaledIngredients';
 import { useAiStatus } from '../hooks/useAiStatus';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { fetchExportFile, shareOrDownloadFile } from '../lib/export-share';
+import { isStandalonePwa } from '../pwa';
 import { toNumber } from '../utils/numeric';
 import CollapsibleActions from '../components/CollapsibleActions';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -34,6 +37,9 @@ export default function RecipeDetailPage() {
   const [servings, setServings] = useState(1);
   const [servingsForRecipeId, setServingsForRecipeId] = useState<number | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  // Computed once: a standalone/installed PWA can't rely on `<a download>` (see
+  // exportFileQuery below), so this decides which export control to render.
+  const [standalone] = useState(isStandalonePwa);
 
   // Form hydration in render (not useEffect) to avoid stale-value flash
   if (recipe && servingsForRecipeId !== recipe.id) {
@@ -55,6 +61,18 @@ export default function RecipeDetailPage() {
     },
   });
 
+  // Standalone iOS PWAs get trapped on the OS "Quick Look" screen when a plain
+  // `<a download>` navigates to a Content-Disposition: attachment response — there's no
+  // browser chrome to hand the download back to. Prefetching here (rather than on click)
+  // means navigator.share() in shareOrDownloadFile can run synchronously off the click
+  // event, since WebKit drops "user activation" after an intervening await.
+  const { data: exportFile, error: exportFileError } = useQuery({
+    queryKey: ['recipe-export-file', id],
+    queryFn: () => fetchExportFile(getRecipeExportUrl(id!), `${recipe?.title ?? 'recipe'}.json`),
+    enabled: standalone && !!user?.jsonImportExportEnabled && !!recipe,
+    staleTime: Infinity,
+  });
+
   if (isLoading) return <p className="text-stone-500">{t('recipes.detail.loading')}</p>;
   if (!recipe) return <p className="text-stone-500">{t('recipes.detail.notFound')}</p>;
 
@@ -69,15 +87,25 @@ export default function RecipeDetailPage() {
           <ArrowLeft size={18} />
         </Link>
         <CollapsibleActions>
-          {user?.jsonImportExportEnabled && (
-            <a
-              href={getRecipeExportUrl(id!)}
-              download
-              className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
-            >
-              {t('recipes.detail.export')}
-            </a>
-          )}
+          {user?.jsonImportExportEnabled &&
+            (standalone ? (
+              <button
+                type="button"
+                disabled={!exportFile}
+                onClick={() => exportFile && shareOrDownloadFile(exportFile)}
+                className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100 disabled:opacity-50"
+              >
+                {t('recipes.detail.export')}
+              </button>
+            ) : (
+              <a
+                href={getRecipeExportUrl(id!)}
+                download
+                className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
+              >
+                {t('recipes.detail.export')}
+              </a>
+            ))}
           <Link
             to={`/recipes/${id}/edit`}
             className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
@@ -101,6 +129,10 @@ export default function RecipeDetailPage() {
           </button>
         </CollapsibleActions>
       </div>
+
+      {standalone && exportFileError && (
+        <AiErrorBanner error={new Error(t('recipes.detail.exportError'))} />
+      )}
 
       <ConfirmDialog
         open={confirmDeleteOpen}

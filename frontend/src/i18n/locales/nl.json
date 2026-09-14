@@ -123,6 +123,7 @@
       "loading": "Recept laden...",
       "notFound": "Recept niet gevonden.",
       "export": "Exporteren",
+      "exportError": "Recept kon niet worden klaargemaakt voor export.",
       "edit": "Bewerken",
       "improveWithAi": "Verbeteren met AI",
       "deleteDialogTitle": "Dit recept verwijderen?",

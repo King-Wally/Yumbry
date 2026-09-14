@@ -1,11 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import RecipeDetailPage from '../src/pages/RecipeDetailPage';
 import * as apiClient from '../src/api/client';
 import type { CurrentUser } from '../src/api/client';
 import { useSession } from '../src/lib/auth-client';
+import * as pwa from '../src/pwa';
 import { sessionFor } from './helpers/auth-client';
 import type { Recipe } from '../src/types';
 
@@ -15,6 +16,10 @@ vi.mock('../src/api/client');
 vi.mock('../src/lib/auth-client', async () =>
   (await import('./helpers/auth-client')).authClientMock()
 );
+vi.mock('../src/pwa', async () => ({
+  ...(await vi.importActual<typeof pwa>('../src/pwa')),
+  isStandalonePwa: vi.fn().mockReturnValue(false),
+}));
 
 const currentUser: CurrentUser = {
   id: 'user_1',
@@ -86,5 +91,60 @@ describe('RecipeDetailPage render-time state sync', () => {
 
     // A measuring cup has no 0.5 marking that reads as "2,5" — a cook reads halves.
     expect(await screen.findByText('2 1/2 cups flour')).toBeInTheDocument();
+  });
+});
+
+describe('RecipeDetailPage export button', () => {
+  const currentUserWithExport: CurrentUser = { ...currentUser, jsonImportExportEnabled: true };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.mocked(pwa.isStandalonePwa).mockReturnValue(false);
+  });
+
+  it('renders a plain download anchor outside of standalone PWA mode', async () => {
+    vi.mocked(apiClient.getRecipe).mockResolvedValue(recipe);
+    vi.mocked(apiClient.getRecipeExportUrl).mockReturnValue('/api/recipes/1/export');
+    vi.mocked(useSession).mockReturnValue(sessionFor(currentUserWithExport));
+    renderDetail();
+
+    const link = await screen.findByRole('link', { name: 'Export' });
+    expect(link).toHaveAttribute('href', '/api/recipes/1/export');
+    expect(link).toHaveAttribute('download');
+  });
+
+  it('prefetches the export and shares it synchronously on click in standalone PWA mode', async () => {
+    vi.mocked(pwa.isStandalonePwa).mockReturnValue(true);
+    vi.mocked(apiClient.getRecipe).mockResolvedValue(recipe);
+    vi.mocked(apiClient.getRecipeExportUrl).mockReturnValue('/api/recipes/1/export');
+    vi.mocked(useSession).mockReturnValue(sessionFor(currentUserWithExport));
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ '@type': 'Recipe' }), {
+        headers: { 'Content-Disposition': 'attachment; filename="pancakes.json"' },
+      })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const shareMock = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      canShare: vi.fn().mockReturnValue(true),
+      share: shareMock,
+    });
+
+    renderDetail();
+
+    const button = await screen.findByRole('button', { name: 'Export' });
+    await waitFor(() => expect(button).toBeEnabled());
+
+    fireEvent.click(button);
+
+    // No fetch should happen between the click and the share call — the file
+    // was already fetched ahead of time, so share() stays a direct response
+    // to user input.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(shareMock).toHaveBeenCalledTimes(1));
+    const sharedFile = shareMock.mock.calls[0][0].files[0] as File;
+    expect(sharedFile.name).toBe('pancakes.json');
   });
 });
