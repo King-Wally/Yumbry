@@ -42,8 +42,20 @@ function detectInitialLocale(): SupportedLocale {
   return 'en';
 }
 
+// Keeps the declared document language in sync with the active locale. The
+// static `lang="en"` in index.html is only a pre-JS placeholder — browsers
+// (Chrome's translate prompt in particular) use this attribute to detect the
+// page's language, so leaving it stale after switching locales causes Chrome
+// to keep offering to translate an already-correctly-localized page.
+function applyDocumentLang(locale: SupportedLocale): void {
+  document.documentElement.lang = locale;
+}
+
+const initialLocale = detectInitialLocale();
+applyDocumentLang(initialLocale);
+
 void i18n.use(initReactI18next).init({
-  lng: detectInitialLocale(),
+  lng: initialLocale,
   fallbackLng: 'en',
   resources: {
     en: { translation: en },
@@ -61,6 +73,7 @@ void i18n.use(initReactI18next).init({
  * `App.tsx`. */
 export function setActiveLocale(locale: SupportedLocale): void {
   writeStoredLocale(locale);
+  applyDocumentLang(locale);
   if (i18n.language !== locale) void i18n.changeLanguage(locale);
 }
 
