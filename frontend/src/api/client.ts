@@ -23,20 +23,48 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+const DEFAULT_TIMEOUT_MS = 60_000;
+
+async function request<T>(
+  path: string,
+  options: RequestInit = {},
+  timeoutMs = DEFAULT_TIMEOUT_MS
+): Promise<T> {
   const headers: Record<string, string> = {};
   if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
 
-  const res = await fetch(`/api${path}`, {
-    credentials: 'include',
-    ...options,
-    headers,
-  });
+  // Bounds how long we wait on a hung request — without this, a stalled connection (e.g. an
+  // overloaded AI provider) waits on the browser/proxy's own timeout with no clear feedback.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  let res: Response;
+  try {
+    res = await fetch(`/api${path}`, {
+      credentials: 'include',
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new ApiError('The request took too long to respond. Please try again.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!res.ok) {
     const body: ApiErrorBody = await res.json().catch(() => ({}));
     const kind = res.status === 401 ? 'unauthenticated' : body.kind;
-    throw new ApiError(body.error || `Request failed with status ${res.status}`, kind);
+    // A gateway/proxy failure (e.g. Cloudflare's own HTML error page instead of our JSON) has no
+    // parsed `error` field — give a human message instead of the raw status code.
+    const message =
+      !body.error && [502, 503, 504].includes(res.status)
+        ? 'The server is temporarily unavailable. Please try again in a moment.'
+        : body.error || `Request failed with status ${res.status}`;
+    throw new ApiError(message, kind);
   }
 
   if (res.status === 204) return null as T;

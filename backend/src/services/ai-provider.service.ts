@@ -46,21 +46,37 @@ function resolveModel(tier: AiModelTier): string {
     : process.env.GEMINI_MODEL_SMALL || DEFAULT_SMALL_MODEL;
 }
 
+// Bounds how long a single Gemini call can hang before we give up and surface a clean
+// `unreachable` error, rather than silently outliving whatever edge/proxy timeout fronts this
+// server in production.
+const REQUEST_TIMEOUT_MS = Number(process.env.GEMINI_REQUEST_TIMEOUT_MS) || 30_000;
+
 function createClient(apiKey: string): OpenAI {
-  return new OpenAI({ baseURL: GEMINI_BASE_URL, apiKey, maxRetries: 0 });
+  return new OpenAI({
+    baseURL: GEMINI_BASE_URL,
+    apiKey,
+    maxRetries: 0,
+    timeout: REQUEST_TIMEOUT_MS,
+  });
 }
 
+// Logged here (not just left to bubble up as a generic 502/503) so the real cause — Gemini's own
+// status and message, e.g. a 503 "model overloaded" — is visible in server logs even though the
+// client only ever sees the generic AiProviderError kind/message.
 function toAiProviderError(err: unknown): AiProviderError {
   if (err instanceof APIConnectionError) {
+    console.error(`[ai-provider] connection to Gemini failed: ${err.message}`);
     return new AiProviderError(unreachableMessage(), 'unreachable', err);
   }
   if (err instanceof APIError) {
+    console.error(`[ai-provider] Gemini responded with HTTP ${err.status}: ${err.message}`);
     return new AiProviderError(
       badStatusMessage(err.status ?? '???', err.message),
       'bad_status',
       err
     );
   }
+  console.error('[ai-provider] unexpected error calling Gemini:', err);
   return new AiProviderError(unreachableMessage(), 'unreachable', err);
 }
 
