@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
+import sharp from 'sharp';
 import pg from 'pg';
 import type { Express } from 'express';
 import { registerTestUser } from './helpers/auth.js';
@@ -424,6 +425,164 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
       const res = await request(app)
         .post('/api/ai/chat')
         .send({ messages: [{ role: 'user', content: 'hi' }], current_draft: null });
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe('POST /api/ai/photo-import', () => {
+    // A one-pixel PNG. It has to be genuinely decodable now that sharp re-encodes every upload
+    // before it is sent, but the model call is mocked, so it needn't be a real photograph.
+    const PNG = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64'
+    );
+
+    const READABLE_RECIPE = JSON.stringify({
+      reply: 'I read a tomato soup. The baking time was smudged, so check it.',
+      recipe: {
+        title: 'Tomatensoep',
+        description: null,
+        servings: 4,
+        prep_time_minutes: 10,
+        cook_time_minutes: null,
+        total_time_minutes: null,
+        category: 'Soup',
+        tags: ['soup'],
+        ingredients: [
+          { item: 'tomatoes', quantity: 800, unit: 'g', note: null, density_key: 'none' },
+        ],
+        instructions: ['Simmer the tomatoes.'],
+      },
+    });
+
+    function postPhoto(buffer = PNG, filename = 'recipe.png') {
+      return agent.post('/api/ai/photo-import').attach('photo', buffer, filename);
+    }
+
+    it('returns the envelope shape for a readable photo', async () => {
+      chatWithAi.mockResolvedValue(READABLE_RECIPE);
+
+      const res = await postPhoto();
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        recipe: {
+          title: 'Tomatensoep',
+          servings: 4,
+          ingredients: ['800 g tomatoes'],
+          instructions: [{ step_number: 1, text: 'Simmer the tomatoes.' }],
+        },
+      });
+      expect(res.body.reply).toContain('smudged');
+    });
+
+    it('always asks for the big model, with a longer timeout than a chat turn', async () => {
+      chatWithAi.mockResolvedValue(READABLE_RECIPE);
+
+      await postPhoto();
+
+      const options = chatWithAi.mock.calls[0][1];
+      expect(options.tier).toBe('big');
+      expect(options.timeoutMs).toBeGreaterThan(30_000);
+    });
+
+    it('sends the photo as a base64 data URL alongside the instruction', async () => {
+      chatWithAi.mockResolvedValue(READABLE_RECIPE);
+
+      await postPhoto();
+
+      const [, userMessage] = chatWithAi.mock.calls[0][0];
+      expect(userMessage.role).toBe('user');
+      expect(userMessage.content).toContainEqual({ type: 'text', text: expect.any(String) });
+
+      const image = userMessage.content.find((part: { type: string }) => part.type === 'image_url');
+      // Always a JPEG, whatever was uploaded — prepareImageForModel re-encodes everything.
+      expect(image.image_url.url).toMatch(/^data:image\/jpeg;base64,/);
+
+      const decoded = Buffer.from(image.image_url.url.split(',')[1], 'base64');
+      expect((await sharp(decoded).metadata()).format).toBe('jpeg');
+    });
+
+    // The photo is uploaded at full camera resolution and shrunk here, so a file multer accepted
+    // can still turn out to be undecodable — a 400, not the catch-all's 500.
+    it('returns 400 when the upload is not a decodable image', async () => {
+      const res = await agent
+        .post('/api/ai/photo-import')
+        .attach('photo', Buffer.from('definitely not a photo'), {
+          filename: 'recipe.png',
+          contentType: 'image/png',
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.kind).toBe('unreadable_image');
+      expect(chatWithAi).not.toHaveBeenCalled();
+    });
+
+    it('renders the extracted recipe in the reader’s unit system', async () => {
+      await agent.patch('/api/me').send({ unitSystem: 'imperial' });
+      chatWithAi.mockResolvedValue(READABLE_RECIPE);
+
+      const res = await postPhoto();
+
+      expect(res.body.recipe.ingredients).toEqual(['1 3/4 lb tomatoes']);
+
+      await agent.patch('/api/me').send({ unitSystem: 'metric' });
+    });
+
+    // A photo with no recipe in it is a real, prompt-taught outcome here, unlike in chat where a
+    // null recipe means "no change". With no draft to fall back on it would otherwise render as an
+    // empty form, which reads as a bug rather than an answer.
+    it('returns 422 when the model reports the photo holds no recipe', async () => {
+      chatWithAi.mockResolvedValue(
+        JSON.stringify({ reply: 'That looks like a photo of a cat, not a recipe.', recipe: null })
+      );
+
+      const res = await postPhoto();
+
+      expect(res.status).toBe(422);
+      expect(res.body.kind).toBe('no_recipe_found');
+      expect(res.body.error).toContain('cat');
+    });
+
+    it('returns 400 when no file is attached', async () => {
+      const res = await agent.post('/api/ai/photo-import');
+
+      expect(res.status).toBe(400);
+      expect(chatWithAi).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 for a non-image upload', async () => {
+      const res = await agent.post('/api/ai/photo-import').attach('photo', Buffer.from('{}'), {
+        filename: 'recipe.json',
+        contentType: 'application/json',
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('image');
+      expect(chatWithAi).not.toHaveBeenCalled();
+    });
+
+    it('returns 502 when the model response is not parseable JSON', async () => {
+      chatWithAi.mockResolvedValue('I am unable to read that.');
+
+      const res = await postPhoto();
+
+      expect(res.status).toBe(502);
+      expect(res.body.kind).toBe('malformed_response');
+    });
+
+    it('maps a not_configured AiProviderError to 503', async () => {
+      chatWithAi.mockRejectedValue(new AiProviderError('no key set', 'not_configured'));
+
+      const res = await postPhoto();
+
+      expect(res.status).toBe(503);
+      expect(res.body.kind).toBe('not_configured');
+    });
+
+    it('rejects unauthenticated requests with 401', async () => {
+      const res = await request(app).post('/api/ai/photo-import').attach('photo', PNG, 'r.png');
+
       expect(res.status).toBe(401);
     });
   });

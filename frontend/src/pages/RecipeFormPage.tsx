@@ -59,7 +59,10 @@ export default function RecipeFormPage() {
   const [tagInputFocused, setTagInputFocused] = useState(false);
   const [aiDraftApplied, setAiDraftApplied] = useState(false);
 
-  const draftState = location.state as { aiDraft?: RecipeInput; draftSource?: 'ai' | 'url' } | null;
+  const draftState = location.state as {
+    aiDraft?: RecipeInput;
+    draftSource?: 'ai' | 'url' | 'photo';
+  } | null;
   const aiDraft = draftState?.aiDraft ?? null;
   const draftSource = draftState?.draftSource ?? 'ai';
 
@@ -195,7 +198,9 @@ export default function RecipeFormPage() {
         <p className="border-clay/25 bg-clay/10 text-clay mb-4 rounded-md border px-3 py-2 text-sm">
           {draftSource === 'url'
             ? t('recipeForm.reviewingUrlDraft')
-            : t('recipeForm.reviewingAiDraft')}
+            : draftSource === 'photo'
+              ? t('recipeForm.reviewingPhotoDraft')
+              : t('recipeForm.reviewingAiDraft')}
         </p>
       )}
 

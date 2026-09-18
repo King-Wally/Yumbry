@@ -51,12 +51,15 @@ function resolveModel(tier: AiModelTier): string {
 // server in production.
 const REQUEST_TIMEOUT_MS = Number(process.env.GEMINI_REQUEST_TIMEOUT_MS) || 30_000;
 
-function createClient(apiKey: string): OpenAI {
+// GEMINI_REQUEST_TIMEOUT_MS overrides the default for every call; a caller passing `timeoutMs`
+// overrides both, for the one request that is legitimately slower than the rest (reading a photo
+// on the big model, where 30s is not enough for a full cookbook page).
+function createClient(apiKey: string, timeoutMs = REQUEST_TIMEOUT_MS): OpenAI {
   return new OpenAI({
     baseURL: GEMINI_BASE_URL,
     apiKey,
     maxRetries: 0,
-    timeout: REQUEST_TIMEOUT_MS,
+    timeout: timeoutMs,
   });
 }
 
@@ -112,6 +115,8 @@ function warnDowngrade(from: string, to: string, err: unknown): void {
 type ChatOptions = {
   jsonSchema?: AiJsonSchemaFormat;
   sampling?: AiSamplingParams;
+  /** Overrides REQUEST_TIMEOUT_MS for this call. */
+  timeoutMs?: number;
 };
 
 async function runCompletion(
@@ -119,7 +124,7 @@ async function runCompletion(
   messages: AiChatMessage[],
   options: ChatOptions
 ): Promise<string> {
-  const client = createClient(requireApiKey());
+  const client = createClient(requireApiKey(), options.timeoutMs);
 
   const create = (responseFormat: ChatResponseFormat | undefined, withSampling: boolean) =>
     client.chat.completions.create({

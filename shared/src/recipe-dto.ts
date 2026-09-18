@@ -1,4 +1,4 @@
-import type { AiChatMessage, AiRecipeDraft } from './ai-recipe-draft.js';
+import type { AiRecipeDraft, AiTextChatMessage } from './ai-recipe-draft.js';
 
 export interface Tag {
   id: number;
@@ -52,7 +52,7 @@ export type AiChatMode = 'create' | 'improve';
 
 export interface AiChatTurnRequest {
   mode: AiChatMode;
-  messages: AiChatMessage[];
+  messages: AiTextChatMessage[];
   current_draft: AiRecipeDraft | null;
 }
 

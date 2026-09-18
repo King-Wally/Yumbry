@@ -17,6 +17,7 @@
   "nav": {
     "addRecipe": "Ajouter une recette",
     "import": "Importer JSON-LD",
+    "fromPhoto": "Depuis une photo",
     "createWithAi": "Créer avec l'IA",
     "settings": "Paramètres",
     "logOut": "Se déconnecter",
@@ -178,7 +179,8 @@
       "addButton": "+ Ajouter une étape",
       "placeholder": "Décrivez cette étape",
       "dragHandle": "Réorganiser l'étape"
-    }
+    },
+    "reviewingPhotoDraft": "Vous examinez une recette lue depuis une photo — vérifiez attentivement les quantités avant d'enregistrer."
   },
   "importJson": {
     "title": "Importer une recette",
@@ -195,6 +197,18 @@
     "urlLabel": "URL de la recette",
     "fetching": "Récupération...",
     "importFromUrl": "Importer depuis une URL"
+  },
+  "importPhoto": {
+    "title": "Ajouter depuis une photo",
+    "cardTitle": "Prenez ou importez une photo",
+    "cardDescription": "Une fiche manuscrite, une page de livre de cuisine, une capture d'écran — Yumbry en rédige le brouillon.",
+    "takePhoto": "Prendre une photo",
+    "uploadPhoto": "Importer une photo",
+    "hint": "Fonctionne mieux avec une photo nette et bien éclairée de la recette entière.",
+    "submit": "Créer la recette depuis la photo",
+    "reading": "Lecture de la photo...",
+    "removePhoto": "Supprimer la photo",
+    "previewAlt": "La photo à importer"
   },
   "aiChat": {
     "loadingRecipe": "Chargement de la recette...",

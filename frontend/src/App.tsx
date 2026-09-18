@@ -5,6 +5,7 @@ import RecipeDetailPage from './pages/RecipeDetailPage';
 import RecipeFormPage from './pages/RecipeFormPage';
 import ImportPage from './pages/ImportPage';
 import UrlImportPage from './pages/UrlImportPage';
+import PhotoImportPage from './pages/PhotoImportPage';
 import AiChatPage from './pages/AiChatPage';
 import SettingsPage from './pages/SettingsPage';
 import JoinFamilyPage from './pages/JoinFamilyPage';
@@ -74,6 +75,12 @@ export default function App() {
                           </Link>
                           {aiStatus?.configured && (
                             <>
+                              <Link
+                                to="/import/photo"
+                                className="px-5 py-2 transition hover:bg-stone-100"
+                              >
+                                {t('nav.fromPhoto')}
+                              </Link>
                               <Link
                                 to="/create-with-ai"
                                 className="px-5 py-2 transition hover:bg-stone-100"
@@ -177,6 +184,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <UrlImportPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/import/photo"
+            element={
+              <ProtectedRoute>
+                <PhotoImportPage />
               </ProtectedRoute>
             }
           />

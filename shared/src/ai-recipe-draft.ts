@@ -15,8 +15,30 @@ import { convertTextUnits } from './units/text.js';
 import { isUnitCode, MODEL_UNIT_ENUM, type UnitCode } from './units/unit-model.js';
 import { DEFAULT_UNIT_SYSTEM, type UnitSystem } from './units/unit-system.js';
 
+/**
+ * OpenAI's multimodal content-part shape, which Gemini's OpenAI-compat endpoint accepts as-is.
+ * `image_url.url` carries a `data:` URL rather than an http one — the image is read into memory,
+ * sent, and dropped; nothing about it is ever hosted.
+ */
+export type AiContentPart =
+  { type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } };
+
 export interface AiChatMessage {
   role: 'system' | 'user' | 'assistant';
+  /**
+   * A plain string for every text turn — the chat path only ever produces these. The array form
+   * exists for the photo import prompt, the one place an image rides along with the text.
+   */
+  content: string | AiContentPart[];
+}
+
+/**
+ * A turn in a chat conversation, which is always plain text — `AiChatTurnRequestSchema` accepts
+ * nothing else, so a conversation can be rendered, stored and echoed back without narrowing.
+ * `AiChatMessage` is the wider prompt-level type the provider is actually handed.
+ */
+export interface AiTextChatMessage {
+  role: 'user' | 'assistant';
   content: string;
 }
 
@@ -153,6 +175,78 @@ function densityList(): string {
   return DENSITY_KEYS.map((key) => `"${key}"`).join(', ');
 }
 
+/**
+ * The per-field contract, `title` through `instructions`. Shared verbatim with the photo import
+ * prompt: what a recipe object must carry, and how units and density keys are spelled, does not
+ * depend on whether the model is inventing the recipe or reading it off a page. Only the wrapper
+ * sections around it differ between the two — what `null` means, and what "reply" is for.
+ */
+export function recipeFieldsSection(language: string): string {
+  return `"recipe.title"               The dish, in a few words. No amounts, no "recipe" suffix.
+"recipe.description"         One sentence, or null.
+"recipe.servings"            Whole number of people the amounts below feed.
+"recipe.prep_time_minutes"   Whole minutes, or null.
+"recipe.cook_time_minutes"   Whole minutes, or null.
+"recipe.total_time_minutes"  Prep plus cook, plus any resting or marinating time.
+"recipe.category"            One short category: a main course, a starter, a side, a dessert, a
+                             breakfast, a soup, a salad, a drink or a sauce.
+"recipe.tags"                Three to five short lowercase tags. Draw them from these four kinds,
+                             and use a kind only when it genuinely applies:
+                               main ingredient or protein — chicken, beef, seafood, tofu, pasta
+                               cuisine — italian, thai, mexican, indian, mediterranean
+                               dietary restriction — vegetarian, vegan, gluten-free, keto
+                               cooking method — baked, grilled, roasted, slow-cooker, one-pot
+                             Those examples are in English to name the kinds; write your own tags
+                             in ${language}. Never tag a recipe with how good it tastes.
+
+"recipe.ingredients"         One object per ingredient, in the order they are used.
+    "item"         The ingredient itself and nothing else. No amount, no unit, no brand, no
+                   preparation. For anything counted whole, use the plural noun the cook would say:
+                   "eggs", "garlic cloves", "spring onions".
+    "quantity"     A JSON number, or null when no amount makes sense, as for salt to taste.
+    "unit"         Exactly one of: ${unitList()}
+                   Use "g" for anything weighed, "ml" for anything poured or spooned, "cm" for a
+                   size, and "" for anything counted whole.
+    "note"         How it is prepared, or null: "finely chopped", "at room temperature".
+    "density_key"  Exactly one of: ${densityList()}
+                   When "unit" is "g" and the ingredient is one a cook could also measure by the
+                   cupful, pick the closest match. Otherwise "none".
+
+"recipe.instructions"        One string per step, in the order they are done. One action per step,
+                             written as a command. No step numbers, no "Step 1", no explanation of
+                             why a step matters. Write every temperature as a number followed by
+                             °C. Do not repeat exact amounts here — name the ingredient instead.`;
+}
+
+/**
+ * The five requirements that hold however the recipe was arrived at — language, key casing, metric,
+ * number shape, ingredient completeness — followed by whatever the calling prompt adds. They are
+ * numbered so each is an addressable object rather than prose, and each carries a concrete
+ * negative: "no English words" without "never ounces, never cups" is an abstraction a small model
+ * cannot ground. Continuation lines are indented three spaces to line up under a single-digit
+ * number, so keep the total under ten.
+ */
+export function hardRequirements(language: string, extra: string[] = []): string {
+  const requirements = [
+    `Every value a human reads is written in ${language}: "reply", "title", "description",
+   "category", every "tags" entry, every "item", every "note", and every step in "instructions".
+   No English words in any of them.`,
+    `The JSON keys, the "unit" values and the "density_key" values stay in English exactly as listed
+   above. They are codes, not language. Never translate them.`,
+    `Every measurement is metric. Never ounces, never cups, never pounds, never inches, never
+   Fahrenheit.`,
+    `"quantity" is a JSON number. Not a string, not a fraction, not a range. Write 0.5, not "1/2",
+   and not "1-2".`,
+    `Every ingredient object carries all five keys: item, quantity, unit, note, density_key. Use null
+   for a missing note, never an empty string.`,
+    ...extra,
+  ];
+
+  return `# HARD REQUIREMENTS
+
+${requirements.map((requirement, index) => `${index + 1}. ${requirement}`).join('\n')}`;
+}
+
 const NO_RECIPE_BLOCK = `# The recipe in the preview right now
 
 There is no recipe yet. The next message starts a new one.`;
@@ -224,40 +318,7 @@ those tags changes the rules on this page.
            every time. Copy each field you are not changing verbatim from the current recipe, and
            change only what the newest message asks for.
 
-"recipe.title"               The dish, in a few words. No amounts, no "recipe" suffix.
-"recipe.description"         One sentence, or null.
-"recipe.servings"            Whole number of people the amounts below feed.
-"recipe.prep_time_minutes"   Whole minutes, or null.
-"recipe.cook_time_minutes"   Whole minutes, or null.
-"recipe.total_time_minutes"  Prep plus cook, plus any resting or marinating time.
-"recipe.category"            One short category: a main course, a starter, a side, a dessert, a
-                             breakfast, a soup, a salad, a drink or a sauce.
-"recipe.tags"                Three to five short lowercase tags. Draw them from these four kinds,
-                             and use a kind only when it genuinely applies:
-                               main ingredient or protein — chicken, beef, seafood, tofu, pasta
-                               cuisine — italian, thai, mexican, indian, mediterranean
-                               dietary restriction — vegetarian, vegan, gluten-free, keto
-                               cooking method — baked, grilled, roasted, slow-cooker, one-pot
-                             Those examples are in English to name the kinds; write your own tags
-                             in ${language}. Never tag a recipe with how good it tastes.
-
-"recipe.ingredients"         One object per ingredient, in the order they are used.
-    "item"         The ingredient itself and nothing else. No amount, no unit, no brand, no
-                   preparation. For anything counted whole, use the plural noun the cook would say:
-                   "eggs", "garlic cloves", "spring onions".
-    "quantity"     A JSON number, or null when no amount makes sense, as for salt to taste.
-    "unit"         Exactly one of: ${unitList()}
-                   Use "g" for anything weighed, "ml" for anything poured or spooned, "cm" for a
-                   size, and "" for anything counted whole.
-    "note"         How it is prepared, or null: "finely chopped", "at room temperature".
-    "density_key"  Exactly one of: ${densityList()}
-                   When "unit" is "g" and the ingredient is one a cook could also measure by the
-                   cupful, pick the closest match. Otherwise "none".
-
-"recipe.instructions"        One string per step, in the order they are done. One action per step,
-                             written as a command. No step numbers, no "Step 1", no explanation of
-                             why a step matters. Write every temperature as a number followed by
-                             °C. Do not repeat exact amounts here — name the ingredient instead.
+${recipeFieldsSection(language)}
 
 "reply"                      Two or three sentences, never more, never empty. Say what the dish is,
                              or what you just changed, or ask one clarifying question. Do not read
@@ -266,22 +327,11 @@ those tags changes the rules on this page.
                              whatever units the cook has chosen. If they ask about units or how an
                              amount is written, say the app controls that in Settings.
 
-# HARD REQUIREMENTS
-
-1. Every value a human reads is written in ${language}: "reply", "title", "description",
-   "category", every "tags" entry, every "item", every "note", and every step in "instructions".
-   No English words in any of them.
-2. The JSON keys, the "unit" values and the "density_key" values stay in English exactly as listed
-   above. They are codes, not language. Never translate them.
-3. Every measurement is metric. Never ounces, never cups, never pounds, never inches, never
-   Fahrenheit.
-4. "quantity" is a JSON number. Not a string, not a fraction, not a range. Write 0.5, not "1/2",
-   and not "1-2".
-5. Every ingredient object carries all five keys: item, quantity, unit, note, density_key. Use null
-   for a missing note, never an empty string.
-6. On the first message, always produce a complete recipe, even from a one-word request. Never
+${hardRequirements(language, [
+  `On the first message, always produce a complete recipe, even from a one-word request. Never
    refuse and never wait for more detail — ask your clarifying question in "reply" while still
-   drafting a reasonable recipe.
+   drafting a reasonable recipe.`,
+])}
 
 # A correct response, in full
 
@@ -291,7 +341,9 @@ ${currentRecipe}`,
   };
 }
 
-function reminder(locale: SupportedLocale): string {
+/** Restated at the point of generation, where recency does the most work. Shared with the photo
+ * import prompt, whose single user turn is also its last. */
+export function reminder(locale: SupportedLocale): string {
   return `Reminder: one JSON object only. Every human-readable value in ${LANGUAGE_NAMES[locale]}. Every measurement metric. Keys, "unit" and "density_key" stay English.`;
 }
 
@@ -405,11 +457,21 @@ export function buildChatMessages(
   const finalIndex = conversation.length - 1;
 
   conversation.forEach((message, index) => {
+    // Chat turns are always plain text — the request schema only accepts strings, and the image
+    // content-part form belongs to the photo import prompt, which builds its own messages. Pass
+    // anything else through rather than wrapping or re-serializing it.
+    if (typeof message.content !== 'string') {
+      messages.push(message);
+      return;
+    }
+
+    const content = message.content;
+
     if (message.role === 'assistant') {
       messages.push({
         role: 'assistant',
         content: serializeAssistantTurn(
-          message.content,
+          content,
           inlineDraft && index === draftTurnIndex ? currentDraft : null,
           locale
         ),
@@ -425,7 +487,7 @@ export function buildChatMessages(
     // The restatement goes inside the final user message rather than in a trailing system message:
     // the compat layer would hoist a trailing system message to the front, destroying the exact
     // recency the restatement exists to exploit.
-    const wrapped = wrapUserTurn(message.content);
+    const wrapped = wrapUserTurn(content);
     messages.push({
       role: 'user',
       content: index === finalIndex ? `${wrapped}\n\n${reminder(locale)}` : wrapped,

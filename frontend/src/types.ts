@@ -6,7 +6,7 @@ export type {
   Ingredient,
   Instruction,
   RecipeInput,
-  AiChatMessage,
+  AiTextChatMessage,
   AiRecipeDraft,
   AiChatTurnRequest,
   AiChatTurnResponse,

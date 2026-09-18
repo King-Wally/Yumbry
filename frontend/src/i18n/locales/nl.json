@@ -17,6 +17,7 @@
   "nav": {
     "addRecipe": "Recept toevoegen",
     "import": "Importeer JSON-LD",
+    "fromPhoto": "Vanaf een foto",
     "createWithAi": "Maken met AI",
     "settings": "Instellingen",
     "logOut": "Uitloggen",
@@ -178,7 +179,8 @@
       "addButton": "+ Stap toevoegen",
       "placeholder": "Beschrijf deze stap",
       "dragHandle": "Stap verplaatsen"
-    }
+    },
+    "reviewingPhotoDraft": "Je bekijkt een recept dat van een foto is gelezen — controleer de hoeveelheden zorgvuldig voordat je opslaat."
   },
   "importJson": {
     "title": "Recept importeren",
@@ -195,6 +197,18 @@
     "urlLabel": "Recept-URL",
     "fetching": "Ophalen...",
     "importFromUrl": "Importeren vanaf URL"
+  },
+  "importPhoto": {
+    "title": "Toevoegen vanaf een foto",
+    "cardTitle": "Maak of upload een foto",
+    "cardDescription": "Een handgeschreven kaartje, een kookboekpagina, een screenshot — Yumbry maakt er een concept van.",
+    "takePhoto": "Foto maken",
+    "uploadPhoto": "Foto uploaden",
+    "hint": "Werkt het best met een scherpe, goed verlichte foto van het hele recept.",
+    "submit": "Recept maken van foto",
+    "reading": "Foto lezen...",
+    "removePhoto": "Foto verwijderen",
+    "previewAlt": "De foto om te importeren"
   },
   "aiChat": {
     "loadingRecipe": "Recept laden...",

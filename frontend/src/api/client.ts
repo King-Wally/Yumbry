@@ -129,6 +129,24 @@ export function uploadRecipePhoto(id: string | number, file: File) {
   });
 }
 
+/**
+ * Reads a recipe off a photo. Returns a draft for review — like importRecipeFromUrl, and unlike
+ * importRecipe, nothing is persisted until the user saves the form.
+ *
+ * The longer timeout is deliberate: this runs on the big model with an image attached, and the
+ * server bounds the same call at 90s. Staying above that lets the server's own clean error win the
+ * race rather than a generic client-side abort.
+ */
+export function importRecipeFromPhoto(file: File) {
+  const formData = new FormData();
+  formData.append('photo', file);
+  return request<AiChatTurnResponse>(
+    '/ai/photo-import',
+    { method: 'POST', body: formData },
+    120_000
+  );
+}
+
 export function getTags() {
   return request<Tag[]>('/tags');
 }

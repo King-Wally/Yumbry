@@ -36,6 +36,23 @@ export const uploadPhoto = multer({
   limits: { fileSize: 8 * 1024 * 1024 },
 });
 
+// Memory storage, unlike uploadPhoto: a photo imported into the AI is downscaled by sharp,
+// base64'd into one Gemini call and then dropped. Writing it to disk would mean a staging
+// directory outside uploads/recipes/<id>/ — which requirePhotoAccess cannot serve — plus cleanup
+// for every import the user abandons, all for a picture of a cookbook page nobody wants to keep.
+//
+// The 25 MB ceiling is deliberately far above uploadPhoto's 8 MB: this file arrives at full camera
+// resolution because the shrink happens server-side, and a recent phone shooting 48 MP easily
+// clears 8 MB. It is a bound on what the process will hold, not a quality setting — what reaches
+// the model is whatever prepareImageForModel produces, typically a few hundred KB.
+export const MEMORY_PHOTO_LIMIT_MB = 25;
+
+export const uploadPhotoToMemory = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: imageFileFilter,
+  limits: { fileSize: MEMORY_PHOTO_LIMIT_MB * 1024 * 1024 },
+});
+
 export const uploadJsonFile = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 2 * 1024 * 1024 },

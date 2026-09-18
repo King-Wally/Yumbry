@@ -132,7 +132,7 @@ export default function OnboardingPage() {
     t('nav.manually'),
     ...(user?.jsonImportExportEnabled ? [t('nav.import')] : []),
     t('nav.paste'),
-    ...(aiStatus?.configured ? [t('nav.createWithAi')] : []),
+    ...(aiStatus?.configured ? [t('nav.fromPhoto'), t('nav.createWithAi')] : []),
   ];
 
   const pwaStepTexts = t(`onboarding.pwa.steps.${PWA_STEP_KEYS[platform]}`, {

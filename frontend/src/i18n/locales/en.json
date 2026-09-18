@@ -17,6 +17,7 @@
   "nav": {
     "addRecipe": "Add recipe",
     "import": "Import JSON-LD",
+    "fromPhoto": "From a photo",
     "createWithAi": "Create with AI",
     "settings": "Settings",
     "logOut": "Log out",
@@ -178,7 +179,8 @@
       "addButton": "+ Add step",
       "placeholder": "Describe this step",
       "dragHandle": "Reorder step"
-    }
+    },
+    "reviewingPhotoDraft": "Reviewing a recipe read from a photo — check the amounts carefully before saving."
   },
   "importJson": {
     "title": "Import a recipe",
@@ -195,6 +197,18 @@
     "urlLabel": "Recipe URL",
     "fetching": "Fetching...",
     "importFromUrl": "Import from URL"
+  },
+  "importPhoto": {
+    "title": "Add from a photo",
+    "cardTitle": "Take or upload a photo",
+    "cardDescription": "A handwritten card, a cookbook page, a screenshot — Yumbry will draft the recipe for you.",
+    "takePhoto": "Take a photo",
+    "uploadPhoto": "Upload a photo",
+    "hint": "Works best with a clear, well-lit shot of the full recipe.",
+    "submit": "Create recipe from photo",
+    "reading": "Reading photo...",
+    "removePhoto": "Remove photo",
+    "previewAlt": "The photo to import"
   },
   "aiChat": {
     "loadingRecipe": "Loading recipe...",

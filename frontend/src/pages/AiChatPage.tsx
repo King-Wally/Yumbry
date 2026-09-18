@@ -17,7 +17,7 @@ import { refreshSession } from '../lib/auth-client';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { renderDraftForReader } from '../utils/render-draft';
 import { toRecipeInput } from '../utils/recipe-mapping';
-import type { AiChatMessage, AiRecipeDraft } from '../types';
+import type { AiTextChatMessage, AiRecipeDraft } from '../types';
 import { ArrowLeft } from 'lucide-react';
 
 export default function AiChatPage() {
@@ -34,7 +34,7 @@ export default function AiChatPage() {
     enabled: isImproving,
   });
 
-  const [messages, setMessages] = useState<AiChatMessage[]>([]);
+  const [messages, setMessages] = useState<AiTextChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [draft, setDraft] = useState<AiRecipeDraft | null>(null);
   const [seededForId, setSeededForId] = useState<number | null>(null);
@@ -46,7 +46,7 @@ export default function AiChatPage() {
   }
 
   const chatMutation = useMutation({
-    mutationFn: (nextMessages: AiChatMessage[]) =>
+    mutationFn: (nextMessages: AiTextChatMessage[]) =>
       chatAboutRecipe({
         mode: isImproving ? 'improve' : 'create',
         messages: nextMessages,
@@ -84,7 +84,7 @@ export default function AiChatPage() {
     e.preventDefault();
     const text = input.trim();
     if (!text) return;
-    const next: AiChatMessage[] = [...messages, { role: 'user', content: text }];
+    const next: AiTextChatMessage[] = [...messages, { role: 'user', content: text }];
     setMessages(next);
     setInput('');
     chatMutation.mutate(next);
@@ -131,7 +131,7 @@ export default function AiChatPage() {
                 key={index}
                 className={
                   message.role === 'user'
-                    ? 'bg-clay ml-auto w-fit max-w-[80%] rounded-lg px-3 py-2 text-sm text-white'
+                    ? 'bg-clay ml-auto w-fit max-w-[80%] rounded-lg px-3 py-2 text-sm text-white selection:bg-white/30 selection:text-white'
                     : 'mr-auto w-fit max-w-[80%] rounded-lg bg-stone-100 px-3 py-2 text-sm text-stone-700'
                 }
               >
