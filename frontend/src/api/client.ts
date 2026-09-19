@@ -1,6 +1,8 @@
 import type {
   AiChatTurnRequest,
   AiChatTurnResponse,
+  AiNutritionEstimate,
+  AiNutritionRequest,
   Category,
   Recipe,
   RecipeInput,
@@ -143,6 +145,14 @@ export function getAiStatus() {
 
 export function chatAboutRecipe(data: AiChatTurnRequest) {
   return request<AiChatTurnResponse>('/ai/chat', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/** Estimates the four per-serving values from whatever is currently typed into the recipe form. */
+export function estimateNutrition(data: AiNutritionRequest) {
+  return request<AiNutritionEstimate>('/ai/nutrition', {
     method: 'POST',
     body: JSON.stringify(data),
   });

@@ -133,7 +133,13 @@
       "prep": "Voorbereiding",
       "cook": "Bereiding",
       "total": "Totaal",
-      "servings": "Porties"
+      "servings": "Porties",
+      "nutrition": "Voedingswaarde",
+      "perServing": "Per portie",
+      "calories": "Calorieën",
+      "fat": "Vet",
+      "carbs": "Koolhydraten",
+      "protein": "Eiwit"
     },
     "card": {
       "noPhoto": "Geen foto"
@@ -167,6 +173,14 @@
     "addTagPlaceholder": "Voeg een tag toe en druk op Enter",
     "saving": "Opslaan...",
     "saveButton": "Recept opslaan",
+    "nutritionTitle": "Voedingswaarde",
+    "nutritionDescription": "De waarden gelden voor één portie.",
+    "calories": "Calorieën (kcal)",
+    "fat": "Vet (g)",
+    "carbohydrates": "Koolhydraten (g)",
+    "protein": "Eiwit (g)",
+    "estimateNutrition": "Schat met AI",
+    "estimatingNutrition": "Schatten...",
     "ingredients": {
       "label": "Ingrediënten",
       "addButton": "+ Ingrediënt toevoegen",

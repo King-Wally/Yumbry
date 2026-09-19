@@ -117,6 +117,100 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
     expect(Number(updated.body.servings)).toBe(3);
   });
 
+  describe('nutrition', () => {
+    const nutrition = {
+      calories: 420,
+      fat_content: 14.5,
+      carbohydrate_content: 58,
+      protein_content: 16,
+    };
+
+    function readNutrition(body: Record<string, string | null>) {
+      return {
+        calories: body.calories === null ? null : Number(body.calories),
+        fat_content: body.fat_content === null ? null : Number(body.fat_content),
+        carbohydrate_content:
+          body.carbohydrate_content === null ? null : Number(body.carbohydrate_content),
+        protein_content: body.protein_content === null ? null : Number(body.protein_content),
+      };
+    }
+
+    it('round-trips per-serving values through create and read', async () => {
+      const created = await agent
+        .post('/api/recipes')
+        .send({ title: 'Pasta', servings: 4, ...nutrition });
+
+      expect(created.status).toBe(201);
+      expect(readNutrition(created.body)).toEqual(nutrition);
+
+      const fetched = await agent.get(`/api/recipes/${created.body.id}`);
+      expect(readNutrition(fetched.body)).toEqual(nutrition);
+    });
+
+    it('defaults to null when a recipe is created without nutrition', async () => {
+      const created = await agent.post('/api/recipes').send({ title: 'Plain', servings: 2 });
+
+      expect(readNutrition(created.body)).toEqual({
+        calories: null,
+        fat_content: null,
+        carbohydrate_content: null,
+        protein_content: null,
+      });
+    });
+
+    // PUT is a full overwrite, so a value the form cleared has to come back as null rather than
+    // silently keeping the old number.
+    it('clears a value the update omits', async () => {
+      const created = await agent
+        .post('/api/recipes')
+        .send({ title: 'Pasta', servings: 4, ...nutrition });
+
+      const updated = await agent
+        .put(`/api/recipes/${created.body.id}`)
+        .send({ title: 'Pasta', servings: 4, calories: 500 });
+
+      expect(updated.status).toBe(200);
+      expect(readNutrition(updated.body)).toEqual({
+        calories: 500,
+        fat_content: null,
+        carbohydrate_content: null,
+        protein_content: null,
+      });
+    });
+
+    it('rejects a negative value', async () => {
+      const res = await agent
+        .post('/api/recipes')
+        .send({ title: 'Pasta', servings: 4, calories: -1 });
+      expect(res.status).toBe(400);
+    });
+
+    it('imports nutrition from JSON-LD', async () => {
+      const jsonLd = JSON.stringify({
+        '@type': 'Recipe',
+        name: 'Nutritious Recipe',
+        recipeYield: '2',
+        recipeIngredient: ['1 cup rice'],
+        recipeInstructions: 'Boil rice.',
+        nutrition: {
+          '@type': 'NutritionInformation',
+          calories: '512 kcal',
+          proteinContent: '31 g',
+        },
+      });
+
+      const res = await agent.post('/api/recipes/import').send({ jsonLd });
+
+      expect(res.status).toBe(201);
+      expect(readNutrition(res.body)).toEqual({
+        calories: 512,
+        fat_content: null,
+        carbohydrate_content: null,
+        protein_content: 31,
+      });
+    });
+  });
+
   it('deletes a recipe', async () => {
     const created = await agent.post('/api/recipes').send({ title: 'To Delete', servings: 1 });
 

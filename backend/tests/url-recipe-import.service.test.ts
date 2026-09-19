@@ -40,6 +40,27 @@ function htmlWithScripts(...blocks: string[]): string {
 }
 
 describe('extractRecipeFromHtml', () => {
+  // The projection from ParsedRecipeImport into RecipeInput is written out field by field, so a
+  // new field that isn't listed there drops silently rather than failing a typecheck.
+  it('carries nutrition through the projection into RecipeInput', () => {
+    const node = {
+      ...bareRecipe,
+      nutrition: {
+        '@type': 'NutritionInformation',
+        calories: '512 kcal',
+        fatContent: '24 g',
+        carbohydrateContent: '40 g',
+        proteinContent: '31 g',
+      },
+    };
+    const recipe = extractRecipeFromHtml(htmlWithScripts(JSON.stringify(node)));
+
+    expect(recipe.calories).toBe(512);
+    expect(recipe.fat_content).toBe(24);
+    expect(recipe.carbohydrate_content).toBe(40);
+    expect(recipe.protein_content).toBe(31);
+  });
+
   it('extracts a Recipe from a single JSON-LD block', () => {
     const recipe = extractRecipeFromHtml(htmlWithScripts(JSON.stringify(bareRecipe)));
 

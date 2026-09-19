@@ -7,6 +7,7 @@ import {
   type AiChatMessage,
   type AiRecipeDraft,
 } from '../src/ai-recipe-draft.js';
+import { NUTRITION_FIELDS } from '../src/ai-nutrition.js';
 import { SUPPORTED_LOCALES, type SupportedLocale } from '../src/locale.js';
 
 const SYSTEM_PROMPT_MARKER = 'You are a recipe developer.';
@@ -42,6 +43,10 @@ function draft(overrides: Partial<AiRecipeDraft> = {}): AiRecipeDraft {
     cook_time_minutes: null,
     total_time_minutes: null,
     servings: 4,
+    calories: null,
+    fat_content: null,
+    carbohydrate_content: null,
+    protein_content: null,
     ingredients: ['800 g tomaten'],
     instructions: [{ step_number: 1, text: 'Laat sudderen.' }],
     tags: [],
@@ -547,6 +552,18 @@ describe('prompt structure', () => {
     for (const message of buildChatMessages([{ role: 'user', content: 'soup' }], draft(), locale)) {
       expect(message.content).not.toContain('{{');
     }
+  });
+
+  // Rungs two and three of the provider's downgrade ladder send no schema, so a nutrition field
+  // that lives only in AI_ENVELOPE_JSON_SCHEMA would be silently unenforced there.
+  it('documents every nutrition field the schema asks for, and says they are per serving', () => {
+    const prompt = buildChatMessages([{ role: 'user', content: 'soup' }], null)[0].content;
+
+    for (const field of NUTRITION_FIELDS) {
+      expect(prompt, field).toContain(`"recipe.${field}"`);
+    }
+    expect(prompt).toContain('for ONE serving');
+    expect(prompt).toContain('divide it by');
   });
 
   // The old wording ("never mention units") left the model deflecting when a cook asked a

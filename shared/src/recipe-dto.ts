@@ -36,6 +36,12 @@ export interface RecipeInput {
   cook_time_minutes?: number | null;
   total_time_minutes?: number | null;
   servings: number;
+  // Nutrition is per single serving — never for the whole recipe. `calories` is kcal,
+  // the other three are grams.
+  calories?: number | null;
+  fat_content?: number | null;
+  carbohydrate_content?: number | null;
+  protein_content?: number | null;
   ingredients: string[];
   instructions: { step_number: number; text: string }[];
   tags: string[];

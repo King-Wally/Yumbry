@@ -9,6 +9,12 @@ export const AiRecipeDraftSchema = z.object({
   cook_time_minutes: z.number().nullable(),
   total_time_minutes: z.number().nullable(),
   servings: z.number(),
+  // Defaulted rather than merely optional: a tab holding a draft from before nutrition existed
+  // must still validate, and `null` is what the rest of the pipeline expects for "not estimated".
+  calories: z.number().nullish().default(null),
+  fat_content: z.number().nullish().default(null),
+  carbohydrate_content: z.number().nullish().default(null),
+  protein_content: z.number().nullish().default(null),
   ingredients: z.array(z.string()),
   instructions: z.array(z.object({ step_number: z.number(), text: z.string() })),
   tags: z.array(z.string()),

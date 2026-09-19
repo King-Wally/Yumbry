@@ -133,7 +133,13 @@
       "prep": "Preparación",
       "cook": "Cocción",
       "total": "Total",
-      "servings": "Raciones"
+      "servings": "Raciones",
+      "nutrition": "Nutrición",
+      "perServing": "Por ración",
+      "calories": "Calorías",
+      "fat": "Grasas",
+      "carbs": "Carbohidratos",
+      "protein": "Proteínas"
     },
     "card": {
       "noPhoto": "Sin foto"
@@ -167,6 +173,14 @@
     "addTagPlaceholder": "Añade una etiqueta y pulsa Intro",
     "saving": "Guardando...",
     "saveButton": "Guardar receta",
+    "nutritionTitle": "Nutrición",
+    "nutritionDescription": "Los valores son para una sola ración.",
+    "calories": "Calorías (kcal)",
+    "fat": "Grasas (g)",
+    "carbohydrates": "Carbohidratos (g)",
+    "protein": "Proteínas (g)",
+    "estimateNutrition": "Estimar con IA",
+    "estimatingNutrition": "Estimando...",
     "ingredients": {
       "label": "Ingredientes",
       "addButton": "+ Añadir ingrediente",

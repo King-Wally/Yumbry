@@ -133,7 +133,13 @@
       "prep": "Prep",
       "cook": "Cook",
       "total": "Total",
-      "servings": "Servings"
+      "servings": "Servings",
+      "nutrition": "Nutrition",
+      "perServing": "Per serving",
+      "calories": "Calories",
+      "fat": "Fat",
+      "carbs": "Carbs",
+      "protein": "Protein"
     },
     "card": {
       "noPhoto": "No photo"
@@ -167,6 +173,14 @@
     "addTagPlaceholder": "Add a tag and press Enter",
     "saving": "Saving...",
     "saveButton": "Save recipe",
+    "nutritionTitle": "Nutrition",
+    "nutritionDescription": "Values are for a single serving.",
+    "calories": "Calories (kcal)",
+    "fat": "Fat (g)",
+    "carbohydrates": "Carbs (g)",
+    "protein": "Protein (g)",
+    "estimateNutrition": "Estimate with AI",
+    "estimatingNutrition": "Estimating...",
     "ingredients": {
       "label": "Ingredients",
       "addButton": "+ Add ingredient",

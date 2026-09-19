@@ -121,6 +121,13 @@ model Recipe {
   cookTimeMinutes  Int?     @map("cook_time_minutes")
   totalTimeMinutes Int?     @map("total_time_minutes")
   servings         Decimal  @default(1)
+  /// Nutrition is always for a single serving — schema.org's NutritionInformation
+  /// is defined that way, so imports need no conversion and the detail page never
+  /// scales these with the servings stepper.
+  calories            Decimal? @db.Decimal(8, 2)
+  fatContent          Decimal? @map("fat_content") @db.Decimal(8, 2)
+  carbohydrateContent Decimal? @map("carbohydrate_content") @db.Decimal(8, 2)
+  proteinContent      Decimal? @map("protein_content") @db.Decimal(8, 2)
   categoryId       Int?     @map("category_id")
   familyId         Int      @map("family_id")
   /// Provenance only — nothing authorises on this. Access is decided by

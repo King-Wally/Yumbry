@@ -47,6 +47,20 @@ const EXAMPLE_TIMES = {
   total_time_minutes: 55,
 };
 
+/**
+ * Per serving, and plausible for a quarter of this dish — the example teaches the division too.
+ *
+ * `calories` is not an independent guess: it is what the Atwater factors give for these three
+ * macros (32.5 × 9 + 6.2 × 4 + 39 × 4 = 473.3, rounded), so the example demonstrates the arithmetic
+ * the prompt asks for rather than quietly contradicting it. A test holds the two in step.
+ */
+const EXAMPLE_NUTRITION = {
+  calories: 473,
+  fat_content: 32.5,
+  carbohydrate_content: 6.2,
+  protein_content: 39,
+};
+
 interface ExampleText {
   title: string;
   description: string;
@@ -179,6 +193,10 @@ export function workedExample(locale: SupportedLocale): Record<string, unknown> 
       prep_time_minutes: EXAMPLE_TIMES.prep_time_minutes,
       cook_time_minutes: EXAMPLE_TIMES.cook_time_minutes,
       total_time_minutes: EXAMPLE_TIMES.total_time_minutes,
+      calories: EXAMPLE_NUTRITION.calories,
+      fat_content: EXAMPLE_NUTRITION.fat_content,
+      carbohydrate_content: EXAMPLE_NUTRITION.carbohydrate_content,
+      protein_content: EXAMPLE_NUTRITION.protein_content,
       category: text.category,
       tags: text.tags,
       ingredients: EXAMPLE_INGREDIENTS.map((ingredient, index) => ({

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import IngredientList from './IngredientList';
 import InstructionList from './InstructionList';
+import NutritionStats from './NutritionStats';
 import RecipeTagBadges from './RecipeTagBadges';
 import TimeStat from './TimeStat';
 import type { RecipeInput } from '../types';
@@ -59,6 +60,13 @@ export default function RecipePreview({ draft }: RecipePreviewProps) {
           </div>
         </div>
       </div>
+
+      <NutritionStats
+        calories={draft.calories ?? null}
+        fatContent={draft.fat_content ?? null}
+        carbohydrateContent={draft.carbohydrate_content ?? null}
+        proteinContent={draft.protein_content ?? null}
+      />
 
       <section>
         <h3 className="mb-2 font-serif text-lg text-stone-900">{t('recipePreview.ingredients')}</h3>

@@ -11,6 +11,10 @@ const fullRecipe: RecipeWithRelations = {
   cook_time_minutes: 15,
   total_time_minutes: 25,
   servings: '4',
+  calories: '420',
+  fat_content: '14.5',
+  carbohydrate_content: '58',
+  protein_content: '16',
   category_id: 1,
   created_at: new Date('2024-01-01'),
   updated_at: new Date('2024-01-01'),
@@ -79,6 +83,10 @@ describe('recipeToJsonLd', () => {
       prep_time_minutes: null,
       cook_time_minutes: null,
       total_time_minutes: null,
+      calories: null,
+      fat_content: null,
+      carbohydrate_content: null,
+      protein_content: null,
       tags: [],
       category: null,
     };
@@ -92,6 +100,39 @@ describe('recipeToJsonLd', () => {
     expect(jsonLd).not.toHaveProperty('totalTime');
     expect(jsonLd).not.toHaveProperty('keywords');
     expect(jsonLd).not.toHaveProperty('recipeCategory');
+    expect(jsonLd).not.toHaveProperty('nutrition');
+  });
+
+  describe('nutrition', () => {
+    it('emits a per-serving NutritionInformation block with units', () => {
+      expect(recipeToJsonLd(fullRecipe).nutrition).toEqual({
+        '@type': 'NutritionInformation',
+        calories: '420 kcal',
+        fatContent: '14.5 g',
+        carbohydrateContent: '58 g',
+        proteinContent: '16 g',
+      });
+    });
+
+    it('emits only the values that are set', () => {
+      const jsonLd = recipeToJsonLd({
+        ...fullRecipe,
+        fat_content: null,
+        carbohydrate_content: null,
+        protein_content: null,
+      });
+
+      expect(jsonLd.nutrition).toEqual({
+        '@type': 'NutritionInformation',
+        calories: '420 kcal',
+      });
+    });
+
+    // A zero is a real measurement, not an absent one.
+    it('keeps a zero value', () => {
+      const jsonLd = recipeToJsonLd({ ...fullRecipe, fat_content: '0' });
+      expect(jsonLd.nutrition).toMatchObject({ fatContent: '0 g' });
+    });
   });
 
   it('preserves ingredient and instruction ordering', () => {

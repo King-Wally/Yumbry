@@ -4,6 +4,7 @@ import {
   buildChatMessages,
   parseChatEnvelope,
 } from '../src/ai-recipe-draft.js';
+import { caloriesFromMacros } from '../src/ai-nutrition.js';
 import { workedExample, workedExampleJson, WORKED_EXAMPLE_TEXT } from '../src/ai-worked-example.js';
 import { SUPPORTED_LOCALES, type SupportedLocale } from '../src/locale.js';
 import { DENSITY_KEYS } from '../src/units/density.js';
@@ -168,5 +169,31 @@ describe('prompt and schema stay in step', () => {
 
     for (const unit of MODEL_UNIT_ENUM) expect(prompt).toContain(`"${unit}"`);
     for (const key of DENSITY_KEYS) expect(prompt).toContain(`"${key}"`);
+  });
+});
+
+// The nutrition section of the prompt asks the model to derive calories from the three macros. An
+// example that ignored its own rule would teach the opposite, since a model copies the example
+// over the spec whenever the two disagree.
+describe('worked example nutrition', () => {
+  it.each([...SUPPORTED_LOCALES])('%s: derives its calories from its own macros', (locale) => {
+    const recipe = workedExample(locale).recipe as {
+      calories: number;
+      fat_content: number | null;
+      carbohydrate_content: number | null;
+      protein_content: number | null;
+    };
+
+    // Exact, not approximate: the example is generated from a fixture we control, so there is no
+    // reason to allow it any slack the prompt does not allow the model.
+    expect(recipe.calories).toBe(Math.round(caloriesFromMacros(recipe)));
+  });
+
+  it.each([...SUPPORTED_LOCALES])('%s: states every macro, not just the energy', (locale) => {
+    const recipe = workedExample(locale).recipe as Record<string, unknown>;
+
+    for (const field of ['calories', 'fat_content', 'carbohydrate_content', 'protein_content']) {
+      expect(typeof recipe[field], field).toBe('number');
+    }
   });
 });

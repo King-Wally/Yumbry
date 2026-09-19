@@ -1,4 +1,4 @@
-import { toNumber } from './numeric';
+import { toNullableNumber, toNumber } from './numeric';
 import type { AiRecipeDraft, Recipe } from '../types';
 
 // Returns the AI draft shape rather than the looser `RecipeInput`: every field is filled here,
@@ -13,6 +13,10 @@ export function toRecipeInput(recipe: Recipe): AiRecipeDraft {
     cook_time_minutes: recipe.cook_time_minutes,
     total_time_minutes: recipe.total_time_minutes,
     servings: toNumber(recipe.servings, 1),
+    calories: toNullableNumber(recipe.calories),
+    fat_content: toNullableNumber(recipe.fat_content),
+    carbohydrate_content: toNullableNumber(recipe.carbohydrate_content),
+    protein_content: toNullableNumber(recipe.protein_content),
     ingredients: recipe.ingredients.map((i) => i.raw_text),
     instructions: recipe.instructions.map((i) => ({ step_number: i.step_number, text: i.text })),
     tags: recipe.tags.map((t) => t.name),
