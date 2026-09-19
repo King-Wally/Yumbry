@@ -17,6 +17,10 @@ const existingRecipe: Recipe = {
   cook_time_minutes: null,
   total_time_minutes: null,
   servings: '4',
+  calories: null,
+  fat_content: null,
+  carbohydrate_content: null,
+  protein_content: null,
   created_at: '2026-01-01T00:00:00.000Z',
   updated_at: '2026-01-01T00:00:00.000Z',
   tags: [],
@@ -116,6 +120,10 @@ describe('RecipeFormPage AI draft hydration', () => {
                 aiDraft: {
                   title: 'Spicier Curry',
                   servings: 4,
+                  calories: null,
+                  fat_content: null,
+                  carbohydrate_content: null,
+                  protein_content: null,
                   ingredients: ['2 tbsp chili paste'],
                   instructions: [{ step_number: 1, text: 'Simmer everything.' }],
                   tags: [],
@@ -158,5 +166,156 @@ describe('RecipeFormPage AI draft hydration', () => {
 
     expect(await screen.findByText('Add a recipe')).toBeInTheDocument();
     expect(screen.queryByText(/Reviewing an AI-generated draft/)).not.toBeInTheDocument();
+  });
+});
+
+describe('RecipeFormPage nutrition', () => {
+  const estimate = {
+    calories: 420,
+    fat_content: 14.5,
+    carbohydrate_content: 58,
+    protein_content: 16,
+  };
+
+  beforeEach(() => {
+    vi.mocked(apiClient.getCategories).mockResolvedValue([]);
+    vi.mocked(apiClient.getAiStatus).mockResolvedValue({ configured: true });
+    vi.mocked(apiClient.getRecipe).mockResolvedValue({
+      ...existingRecipe,
+      calories: '420.00',
+      fat_content: '14.50',
+      ingredients: [
+        {
+          id: 1,
+          recipe_id: 7,
+          raw_text: '400 g spaghetti',
+          amount: '400',
+          unit: 'g',
+          name: 'spaghetti',
+          is_scalable: true,
+          sort_order: 0,
+        },
+      ],
+    });
+  });
+
+  function estimateButton() {
+    return screen.getByRole('button', { name: 'Estimate with AI' });
+  }
+
+  it('hydrates the inputs from the saved recipe, trimming Decimal noise', async () => {
+    renderForm();
+
+    expect(await screen.findByDisplayValue('420')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('14.5')).toBeInTheDocument();
+  });
+
+  // The payload has to be what the cook is looking at, not the recipe that was fetched.
+  it('sends the live form values, including unsaved edits', async () => {
+    vi.mocked(apiClient.estimateNutrition).mockResolvedValue(estimate);
+    renderForm();
+
+    const titleInput = await screen.findByDisplayValue('Original Title');
+    fireEvent.change(titleInput, { target: { value: 'Edited Pasta' } });
+    fireEvent.click(estimateButton());
+
+    // react-query hands mutationFn a context argument too, so assert on the payload alone.
+    await waitFor(() => expect(apiClient.estimateNutrition).toHaveBeenCalled());
+    expect(vi.mocked(apiClient.estimateNutrition).mock.calls[0][0]).toEqual({
+      title: 'Edited Pasta',
+      description: null,
+      servings: 4,
+      ingredients: ['400 g spaghetti'],
+      instructions: [],
+    });
+  });
+
+  it('fills the inputs from the estimate', async () => {
+    vi.mocked(apiClient.estimateNutrition).mockResolvedValue(estimate);
+    renderForm();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Estimate with AI' }));
+
+    expect(await screen.findByDisplayValue('58')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('16')).toBeInTheDocument();
+  });
+
+  // A value the model declined to guess must not be overwritten with a fake 0.
+  it('leaves a field the estimate returned as null untouched', async () => {
+    vi.mocked(apiClient.estimateNutrition).mockResolvedValue({ ...estimate, calories: null });
+    renderForm();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Estimate with AI' }));
+
+    await screen.findByDisplayValue('58');
+    expect(screen.getByDisplayValue('420')).toBeInTheDocument();
+  });
+
+  it('shows the error inline and changes nothing when the estimate fails', async () => {
+    vi.mocked(apiClient.estimateNutrition).mockRejectedValue(new Error('AI is unavailable.'));
+    renderForm();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Estimate with AI' }));
+
+    expect(await screen.findByText('AI is unavailable.')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('420')).toBeInTheDocument();
+  });
+
+  it('disables the button while the estimate is in flight', async () => {
+    vi.mocked(apiClient.estimateNutrition).mockReturnValue(new Promise(() => {}));
+    renderForm();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Estimate with AI' }));
+
+    const pending = await screen.findByRole('button', { name: 'Estimating...' });
+    expect(pending).toBeDisabled();
+  });
+
+  it('disables the button when there is nothing to measure', async () => {
+    vi.mocked(apiClient.getRecipe).mockResolvedValue(existingRecipe);
+    renderForm();
+
+    expect(await screen.findByRole('button', { name: 'Estimate with AI' })).toBeDisabled();
+  });
+
+  it('hides the button entirely when the server has no AI key', async () => {
+    vi.mocked(apiClient.getAiStatus).mockResolvedValue({ configured: false });
+    renderForm();
+
+    await screen.findByDisplayValue('Original Title');
+    expect(screen.queryByRole('button', { name: 'Estimate with AI' })).not.toBeInTheDocument();
+  });
+
+  // A bare <button> inside the form would submit it.
+  it('does not save the recipe when estimating', async () => {
+    vi.mocked(apiClient.estimateNutrition).mockResolvedValue(estimate);
+    renderForm();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Estimate with AI' }));
+    await screen.findByDisplayValue('58');
+
+    expect(apiClient.updateRecipe).not.toHaveBeenCalled();
+    expect(apiClient.createRecipe).not.toHaveBeenCalled();
+  });
+
+  it('submits an empty nutrition input as null rather than zero', async () => {
+    vi.mocked(apiClient.getRecipe).mockResolvedValue(existingRecipe);
+    vi.mocked(apiClient.updateRecipe).mockResolvedValue(existingRecipe);
+    renderForm();
+
+    await screen.findByDisplayValue('Original Title');
+    fireEvent.click(screen.getByRole('button', { name: 'Save recipe' }));
+
+    await waitFor(() =>
+      expect(apiClient.updateRecipe).toHaveBeenCalledWith(
+        '7',
+        expect.objectContaining({
+          calories: null,
+          fat_content: null,
+          carbohydrate_content: null,
+          protein_content: null,
+        })
+      )
+    );
   });
 });

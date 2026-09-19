@@ -586,4 +586,100 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
       expect(res.status).toBe(401);
     });
   });
+
+  describe('POST /api/ai/nutrition', () => {
+    const body = {
+      title: 'Weeknight tomato pasta',
+      description: 'A quick weeknight pasta.',
+      servings: 4,
+      ingredients: ['400 g spaghetti', '2 tbsp olive oil'],
+      instructions: ['Boil the pasta.'],
+    };
+
+    const estimate = {
+      calories: 420,
+      fat_content: 14,
+      carbohydrate_content: 58,
+      protein_content: 16,
+    };
+
+    it('returns the four per-serving values', async () => {
+      chatWithAi.mockResolvedValue(JSON.stringify(estimate));
+
+      const res = await agent.post('/api/ai/nutrition').send(body);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(estimate);
+    });
+
+    // Otherwise unobservable, and the whole point of a separate endpoint: estimating from a recipe
+    // already in hand never needs the expensive model.
+    it('always spends the small model', async () => {
+      chatWithAi.mockResolvedValue(JSON.stringify(estimate));
+      await agent.post('/api/ai/nutrition').send(body);
+
+      expect(chatWithAi.mock.calls[0][1].tier).toBe('small');
+      expect(chatWithAi.mock.calls[0][1].jsonSchema.strict).toBe(true);
+    });
+
+    it('puts the recipe in the prompt', async () => {
+      chatWithAi.mockResolvedValue(JSON.stringify(estimate));
+      await agent.post('/api/ai/nutrition').send(body);
+
+      const prompt = JSON.stringify(chatWithAi.mock.calls[0][0]);
+      expect(prompt).toContain('Weeknight tomato pasta');
+      expect(prompt).toContain('400 g spaghetti');
+      expect(prompt).toContain('Servings: 4');
+    });
+
+    it('returns 400 on a request with nothing to measure', async () => {
+      const noIngredients = await agent
+        .post('/api/ai/nutrition')
+        .send({ ...body, ingredients: [] });
+      expect(noIngredients.status).toBe(400);
+
+      const noServings = await agent
+        .post('/api/ai/nutrition')
+        .send({ ...body, servings: undefined });
+      expect(noServings.status).toBe(400);
+
+      expect(chatWithAi).not.toHaveBeenCalled();
+    });
+
+    it('returns 502 when the model answers with prose instead of JSON', async () => {
+      chatWithAi.mockResolvedValue('Sorry, I cannot estimate that.');
+
+      const res = await agent.post('/api/ai/nutrition').send(body);
+
+      expect(res.status).toBe(502);
+      expect(res.body.kind).toBe('malformed_response');
+    });
+
+    // All four null is a non-answer; the cook needs a "try again", not a button that did nothing.
+    it('returns 502 when the model estimated nothing at all', async () => {
+      chatWithAi.mockResolvedValue('{}');
+
+      const res = await agent.post('/api/ai/nutrition').send(body);
+
+      expect(res.status).toBe(502);
+      expect(res.body.kind).toBe('malformed_response');
+    });
+
+    it('maps provider errors the same way the chat endpoint does', async () => {
+      chatWithAi.mockRejectedValue(new AiProviderError('bad key', 'bad_status'));
+      const badStatus = await agent.post('/api/ai/nutrition').send(body);
+      expect(badStatus.status).toBe(502);
+      expect(badStatus.body.kind).toBe('bad_status');
+
+      chatWithAi.mockRejectedValue(new AiProviderError('no key set', 'not_configured'));
+      const notConfigured = await agent.post('/api/ai/nutrition').send(body);
+      expect(notConfigured.status).toBe(503);
+      expect(notConfigured.body.kind).toBe('not_configured');
+    });
+
+    it('rejects unauthenticated requests with 401', async () => {
+      const res = await request(app).post('/api/ai/nutrition').send(body);
+      expect(res.status).toBe(401);
+    });
+  });
 });

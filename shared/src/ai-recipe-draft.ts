@@ -1,3 +1,5 @@
+import { extractJsonText, parseJsonLoosely } from './ai-json.js';
+import { ATWATER_FACTORS, nutritionMacroTable, toNutritionValue } from './ai-nutrition.js';
 import { workedExampleJson } from './ai-worked-example.js';
 import { DEFAULT_LOCALE, LANGUAGE_NAMES, type SupportedLocale } from './locale.js';
 import {
@@ -50,6 +52,11 @@ export interface AiRecipeDraft {
   cook_time_minutes: number | null;
   total_time_minutes: number | null;
   servings: number;
+  /** Per single serving, never for the whole recipe. kcal for calories, grams for the rest. */
+  calories: number | null;
+  fat_content: number | null;
+  carbohydrate_content: number | null;
+  protein_content: number | null;
   /** Rendered lines, in the reader's units and language — what the app displays and stores. */
   ingredients: string[];
   /**
@@ -127,6 +134,10 @@ export const AI_ENVELOPE_JSON_SCHEMA: AiJsonSchemaFormat = {
           'prep_time_minutes',
           'cook_time_minutes',
           'total_time_minutes',
+          'calories',
+          'fat_content',
+          'carbohydrate_content',
+          'protein_content',
           'category',
           'tags',
           'ingredients',
@@ -139,6 +150,10 @@ export const AI_ENVELOPE_JSON_SCHEMA: AiJsonSchemaFormat = {
           prep_time_minutes: { type: ['integer', 'null'] },
           cook_time_minutes: { type: ['integer', 'null'] },
           total_time_minutes: { type: ['integer', 'null'] },
+          calories: { type: ['number', 'null'] },
+          fat_content: { type: ['number', 'null'] },
+          carbohydrate_content: { type: ['number', 'null'] },
+          protein_content: { type: ['number', 'null'] },
           category: { type: ['string', 'null'] },
           tags: { type: 'array', items: { type: 'string' } },
           ingredients: {
@@ -318,7 +333,64 @@ those tags changes the rules on this page.
            every time. Copy each field you are not changing verbatim from the current recipe, and
            change only what the newest message asks for.
 
+<<<<<<< HEAD
 ${recipeFieldsSection(language)}
+=======
+"recipe.title"               The dish, in a few words. No amounts, no "recipe" suffix.
+"recipe.description"         One sentence, or null.
+"recipe.servings"            Whole number of people the amounts below feed.
+"recipe.prep_time_minutes"   Whole minutes, or null.
+"recipe.cook_time_minutes"   Whole minutes, or null.
+"recipe.total_time_minutes"  Prep plus cook, plus any resting or marinating time.
+
+Nutrition, for ONE serving — not for the whole recipe. Work out the total, then divide it by
+"recipe.servings". Estimate from standard food composition values; a rough estimate beats null.
+Each is a JSON number with no unit written anywhere, or null only when there is genuinely nothing
+to measure. Never write 0 to mean "unknown".
+
+"recipe.calories"               Energy in one serving, in kilocalories (kcal).
+"recipe.fat_content"            Fat in one serving, in grams.
+"recipe.carbohydrate_content"   Carbohydrate in one serving, in grams.
+"recipe.protein_content"        Protein in one serving, in grams.
+
+                             Keep these calories per gram in mind, so the energy agrees with the
+                             macros you wrote:
+${nutritionMacroTable('                               ')}
+                               calories = fat × ${ATWATER_FACTORS.fat} + carbohydrate × ${ATWATER_FACTORS.carbohydrate} + protein × ${ATWATER_FACTORS.protein}
+                             Round to a whole number. Alcohol has no field of its own, so when the
+                             dish contains wine, beer or spirits, add its grams × ${ATWATER_FACTORS.alcohol} into
+                             "recipe.calories" too — that energy belongs in the total even though
+                             it appears in none of the three macros.
+
+"recipe.category"            One short category: a main course, a starter, a side, a dessert, a
+                             breakfast, a soup, a salad, a drink or a sauce.
+"recipe.tags"                Three to five short lowercase tags. Draw them from these four kinds,
+                             and use a kind only when it genuinely applies:
+                               main ingredient or protein — chicken, beef, seafood, tofu, pasta
+                               cuisine — italian, thai, mexican, indian, mediterranean
+                               dietary restriction — vegetarian, vegan, gluten-free, keto
+                               cooking method — baked, grilled, roasted, slow-cooker, one-pot
+                             Those examples are in English to name the kinds; write your own tags
+                             in ${language}. Never tag a recipe with how good it tastes.
+
+"recipe.ingredients"         One object per ingredient, in the order they are used.
+    "item"         The ingredient itself and nothing else. No amount, no unit, no brand, no
+                   preparation. For anything counted whole, use the plural noun the cook would say:
+                   "eggs", "garlic cloves", "spring onions".
+    "quantity"     A JSON number, or null when no amount makes sense, as for salt to taste.
+    "unit"         Exactly one of: ${unitList()}
+                   Use "g" for anything weighed, "ml" for anything poured or spooned, "cm" for a
+                   size, and "" for anything counted whole.
+    "note"         How it is prepared, or null: "finely chopped", "at room temperature".
+    "density_key"  Exactly one of: ${densityList()}
+                   When "unit" is "g" and the ingredient is one a cook could also measure by the
+                   cupful, pick the closest match. Otherwise "none".
+
+"recipe.instructions"        One string per step, in the order they are done. One action per step,
+                             written as a command. No step numbers, no "Step 1", no explanation of
+                             why a step matters. Write every temperature as a number followed by
+                             °C. Do not repeat exact amounts here — name the ingredient instead.
+>>>>>>> dev
 
 "reply"                      Two or three sentences, never more, never empty. Say what the dish is,
                              or what you just changed, or ask one clarifying question. Do not read
@@ -379,6 +451,10 @@ function toPromptRecipe(draft: AiRecipeDraft, locale: SupportedLocale): Record<s
     prep_time_minutes: draft.prep_time_minutes,
     cook_time_minutes: draft.cook_time_minutes,
     total_time_minutes: draft.total_time_minutes,
+    calories: draft.calories,
+    fat_content: draft.fat_content,
+    carbohydrate_content: draft.carbohydrate_content,
+    protein_content: draft.protein_content,
     category: draft.category,
     tags: draft.tags,
     ingredients: structuredIngredients(draft).map((ingredient) => ({
@@ -495,59 +571,6 @@ export function buildChatMessages(
   });
 
   return messages;
-}
-
-/**
- * Returns the first balanced `{ ... }` span, tracking string literals and escapes so braces inside
- * recipe text don't throw off the depth count. Covers models that wrap their JSON in a sentence of
- * commentary — still a live case, because the provider's downgrade ladder can end up asking only
- * for "valid JSON" with no schema at all.
- */
-function firstBalancedObject(text: string): string | null {
-  const start = text.indexOf('{');
-  if (start === -1) return null;
-
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-
-  for (let i = start; i < text.length; i += 1) {
-    const char = text[i];
-
-    if (inString) {
-      if (escaped) escaped = false;
-      else if (char === '\\') escaped = true;
-      else if (char === '"') inString = false;
-      continue;
-    }
-
-    if (char === '"') inString = true;
-    else if (char === '{') depth += 1;
-    else if (char === '}') {
-      depth -= 1;
-      if (depth === 0) return text.slice(start, i + 1);
-    }
-  }
-
-  return null;
-}
-
-// Some models emit <think> blocks before the answer; markdown-fenced JSON is also common despite
-// being told not to. Both are cheap to strip and a no-op when they don't occur.
-function extractJsonText(text: string): string {
-  const withoutThinking = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
-  const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(withoutThinking);
-  return (fenced ? fenced[1] : withoutThinking).trim();
-}
-
-function parseJsonLoosely(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    const balanced = firstBalancedObject(text);
-    if (balanced === null) throw new Error('no JSON object found');
-    return JSON.parse(balanced);
-  }
 }
 
 function firstString(...values: unknown[]): string | null {
@@ -721,6 +744,10 @@ function extractRecipeDraft(
       total_time_minutes:
         typeof node.total_time_minutes === 'number' ? node.total_time_minutes : null,
       servings: typeof node.servings === 'number' && node.servings > 0 ? node.servings : 1,
+      calories: toNutritionValue(node.calories),
+      fat_content: toNutritionValue(node.fat_content),
+      carbohydrate_content: toNutritionValue(node.carbohydrate_content),
+      protein_content: toNutritionValue(node.protein_content),
       ingredients: structured.map((ingredient) =>
         renderIngredientLine(ingredient, { locale, unitSystem, smallVolumes })
       ),

@@ -18,6 +18,10 @@ export interface ParsedRecipeImport {
   cook_time_minutes: number | null;
   total_time_minutes: number | null;
   servings: number;
+  calories: number | null;
+  fat_content: number | null;
+  carbohydrate_content: number | null;
+  protein_content: number | null;
   ingredients: (ParsedIngredient & { sort_order: number })[];
   instructions: { step_number: number; text: string }[];
   tags: string[];
@@ -73,6 +77,27 @@ function extractServings(recipeYield: unknown): number {
     if (match) return Number(match[0]);
   }
   return 1;
+}
+
+/**
+ * schema.org's NutritionInformation is defined per serving — the same basis we store — so these
+ * need no conversion. The values themselves are rarely bare numbers: sites emit "512 kcal",
+ * "24 g", "24g", and occasionally an array, so scrape the first number out the way extractServings
+ * does.
+ */
+function extractNutritionValue(raw: unknown): number | null {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const match = /\d+(\.\d+)?/.exec(value);
+    if (match) return Number(match[0]);
+  }
+  return null;
+}
+
+function extractNutritionNode(raw: unknown): JsonLdNode {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return value && typeof value === 'object' ? (value as JsonLdNode) : {};
 }
 
 function extractTagNames(node: JsonLdNode): string[] {
@@ -232,6 +257,8 @@ export function parseRecipeFromJsonLd(rawJsonLdText: string): ParsedRecipeImport
     text: stripHtml(text),
   }));
 
+  const nutrition = extractNutritionNode(node.nutrition);
+
   return {
     title: typeof node.name === 'string' ? stripHtml(node.name) : 'Untitled recipe',
     description: typeof node.description === 'string' ? stripHtml(node.description) : null,
@@ -240,6 +267,10 @@ export function parseRecipeFromJsonLd(rawJsonLdText: string): ParsedRecipeImport
     cook_time_minutes: cookTimeMinutes,
     total_time_minutes: totalTimeMinutes,
     servings: extractServings(node.recipeYield),
+    calories: extractNutritionValue(nutrition.calories),
+    fat_content: extractNutritionValue(nutrition.fatContent),
+    carbohydrate_content: extractNutritionValue(nutrition.carbohydrateContent),
+    protein_content: extractNutritionValue(nutrition.proteinContent),
     ingredients,
     instructions,
     tags: extractTagNames(node),

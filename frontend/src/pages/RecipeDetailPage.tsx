@@ -19,6 +19,7 @@ import CollapsibleActions from '../components/CollapsibleActions';
 import ConfirmDialog from '../components/ConfirmDialog';
 import IngredientList from '../components/IngredientList';
 import InstructionList from '../components/InstructionList';
+import NutritionStats from '../components/NutritionStats';
 import RecipeTagBadges from '../components/RecipeTagBadges';
 
 export default function RecipeDetailPage() {
@@ -180,6 +181,13 @@ export default function RecipeDetailPage() {
               />
             )}
           </div>
+
+          <NutritionStats
+            calories={recipe.calories}
+            fatContent={recipe.fat_content}
+            carbohydrateContent={recipe.carbohydrate_content}
+            proteinContent={recipe.protein_content}
+          />
         </div>
 
         <div className="lg:col-span-2">

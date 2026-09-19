@@ -2,18 +2,26 @@ import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Clock, ReceiptText, Tags } from 'lucide-react';
-import { createRecipe, getRecipe, updateRecipe, uploadRecipePhoto } from '../api/client';
+import { ArrowLeft, Clock, Flame, ReceiptText, Tags } from 'lucide-react';
+import {
+  createRecipe,
+  estimateNutrition,
+  getRecipe,
+  updateRecipe,
+  uploadRecipePhoto,
+} from '../api/client';
 import { queryKeys } from '../api/queryKeys';
+import AiErrorBanner from '../components/AiErrorBanner';
 import Card from '../components/Card';
 import CategoryPicker from '../components/CategoryPicker';
 import ImageUpload from '../components/ImageUpload';
 import IngredientListEditor from '../components/IngredientListEditor';
 import InstructionListEditor, { type InstructionDraft } from '../components/InstructionListEditor';
 import ServingsStepper from '../components/ServingsStepper';
+import { useAiStatus } from '../hooks/useAiStatus';
 import { useCategories } from '../hooks/useCategories';
 import { useTags } from '../hooks/useTags';
-import { toNumber } from '../utils/numeric';
+import { toNullableNumber, toNumber } from '../utils/numeric';
 import type { RecipeInput } from '../types';
 
 interface FormState {
@@ -23,11 +31,25 @@ interface FormState {
   cook_time_minutes: string;
   total_time_minutes: string;
   servings: number;
+  // Held as strings like the time fields, so an empty input stays empty rather than becoming 0.
+  calories: string;
+  fat_content: string;
+  carbohydrate_content: string;
+  protein_content: string;
   image_path: string | null;
   ingredients: string[];
   instructions: InstructionDraft[];
   tags: string[];
   category: string | null;
+}
+
+/**
+ * The form holds numbers as strings, so an absent value is '' rather than 0 or "null". Routed
+ * through toNullableNumber so a Decimal column's "420.00" shows up in the input as 420.
+ */
+function numberField(value: string | number | null | undefined): string {
+  const parsed = toNullableNumber(value);
+  return parsed === null ? '' : String(parsed);
 }
 
 const emptyForm: FormState = {
@@ -37,6 +59,10 @@ const emptyForm: FormState = {
   cook_time_minutes: '',
   total_time_minutes: '',
   servings: 4,
+  calories: '',
+  fat_content: '',
+  carbohydrate_content: '',
+  protein_content: '',
   image_path: null,
   ingredients: [''],
   instructions: [{ text: '' }],
@@ -72,6 +98,7 @@ export default function RecipeFormPage() {
     enabled: isEditing,
   });
 
+  const { data: aiStatus } = useAiStatus();
   const { data: categories } = useCategories();
   const { data: existingTags } = useTags();
 
@@ -97,6 +124,10 @@ export default function RecipeFormPage() {
       total_time_minutes:
         existingRecipe.total_time_minutes != null ? String(existingRecipe.total_time_minutes) : '',
       servings: toNumber(existingRecipe.servings, 1),
+      calories: numberField(existingRecipe.calories),
+      fat_content: numberField(existingRecipe.fat_content),
+      carbohydrate_content: numberField(existingRecipe.carbohydrate_content),
+      protein_content: numberField(existingRecipe.protein_content),
       image_path: existingRecipe.image_path ?? null,
       ingredients: existingRecipe.ingredients?.map((i) => i.raw_text) ?? [''],
       instructions: existingRecipe.instructions?.length
@@ -118,6 +149,10 @@ export default function RecipeFormPage() {
       total_time_minutes:
         aiDraft.total_time_minutes != null ? String(aiDraft.total_time_minutes) : '',
       servings: aiDraft.servings,
+      calories: numberField(aiDraft.calories),
+      fat_content: numberField(aiDraft.fat_content),
+      carbohydrate_content: numberField(aiDraft.carbohydrate_content),
+      protein_content: numberField(aiDraft.protein_content),
       image_path: aiDraft.image_path ?? null,
       ingredients: aiDraft.ingredients.length ? aiDraft.ingredients : [''],
       instructions: aiDraft.instructions.length
@@ -140,10 +175,43 @@ export default function RecipeFormPage() {
     },
   });
 
+  const nutritionIngredients = form.ingredients.filter((line) => line.trim() !== '');
+  const canEstimateNutrition = form.title.trim() !== '' && nutritionIngredients.length > 0;
+
+  const nutritionMutation = useMutation({
+    mutationFn: estimateNutrition,
+    onSuccess: (estimate) =>
+      setForm((f) => ({
+        ...f,
+        // A null stays null: a value the model declined to guess keeps whatever the cook already
+        // had, rather than being overwritten with a fake 0 they would have to notice and clear.
+        calories: estimate.calories != null ? String(estimate.calories) : f.calories,
+        fat_content: estimate.fat_content != null ? String(estimate.fat_content) : f.fat_content,
+        carbohydrate_content:
+          estimate.carbohydrate_content != null
+            ? String(estimate.carbohydrate_content)
+            : f.carbohydrate_content,
+        protein_content:
+          estimate.protein_content != null ? String(estimate.protein_content) : f.protein_content,
+      })),
+  });
+
   const photoMutation = useMutation({
     mutationFn: (file: File) => uploadRecipePhoto(id!, file),
     onSuccess: ({ image_path }) => setForm((f) => ({ ...f, image_path })),
   });
+
+  // Built from live form state rather than the saved recipe, so it measures what the cook is
+  // looking at right now.
+  function handleEstimateNutrition() {
+    nutritionMutation.mutate({
+      title: form.title.trim(),
+      description: form.description.trim() || null,
+      servings: Number(form.servings),
+      ingredients: nutritionIngredients,
+      instructions: form.instructions.map((step) => step.text.trim()).filter(Boolean),
+    });
+  }
 
   function updateField<K extends keyof FormState>(field: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -169,6 +237,10 @@ export default function RecipeFormPage() {
       cook_time_minutes: form.cook_time_minutes === '' ? null : Number(form.cook_time_minutes),
       total_time_minutes: form.total_time_minutes === '' ? null : Number(form.total_time_minutes),
       servings: Number(form.servings),
+      calories: toNullableNumber(form.calories),
+      fat_content: toNullableNumber(form.fat_content),
+      carbohydrate_content: toNullableNumber(form.carbohydrate_content),
+      protein_content: toNullableNumber(form.protein_content),
       image_path: form.image_path,
       ingredients: form.ingredients.filter((line) => line.trim() !== ''),
       instructions: form.instructions
@@ -382,6 +454,80 @@ export default function RecipeFormPage() {
                 )}
               </div>
             </div>
+          </div>
+        </Card>
+
+        <Card>
+          <Card.Header
+            icon={<Flame size={20} strokeWidth={2} />}
+            title={t('recipeForm.nutritionTitle')}
+            description={t('recipeForm.nutritionDescription')}
+          />
+          {aiStatus?.configured && (
+            <div className="mb-4">
+              <button
+                // Load-bearing: a bare button inside this form would submit it.
+                type="button"
+                onClick={handleEstimateNutrition}
+                disabled={!canEstimateNutrition || nutritionMutation.isPending}
+                className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100 disabled:opacity-50"
+              >
+                {nutritionMutation.isPending
+                  ? t('recipeForm.estimatingNutrition')
+                  : t('recipeForm.estimateNutrition')}
+              </button>
+              {nutritionMutation.isError && (
+                <div className="mt-2">
+                  <AiErrorBanner error={nutritionMutation.error} />
+                </div>
+              )}
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <label className="text-sm text-stone-600">
+              {t('recipeForm.calories')}
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={form.calories}
+                onChange={(e) => updateField('calories', e.target.value)}
+                className="focus:border-clay mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5 focus:outline-none"
+              />
+            </label>
+            <label className="text-sm text-stone-600">
+              {t('recipeForm.fat')}
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={form.fat_content}
+                onChange={(e) => updateField('fat_content', e.target.value)}
+                className="focus:border-clay mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5 focus:outline-none"
+              />
+            </label>
+            <label className="text-sm text-stone-600">
+              {t('recipeForm.carbohydrates')}
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={form.carbohydrate_content}
+                onChange={(e) => updateField('carbohydrate_content', e.target.value)}
+                className="focus:border-clay mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5 focus:outline-none"
+              />
+            </label>
+            <label className="text-sm text-stone-600">
+              {t('recipeForm.protein')}
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={form.protein_content}
+                onChange={(e) => updateField('protein_content', e.target.value)}
+                className="focus:border-clay mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5 focus:outline-none"
+              />
+            </label>
           </div>
         </Card>
 

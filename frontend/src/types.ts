@@ -10,6 +10,8 @@ export type {
   AiRecipeDraft,
   AiChatTurnRequest,
   AiChatTurnResponse,
+  AiNutritionRequest,
+  AiNutritionEstimate,
 } from 'yumbry-shared';
 
 interface RecipeBase {
@@ -21,6 +23,11 @@ interface RecipeBase {
   cook_time_minutes: number | null;
   total_time_minutes: number | null;
   servings: string;
+  // Per single serving, never scaled. Prisma Decimal, so these arrive as strings like `servings`.
+  calories: string | null;
+  fat_content: string | null;
+  carbohydrate_content: string | null;
+  protein_content: string | null;
   created_at: string;
   updated_at: string;
   tags: Tag[];

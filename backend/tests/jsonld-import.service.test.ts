@@ -222,6 +222,56 @@ describe('parseRecipeFromJsonLd', () => {
     expect(recipe.ingredients).toHaveLength(3);
   });
 
+  describe('nutrition', () => {
+    // schema.org's NutritionInformation is per serving, which is how we store it — no conversion.
+    it('reads the four values, however the site wrote the units', () => {
+      const node = {
+        ...bareRecipe,
+        nutrition: {
+          '@type': 'NutritionInformation',
+          calories: '512 kcal',
+          fatContent: '24 g',
+          carbohydrateContent: '40g',
+          proteinContent: 31,
+        },
+      };
+      const recipe = parseRecipeFromJsonLd(JSON.stringify(node));
+
+      expect(recipe.calories).toBe(512);
+      expect(recipe.fat_content).toBe(24);
+      expect(recipe.carbohydrate_content).toBe(40);
+      expect(recipe.protein_content).toBe(31);
+    });
+
+    it('reads a decimal value', () => {
+      const node = { ...bareRecipe, nutrition: { fatContent: '14.5 g' } };
+      expect(parseRecipeFromJsonLd(JSON.stringify(node)).fat_content).toBe(14.5);
+    });
+
+    it('unwraps a nutrition node published as an array', () => {
+      const node = { ...bareRecipe, nutrition: [{ calories: '300 kcal' }] };
+      expect(parseRecipeFromJsonLd(JSON.stringify(node)).calories).toBe(300);
+    });
+
+    it('nulls every value when the recipe has no nutrition at all', () => {
+      const recipe = parseRecipeFromJsonLd(JSON.stringify(bareRecipe));
+      expect(recipe.calories).toBeNull();
+      expect(recipe.fat_content).toBeNull();
+      expect(recipe.carbohydrate_content).toBeNull();
+      expect(recipe.protein_content).toBeNull();
+    });
+
+    it('nulls a value that carries no number, and a non-object nutrition node', () => {
+      const node = { ...bareRecipe, nutrition: { calories: 'unknown', fatContent: null } };
+      const recipe = parseRecipeFromJsonLd(JSON.stringify(node));
+      expect(recipe.calories).toBeNull();
+      expect(recipe.fat_content).toBeNull();
+
+      const stringy = { ...bareRecipe, nutrition: 'see the label' };
+      expect(parseRecipeFromJsonLd(JSON.stringify(stringy)).calories).toBeNull();
+    });
+  });
+
   it('drops non-string entries from keywords instead of throwing', () => {
     const node = {
       ...bareRecipe,

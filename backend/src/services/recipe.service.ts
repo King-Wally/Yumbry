@@ -23,6 +23,10 @@ type PrismaRecipeWithRelations = {
   cookTimeMinutes: number | null;
   totalTimeMinutes: number | null;
   servings: { toString(): string };
+  calories: { toString(): string } | null;
+  fatContent: { toString(): string } | null;
+  carbohydrateContent: { toString(): string } | null;
+  proteinContent: { toString(): string } | null;
   categoryId: number | null;
   createdAt: Date;
   updatedAt: Date;
@@ -43,6 +47,10 @@ function toRecipeRow(recipe: PrismaRecipeWithRelations): RecipeRow & {
     cook_time_minutes: recipe.cookTimeMinutes,
     total_time_minutes: recipe.totalTimeMinutes,
     servings: recipe.servings.toString(),
+    calories: recipe.calories?.toString() ?? null,
+    fat_content: recipe.fatContent?.toString() ?? null,
+    carbohydrate_content: recipe.carbohydrateContent?.toString() ?? null,
+    protein_content: recipe.proteinContent?.toString() ?? null,
     category_id: recipe.categoryId,
     created_at: recipe.createdAt,
     updated_at: recipe.updatedAt,
@@ -209,6 +217,10 @@ export async function createRecipe(
         cookTimeMinutes: data.cook_time_minutes ?? null,
         totalTimeMinutes: data.total_time_minutes ?? null,
         servings: data.servings ?? 1,
+        calories: data.calories ?? null,
+        fatContent: data.fat_content ?? null,
+        carbohydrateContent: data.carbohydrate_content ?? null,
+        proteinContent: data.protein_content ?? null,
         categoryId,
         familyId,
         authorId,
@@ -250,6 +262,10 @@ export async function updateRecipe(
         cookTimeMinutes: data.cook_time_minutes ?? null,
         totalTimeMinutes: data.total_time_minutes ?? null,
         servings: data.servings ?? 1,
+        calories: data.calories ?? null,
+        fatContent: data.fat_content ?? null,
+        carbohydrateContent: data.carbohydrate_content ?? null,
+        proteinContent: data.protein_content ?? null,
         categoryId,
         updatedAt: new Date(),
       },

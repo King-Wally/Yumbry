@@ -16,6 +16,11 @@ export interface RecipeRow {
   cook_time_minutes: number | null;
   total_time_minutes: number | null;
   servings: string;
+  // Per single serving. Prisma Decimal, so it crosses the wire as a string like `servings`.
+  calories: string | null;
+  fat_content: string | null;
+  carbohydrate_content: string | null;
+  protein_content: string | null;
   category_id: number | null;
   created_at: Date;
   updated_at: Date;

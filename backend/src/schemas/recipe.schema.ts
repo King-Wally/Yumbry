@@ -17,6 +17,11 @@ export const RecipeBodySchema = z.object({
   cook_time_minutes: z.number().nullable().optional(),
   total_time_minutes: z.number().nullable().optional(),
   servings: z.number().positive().optional(),
+  // Per single serving. kcal for calories, grams for the rest.
+  calories: z.number().nonnegative().nullable().optional(),
+  fat_content: z.number().nonnegative().nullable().optional(),
+  carbohydrate_content: z.number().nonnegative().nullable().optional(),
+  protein_content: z.number().nonnegative().nullable().optional(),
   ingredients: z.array(IngredientInputSchema).optional(),
   instructions: z.array(InstructionInputSchema).optional(),
   tags: z.array(z.string()).optional(),

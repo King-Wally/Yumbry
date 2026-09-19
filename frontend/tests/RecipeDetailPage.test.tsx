@@ -39,6 +39,10 @@ const recipe: Recipe = {
   cook_time_minutes: null,
   total_time_minutes: null,
   servings: '4',
+  calories: null,
+  fat_content: null,
+  carbohydrate_content: null,
+  protein_content: null,
   created_at: '2026-01-01T00:00:00.000Z',
   updated_at: '2026-01-01T00:00:00.000Z',
   tags: [],
@@ -146,5 +150,56 @@ describe('RecipeDetailPage export button', () => {
     await waitFor(() => expect(shareMock).toHaveBeenCalledTimes(1));
     const sharedFile = shareMock.mock.calls[0][0].files[0] as File;
     expect(sharedFile.name).toBe('pancakes.json');
+  });
+});
+
+describe('RecipeDetailPage nutrition', () => {
+  beforeEach(() => {
+    vi.mocked(apiClient.getAiStatus).mockResolvedValue({ configured: false });
+  });
+
+  it('shows the four per-serving values', async () => {
+    vi.mocked(apiClient.getRecipe).mockResolvedValue({
+      ...recipe,
+      calories: '420.00',
+      fat_content: '14.50',
+      carbohydrate_content: '58.00',
+      protein_content: '16.00',
+    });
+    renderDetail();
+
+    expect(await screen.findByText('Nutrition')).toBeInTheDocument();
+    expect(screen.getByText('Per serving')).toBeInTheDocument();
+    // Decimal(8,2) noise is trimmed, but a real decimal survives.
+    expect(screen.getByText('420')).toBeInTheDocument();
+    expect(screen.getByText('14.5')).toBeInTheDocument();
+  });
+
+  it('renders nothing at all when the recipe has no nutrition', async () => {
+    vi.mocked(apiClient.getRecipe).mockResolvedValue(recipe);
+    renderDetail();
+
+    await screen.findByText('Pancakes');
+    expect(screen.queryByText('Nutrition')).not.toBeInTheDocument();
+    expect(screen.queryByText('Per serving')).not.toBeInTheDocument();
+  });
+
+  it('shows only the values that are set', async () => {
+    vi.mocked(apiClient.getRecipe).mockResolvedValue({ ...recipe, calories: '420' });
+    renderDetail();
+
+    expect(await screen.findByText('Calories')).toBeInTheDocument();
+    expect(screen.queryByText('Protein')).not.toBeInTheDocument();
+  });
+
+  // They describe one serving by definition, so the stepper must not touch them.
+  it('does not scale with the servings stepper', async () => {
+    vi.mocked(apiClient.getRecipe).mockResolvedValue({ ...recipe, calories: '420' });
+    renderDetail();
+
+    await screen.findByText('420');
+    fireEvent.click(screen.getByLabelText('Increase servings'));
+
+    expect(screen.getByText('420')).toBeInTheDocument();
   });
 });
