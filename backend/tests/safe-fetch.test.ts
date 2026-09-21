@@ -1,8 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fetch, type Response as UndiciResponse } from 'undici';
 import { safeFetchHtml } from '../src/utils/safe-fetch.js';
 
-const { lookup, pinnedAgents } = vi.hoisted(() => ({
+const {
+  lookup,
+  pinnedAgents,
+  fetch: fetchMock,
+} = vi.hoisted(() => ({
   lookup: vi.fn(),
+  fetch: vi.fn(),
   pinnedAgents: [] as {
     connect: { lookup: (...args: unknown[]) => void };
     close: ReturnType<typeof vi.fn>;
@@ -14,6 +20,7 @@ vi.mock('node:dns', () => ({
 }));
 
 vi.mock('undici', () => ({
+  fetch: fetchMock,
   Agent: class MockAgent {
     connect: { lookup: (...args: unknown[]) => void };
     close = vi.fn(async () => {});
@@ -67,18 +74,14 @@ function mockResponse({
         };
       },
     },
-  } as unknown as Response;
+  } as unknown as UndiciResponse;
 }
 
 describe('safeFetchHtml', () => {
   beforeEach(() => {
     lookup.mockReset();
+    fetchMock.mockReset();
     pinnedAgents.length = 0;
-    vi.stubGlobal('fetch', vi.fn());
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
   });
 
   it('rejects a non-http(s) scheme without any DNS lookup or fetch', async () => {

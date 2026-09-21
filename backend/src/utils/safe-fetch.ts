@@ -1,5 +1,5 @@
 import { promises as dns } from 'node:dns';
-import { Agent } from 'undici';
+import { Agent, fetch as undiciFetch } from 'undici';
 import ipaddr from 'ipaddr.js';
 import { CookieJar } from 'tough-cookie';
 import { UrlImportError } from './url-import-error.js';
@@ -179,17 +179,17 @@ export async function safeFetchHtml(
 
       let response: Response;
       try {
-        response = await fetch(currentUrl, {
+        response = (await undiciFetch(currentUrl, {
           redirect: 'manual',
           signal: controller.signal,
-          dispatcher: agent as unknown as NonNullable<RequestInit['dispatcher']>,
+          dispatcher: agent,
           headers: {
             accept: 'text/html,application/xhtml+xml',
             'accept-language': acceptLanguage,
             'user-agent': BROWSER_USER_AGENT,
             ...(cookieHeader ? { cookie: cookieHeader } : {}),
           },
-        } satisfies RequestInit);
+        })) as unknown as Response;
       } catch (err) {
         if (controller.signal.aborted) {
           throw new UrlImportError(
