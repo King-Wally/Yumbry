@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { SUPPORTED_LOCALES, type SupportedLocale } from 'yumbry-shared';
 import {
+  Camera,
   Check,
   Download,
   Flame,
@@ -117,6 +118,12 @@ export default function OnboardingPage() {
     },
     ...(aiStatus?.configured
       ? [
+          {
+            key: 'photo',
+            icon: Camera,
+            title: t('onboarding.create.photo.title'),
+            description: t('onboarding.create.photo.description'),
+          },
           {
             key: 'ai',
             icon: Sparkles,

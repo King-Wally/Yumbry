@@ -304,6 +304,10 @@
         "title": "Importer depuis une URL",
         "description": "Collez un lien et Yumbry récupère la recette pour vous."
       },
+      "photo": {
+        "title": "Importer depuis une photo",
+        "description": "Prenez ou téléchargez une photo et l'IA en extrait la recette."
+      },
       "ai": {
         "title": "Générer avec l'IA",
         "description": "Décrivez un plat et laissez l'IA rédiger la recette."

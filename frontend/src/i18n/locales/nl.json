@@ -304,6 +304,10 @@
         "title": "Importeren via een URL",
         "description": "Plak een link en Yumbry haalt het recept voor je op."
       },
+      "photo": {
+        "title": "Importeren via een foto",
+        "description": "Maak of upload een foto en AI leest het recept eruit."
+      },
       "ai": {
         "title": "Genereren met AI",
         "description": "Beschrijf een gerecht en laat AI een recept opstellen."

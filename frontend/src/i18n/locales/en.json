@@ -304,6 +304,10 @@
         "title": "Import from a URL",
         "description": "Paste a link and Yumbry pulls in the recipe for you."
       },
+      "photo": {
+        "title": "Import from a photo",
+        "description": "Snap or upload a photo and AI reads out the recipe."
+      },
       "ai": {
         "title": "Generate with AI",
         "description": "Describe a dish and let AI draft the recipe."
