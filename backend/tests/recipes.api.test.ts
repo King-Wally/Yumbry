@@ -36,6 +36,12 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
 
     ({ app } = await import('../src/app.js'));
     ({ agent } = await registerTestUser(app));
+
+    // Nothing creates UPLOADS_DIR at startup — it's only ever made lazily by a
+    // successful photo upload (upload.ts's destination callback). The traversal
+    // test's sanity check needs the root to already exist so it can tell "still
+    // there" from "never existed".
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
   });
 
   afterAll(async () => {
