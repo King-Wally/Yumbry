@@ -1,6 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import express, { type NextFunction, type Request, type Response } from 'express';
+import helmet from 'helmet';
 import { toNodeHandler } from 'better-auth/node';
 import { auth } from './auth.js';
 import { getAppConfig } from './controllers/config.controller.js';
@@ -20,6 +21,7 @@ const PUBLIC_DIR = path.join(process.cwd(), 'public');
 
 export const app = express();
 app.set('trust proxy', 1);
+app.use(helmet());
 
 // Body-agnostic, so it can sit above the auth handler and still cover it.
 app.use('/api', apiRateLimiter);
@@ -34,7 +36,23 @@ app.use(express.json({ limit: '2mb' }));
 // No cookie-parser: better-auth reads cookies straight off the raw headers, and
 // nothing else in the app looks at req.cookies.
 
-app.use('/uploads', requireAuth, asyncHandler(requirePhotoAccess), express.static(UPLOADS_DIR));
+// Only ever serves files this app wrote, under a server-chosen name and extension
+// (see middleware/upload.ts). The options are the belt to that braces: no directory
+// listings, no dotfiles, and an explicit `inline` disposition so a stored file is
+// rendered as the image it claims to be rather than interpreted as a document.
+app.use(
+  '/uploads',
+  requireAuth,
+  asyncHandler(requirePhotoAccess),
+  express.static(UPLOADS_DIR, {
+    index: false,
+    dotfiles: 'deny',
+    setHeaders: (res) => {
+      res.setHeader('Content-Disposition', 'inline');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+    },
+  })
+);
 
 app.get('/api/health', (_req, res) => res.status(200).json({ status: 'ok' }));
 // Not under /api/auth: that prefix belongs entirely to better-auth's catch-all.

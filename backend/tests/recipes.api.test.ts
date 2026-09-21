@@ -77,6 +77,71 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
     expect(res.status).toBe(404);
   });
 
+  // A malformed id used to reach Prisma as NaN (or overflow int4) and surface as an
+  // opaque 500 from the catch-all in app.ts. It must now be rejected at the route
+  // boundary, while a well-formed id that simply doesn't exist stays a 404.
+  describe('recipe id validation', () => {
+    const MALFORMED = ['abc', '-1', '0', '1.5', '%20', '007', '1e3', '99999999999999'];
+
+    it.each(MALFORMED)('rejects GET /api/recipes/%s with 400', async (id) => {
+      const res = await agent.get(`/api/recipes/${id}`);
+      expect(res.status).toBe(400);
+      // The frontend puts body.error straight into an ApiError message, so an array
+      // here would render as "[object Object]".
+      expect(typeof res.body.error).toBe('string');
+    });
+
+    it.each(MALFORMED)('rejects GET /api/recipes/%s/export with 400', async (id) => {
+      expect((await agent.get(`/api/recipes/${id}/export`)).status).toBe(400);
+    });
+
+    it.each(MALFORMED)('rejects DELETE /api/recipes/%s with 400', async (id) => {
+      expect((await agent.delete(`/api/recipes/${id}`)).status).toBe(400);
+    });
+
+    it('rejects a malformed id on PUT before the body is even parsed', async () => {
+      const res = await agent.put('/api/recipes/abc').send({ title: 'Valid', servings: 4 });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Invalid recipe id.');
+    });
+
+    it('keeps 404 (not 400) for a well-formed id that does not exist', async () => {
+      expect((await agent.get('/api/recipes/999999')).status).toBe(404);
+      expect((await agent.delete('/api/recipes/999999')).status).toBe(404);
+      expect(
+        (await agent.put('/api/recipes/999999').send({ title: 'Valid', servings: 4 })).status
+      ).toBe(404);
+    });
+
+    it('rejects a traversal id on photo upload without creating a directory', async () => {
+      const res = await agent
+        .post('/api/recipes/..%2F..%2Fetc/photo')
+        .attach('photo', Buffer.from('fake-image-bytes'), {
+          filename: 'photo.png',
+          contentType: 'image/png',
+        });
+
+      expect(res.status).toBe(400);
+      expect(fs.existsSync(path.join(UPLOADS_DIR, '..', '..', 'etc'))).toBe(false);
+      expect(fs.existsSync(path.join(UPLOADS_DIR, 'recipes', '..'))).toBe(true); // sanity: uploads root intact
+    });
+
+    it('still returns 404 when photo upload targets a well-formed missing recipe', async () => {
+      const res = await agent
+        .post('/api/recipes/999999/photo')
+        .attach('photo', Buffer.from('fake-image-bytes'), {
+          filename: 'photo.png',
+          contentType: 'image/png',
+        });
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 404, not 500, for an over-long id on the static photo mount', async () => {
+      const res = await agent.get('/uploads/recipes/99999999999999/x.jpg');
+      expect(res.status).toBe(404);
+    });
+  });
+
   it('filters the recipe list by search text', async () => {
     await agent.post('/api/recipes').send({ title: 'Chocolate Cake', servings: 8 });
     await agent.post('/api/recipes').send({ title: 'Vegetable Soup', servings: 4 });
@@ -242,10 +307,46 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
     );
   });
 
+  // A remote URL is the one image_path a client may put in the DB — it is how both
+  // import routes carry a picture, and it can never reach the filesystem helpers.
+  it('keeps the remote image URL when importing from JSON-LD', async () => {
+    const jsonLd = JSON.stringify({
+      '@type': 'Recipe',
+      name: 'Pictured Recipe',
+      image: 'https://example.com/pancakes.jpg',
+      recipeYield: '2',
+      recipeIngredient: ['1 cup rice'],
+      recipeInstructions: 'Boil rice.',
+    });
+
+    const res = await agent.post('/api/recipes/import').send({ jsonLd });
+    expect(res.status).toBe(201);
+    expect(res.body.image_path).toBe('https://example.com/pancakes.jpg');
+  });
+
+  it('drops a non-remote image_path on create', async () => {
+    const res = await agent
+      .post('/api/recipes')
+      .send({ title: 'Local Path', servings: 1, image_path: '/uploads/recipes/1/x.png' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.image_path).toBeNull();
+  });
+
   it('rejects import with no JSON-LD provided', async () => {
     const res = await agent.post('/api/recipes/import').send({});
     expect(res.status).toBe(400);
   });
+
+  // A truthy non-string jsonLd used to throw a TypeError inside the parser (which
+  // iterates the string) past all three catch branches, surfacing as a 500.
+  it.each([[{ a: 1 }], [123], [true], [['a']]])(
+    'rejects a non-string jsonLd (%j) with 400, not 500',
+    async (jsonLd) => {
+      const res = await agent.post('/api/recipes/import').send({ jsonLd });
+      expect(res.status).toBe(400);
+    }
+  );
 
   describe('POST /api/recipes/import-url', () => {
     afterEach(() => {
@@ -592,18 +693,84 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
       await agent.delete(`/api/recipes/${created.body.id}`);
     });
 
-    it('deletes the file when a recipe update drops image_path', async () => {
-      const created = await agent.post('/api/recipes').send({ title: 'Dropped', servings: 1 });
+    // The inverse of the behaviour this endpoint used to have. A PUT that omits
+    // image_path leaves the photo alone instead of clearing it: the column is owned
+    // by setRecipePhoto, because a body-supplied path is a filesystem handle the
+    // request has no claim to. The edit form has no "remove photo" control, so
+    // nothing in the app relied on the old clearing behaviour.
+    it('leaves the photo untouched when a recipe update omits image_path', async () => {
+      const created = await agent.post('/api/recipes').send({ title: 'Kept', servings: 1 });
       const uploaded = await attachPhoto(created.body.id);
       const absolute = absoluteUploadPath(uploaded.body.image_path) as string;
 
       const updated = await agent
         .put(`/api/recipes/${created.body.id}`)
-        .send({ title: 'Dropped', servings: 1 });
+        .send({ title: 'Kept', servings: 1 });
       expect(updated.status).toBe(200);
-      expect(updated.body.image_path).toBeNull();
+      expect(updated.body.image_path).toBe(uploaded.body.image_path);
 
-      expect(fs.existsSync(absolute)).toBe(false);
+      expect(fs.existsSync(absolute)).toBe(true);
+
+      await agent.delete(`/api/recipes/${created.body.id}`);
+    });
+
+    it('ignores a client-supplied image_path pointing at another recipe’s upload', async () => {
+      const victim = await agent.post('/api/recipes').send({ title: 'Victim', servings: 1 });
+      const victimPhoto = await attachPhoto(victim.body.id);
+      const victimFile = absoluteUploadPath(victimPhoto.body.image_path) as string;
+
+      // Create: the foreign path must not be stored at all.
+      const attacker = await agent
+        .post('/api/recipes')
+        .send({ title: 'Attacker', servings: 1, image_path: victimPhoto.body.image_path });
+      expect(attacker.status).toBe(201);
+      expect(attacker.body.image_path).toBeNull();
+
+      // Update: the same path must not reach deleteUploadedFile. Point the recipe at
+      // the victim's photo and then "replace" it — the old code would have unlinked
+      // the previous value, which is the victim's file.
+      await agent
+        .put(`/api/recipes/${attacker.body.id}`)
+        .send({ title: 'Attacker', servings: 1, image_path: victimPhoto.body.image_path });
+      const reread = await agent
+        .put(`/api/recipes/${attacker.body.id}`)
+        .send({ title: 'Attacker', servings: 1, image_path: null });
+      expect(reread.body.image_path).toBeNull();
+
+      expect(fs.existsSync(victimFile)).toBe(true);
+
+      await agent.delete(`/api/recipes/${attacker.body.id}`);
+      await agent.delete(`/api/recipes/${victim.body.id}`);
+    });
+
+    it('stores a server-chosen extension, not the one the upload asked for', async () => {
+      const created = await agent.post('/api/recipes').send({ title: 'Renamed', servings: 1 });
+
+      const uploaded = await agent
+        .post(`/api/recipes/${created.body.id}/photo`)
+        .attach('photo', Buffer.from('fake-image-bytes'), {
+          filename: 'evil.html',
+          contentType: 'image/png',
+        });
+      expect(uploaded.status).toBe(200);
+      expect(uploaded.body.image_path).toMatch(/\.png$/);
+
+      await agent.delete(`/api/recipes/${created.body.id}`);
+    });
+
+    it('refuses an SVG upload outright', async () => {
+      const created = await agent.post('/api/recipes').send({ title: 'Svg', servings: 1 });
+
+      const uploaded = await agent
+        .post(`/api/recipes/${created.body.id}/photo`)
+        .attach('photo', Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>'), {
+          filename: 'x.svg',
+          contentType: 'image/svg+xml',
+        });
+      expect(uploaded.status).toBe(500);
+
+      const recipe = await agent.get(`/api/recipes/${created.body.id}`);
+      expect(recipe.body.image_path).toBeNull();
 
       await agent.delete(`/api/recipes/${created.body.id}`);
     });

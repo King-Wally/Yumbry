@@ -8,8 +8,16 @@ export async function requireRecipeAccess(
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  // Fail closed rather than query on an absent id: Prisma drops a `where` clause
+  // whose value is undefined, so `{ id: undefined, familyId }` would match *any*
+  // recipe in the family. Only reachable if a route forgets validateRecipeIdParam.
+  if (req.recipeId === undefined) {
+    res.status(404).json({ error: 'Recipe not found' });
+    return;
+  }
+
   const recipe = await prisma.recipe.findFirst({
-    where: { id: Number(req.params.id), familyId: req.familyId },
+    where: { id: req.recipeId, familyId: req.familyId },
     select: { id: true },
   });
   if (!recipe) {

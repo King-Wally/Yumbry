@@ -40,15 +40,27 @@ describe('absoluteUploadPath', () => {
 describe('imageFileFilter', () => {
   const req = {} as Request;
 
-  it('accepts image mimetypes', () => {
-    const cb = vi.fn();
-    imageFileFilter(req, { mimetype: 'image/png' } as Express.Multer.File, cb);
-    expect(cb).toHaveBeenCalledWith(null, true);
+  it('accepts the allowlisted image mimetypes', () => {
+    for (const mimetype of ['image/jpeg', 'image/png', 'image/webp', 'image/gif']) {
+      const cb = vi.fn();
+      imageFileFilter(req, { mimetype } as Express.Multer.File, cb);
+      expect(cb).toHaveBeenCalledWith(null, true);
+    }
   });
 
   it('rejects non-image mimetypes', () => {
     const cb = vi.fn();
     imageFileFilter(req, { mimetype: 'application/pdf' } as Express.Multer.File, cb);
     expect(cb).toHaveBeenCalledWith(expect.any(Error));
+  });
+
+  // These would all have passed the old `startsWith('image/')` test. SVG is the one
+  // that matters: it is a scriptable document served from the app's own origin.
+  it('rejects image mimetypes outside the allowlist', () => {
+    for (const mimetype of ['image/svg+xml', 'image/svg', 'image/x-icon', 'image/']) {
+      const cb = vi.fn();
+      imageFileFilter(req, { mimetype } as Express.Multer.File, cb);
+      expect(cb).toHaveBeenCalledWith(expect.any(Error));
+    }
   });
 });

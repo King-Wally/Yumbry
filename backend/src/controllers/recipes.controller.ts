@@ -34,7 +34,14 @@ function isErrorWithMessage(err: unknown): err is Error {
 
 export async function importRecipe(req: Request, res: Response) {
   try {
-    const rawJsonLdText = req.file ? req.file.buffer.toString('utf-8') : req.body.jsonLd;
+    // The body branch needs narrowing, the file branch doesn't: parseRecipeFromJsonLd
+    // immediately iterates the string, so a truthy non-string ({}, 123, true) would
+    // throw a TypeError past all three catch branches below and surface as a 500.
+    const rawJsonLdText = req.file
+      ? req.file.buffer.toString('utf-8')
+      : typeof req.body?.jsonLd === 'string'
+        ? req.body.jsonLd
+        : undefined;
 
     if (!rawJsonLdText) {
       return res.status(400).json({ error: 'Provide JSON-LD text or upload a .json file.' });
@@ -117,7 +124,7 @@ function slugify(title: string): string {
 }
 
 export async function exportRecipe(req: Request, res: Response) {
-  const recipe = await getRecipeById(req.params.id, req.familyId as number);
+  const recipe = await getRecipeById(req.recipeId as number, req.familyId as number);
   if (!recipe) return res.status(404).json({ error: 'Recipe not found' });
 
   const jsonLd = recipeToJsonLd(recipe);
@@ -125,16 +132,27 @@ export async function exportRecipe(req: Request, res: Response) {
   res.json(jsonLd);
 }
 
+// Clamped rather than rejected: a 400 on a long paste into the search box is worse
+// UX than searching its first 100 characters. The typeof narrows below are what keep
+// qs object/array values (?tag[contains]=x) out of the Prisma filter; the length cap
+// bounds `search`, which feeds two unindexed ILIKE '%…%' scans.
+const MAX_SEARCH_LENGTH = 100;
+
 export async function getRecipes(req: Request, res: Response) {
-  const search = typeof req.query.search === 'string' ? req.query.search : undefined;
-  const tag = typeof req.query.tag === 'string' ? req.query.tag : undefined;
-  const category = typeof req.query.category === 'string' ? req.query.category : undefined;
+  const search =
+    typeof req.query.search === 'string' ? req.query.search.slice(0, MAX_SEARCH_LENGTH) : undefined;
+  const tag =
+    typeof req.query.tag === 'string' ? req.query.tag.slice(0, MAX_SEARCH_LENGTH) : undefined;
+  const category =
+    typeof req.query.category === 'string'
+      ? req.query.category.slice(0, MAX_SEARCH_LENGTH)
+      : undefined;
   const recipes = await listRecipes(req.familyId as number, { search, tag, category });
   res.json(recipes);
 }
 
 export async function getRecipe(req: Request, res: Response) {
-  const recipe = await getRecipeById(req.params.id, req.familyId as number);
+  const recipe = await getRecipeById(req.recipeId as number, req.familyId as number);
   if (!recipe) return res.status(404).json({ error: 'Recipe not found' });
   res.json(recipe);
 }
@@ -160,7 +178,7 @@ export async function putRecipe(req: Request, res: Response) {
   try {
     const body = RecipeBodySchema.parse(req.body);
     const recipe = await updateRecipe(
-      req.params.id,
+      req.recipeId as number,
       {
         ...body,
         ingredients: normalizeIngredients(body.ingredients),
@@ -176,7 +194,7 @@ export async function putRecipe(req: Request, res: Response) {
 }
 
 export async function removeRecipe(req: Request, res: Response) {
-  const deleted = await deleteRecipe(req.params.id, req.familyId as number);
+  const deleted = await deleteRecipe(req.recipeId as number, req.familyId as number);
   if (!deleted) return res.status(404).json({ error: 'Recipe not found' });
   res.status(204).end();
 }
@@ -185,7 +203,7 @@ export async function uploadRecipePhoto(req: Request, res: Response) {
   if (!req.file) return res.status(400).json({ error: 'No image file provided.' });
 
   const imagePath = publicUploadPath(req.file.path);
-  const updated = await setRecipePhoto(req.params.id, imagePath, req.familyId as number);
+  const updated = await setRecipePhoto(req.recipeId as number, imagePath, req.familyId as number);
   if (!updated) return res.status(404).json({ error: 'Recipe not found' });
   res.json({ image_path: imagePath });
 }

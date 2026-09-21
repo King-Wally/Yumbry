@@ -14,6 +14,26 @@ import type {
   TagRef,
 } from './recipe.types.js';
 
+/** The only `image_path` a client may put in the DB: a remote picture, as JSON-LD
+ * and URL imports carry one. A local `/uploads/...` path is refused because that
+ * string is a filesystem handle — it reaches `fs.rm` through deleteUploadedFile —
+ * and nothing in the request ties it to the recipe being written, so accepting one
+ * would let a user aim their recipe at another family's upload directory. Local
+ * paths are set by setRecipePhoto alone, from a file this server just wrote. */
+function externalImageUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    // Not absolute: a relative path, an `/uploads/...` echo, or junk.
+    return null;
+  }
+
+  return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.href : null;
+}
+
 type PrismaRecipeWithRelations = {
   id: number;
   title: string;
@@ -106,7 +126,7 @@ export async function listRecipes(
 ): Promise<(RecipeRow & { tags: TagRef[]; category: CategoryRef | null })[]> {
   const recipes = await prisma.recipe.findMany({
     where: {
-      familyId,
+      familyId: { equals: familyId },
       ...(search && {
         OR: [
           { title: { contains: search, mode: 'insensitive' } },
@@ -124,11 +144,11 @@ export async function listRecipes(
 }
 
 export async function getRecipeById(
-  id: string | number,
+  id: number,
   familyId: number
 ): Promise<RecipeWithRelations | null> {
   const recipe = await prisma.recipe.findFirst({
-    where: { id: Number(id), familyId },
+    where: { id: { equals: id }, familyId: { equals: familyId } },
     include: {
       ...RECIPE_WITH_TAGS_INCLUDE,
       ingredients: { orderBy: { sortOrder: 'asc' } },
@@ -182,7 +202,7 @@ async function insertInstructions(
 
 async function referencedTagIds(client: Queryable, familyId: number): Promise<number[]> {
   const rows = await client.recipeTag.findMany({
-    where: { tag: { familyId } },
+    where: { tag: { familyId: { equals: familyId } } },
     select: { tagId: true },
     distinct: ['tagId'],
   });
@@ -191,7 +211,7 @@ async function referencedTagIds(client: Queryable, familyId: number): Promise<nu
 
 async function referencedCategoryIds(client: Queryable, familyId: number): Promise<number[]> {
   const rows = await client.recipe.findMany({
-    where: { familyId, categoryId: { not: null } },
+    where: { familyId: { equals: familyId }, categoryId: { not: null } },
     select: { categoryId: true },
     distinct: ['categoryId'],
   });
@@ -212,7 +232,7 @@ export async function createRecipe(
       data: {
         title: data.title,
         description: data.description ?? null,
-        imagePath: data.image_path ?? null,
+        imagePath: externalImageUrl(data.image_path),
         prepTimeMinutes: data.prep_time_minutes ?? null,
         cookTimeMinutes: data.cook_time_minutes ?? null,
         totalTimeMinutes: data.total_time_minutes ?? null,
@@ -239,25 +259,24 @@ export async function createRecipe(
 }
 
 export async function updateRecipe(
-  id: string,
+  id: number,
   data: RecipeInput,
   familyId: number
 ): Promise<RecipeWithRelations | null> {
   const result = await withTransaction(async (client) => {
     const categoryId = await upsertCategory(client, data.category, familyId);
-    const recipeId = Number(id);
 
-    const existing = await client.recipe.findFirst({
-      where: { id: recipeId, familyId },
-      select: { imagePath: true },
-    });
-
+    // imagePath is deliberately absent from the update: the column is owned by
+    // setRecipePhoto (and, for a remote picture, by the initial create). Writing
+    // the client's copy here is what made a PUT able to delete an arbitrary file
+    // under uploads/ — the value flows on to deleteUploadedFile, and nothing in
+    // the body proves the path belongs to this recipe. A photo is changed by
+    // POST /api/recipes/:id/photo, which replaces the file it supersedes.
     const { count } = await client.recipe.updateMany({
-      where: { id: recipeId, familyId },
+      where: { id: { equals: id }, familyId: { equals: familyId } },
       data: {
         title: data.title,
         description: data.description ?? null,
-        imagePath: data.image_path ?? null,
         prepTimeMinutes: data.prep_time_minutes ?? null,
         cookTimeMinutes: data.cook_time_minutes ?? null,
         totalTimeMinutes: data.total_time_minutes ?? null,
@@ -273,13 +292,13 @@ export async function updateRecipe(
 
     if (count === 0) return null;
 
-    await client.ingredient.deleteMany({ where: { recipeId } });
-    await client.instruction.deleteMany({ where: { recipeId } });
-    await client.recipeTag.deleteMany({ where: { recipeId } });
+    await client.ingredient.deleteMany({ where: { recipeId: { equals: id } } });
+    await client.instruction.deleteMany({ where: { recipeId: { equals: id } } });
+    await client.recipeTag.deleteMany({ where: { recipeId: { equals: id } } });
 
-    await insertIngredients(client, recipeId, data.ingredients ?? []);
-    await insertInstructions(client, recipeId, data.instructions ?? []);
-    await upsertTags(client, recipeId, data.tags ?? [], familyId);
+    await insertIngredients(client, id, data.ingredients ?? []);
+    await insertInstructions(client, id, data.instructions ?? []);
+    await upsertTags(client, id, data.tags ?? [], familyId);
 
     await deleteOrphaned(client, 'tags', await referencedTagIds(client, familyId), familyId);
     await deleteOrphaned(
@@ -289,24 +308,19 @@ export async function updateRecipe(
       familyId
     );
 
-    return { previousImagePath: existing?.imagePath ?? null };
+    return true;
   });
 
   if (!result) return null;
 
-  const nextImagePath = data.image_path ?? null;
-  if (result.previousImagePath && result.previousImagePath !== nextImagePath) {
-    await deleteUploadedFile(result.previousImagePath);
-  }
-
   return getRecipeById(id, familyId);
 }
 
-export async function deleteRecipe(id: string, familyId: number): Promise<boolean> {
-  const recipeId = Number(id);
-
+export async function deleteRecipe(id: number, familyId: number): Promise<boolean> {
   const deleted = await withTransaction(async (client) => {
-    const { count } = await client.recipe.deleteMany({ where: { id: recipeId, familyId } });
+    const { count } = await client.recipe.deleteMany({
+      where: { id: { equals: id }, familyId: { equals: familyId } },
+    });
     await deleteOrphaned(client, 'tags', await referencedTagIds(client, familyId), familyId);
     await deleteOrphaned(
       client,
@@ -317,23 +331,23 @@ export async function deleteRecipe(id: string, familyId: number): Promise<boolea
     return count > 0;
   });
 
-  if (deleted) await deleteRecipeUploadsDir(recipeId);
+  if (deleted) await deleteRecipeUploadsDir(id);
   return deleted;
 }
 
 export async function setRecipePhoto(
-  id: string,
+  id: number,
   imagePath: string,
   familyId: number
 ): Promise<{ id: number } | null> {
   const existing = await prisma.recipe.findFirst({
-    where: { id: Number(id), familyId },
+    where: { id: { equals: id }, familyId: { equals: familyId } },
     select: { imagePath: true },
   });
   if (!existing) return null;
 
   const { count } = await prisma.recipe.updateMany({
-    where: { id: Number(id), familyId },
+    where: { id: { equals: id }, familyId: { equals: familyId } },
     data: { imagePath, updatedAt: new Date() },
   });
   if (count === 0) return null;
@@ -342,5 +356,5 @@ export async function setRecipePhoto(
     await deleteUploadedFile(existing.imagePath);
   }
 
-  return { id: Number(id) };
+  return { id };
 }

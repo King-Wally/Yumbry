@@ -11,7 +11,7 @@ export async function deleteOrphaned(
   referencedIds: number[],
   familyId: number
 ): Promise<void> {
-  const where = { familyId, id: { notIn: referencedIds } };
+  const where = { familyId: { equals: familyId }, id: { notIn: referencedIds } };
   if (table === 'tags') {
     await client.tag.deleteMany({ where });
   } else {
@@ -63,9 +63,15 @@ export async function upsertCategory(
 }
 
 export async function listTags(familyId: number): Promise<TagRef[]> {
-  return prisma.tag.findMany({ where: { familyId }, orderBy: { name: 'asc' } });
+  return prisma.tag.findMany({
+    where: { familyId: { equals: familyId } },
+    orderBy: { name: 'asc' },
+  });
 }
 
 export async function listCategories(familyId: number): Promise<CategoryRef[]> {
-  return prisma.category.findMany({ where: { familyId }, orderBy: { name: 'asc' } });
+  return prisma.category.findMany({
+    where: { familyId: { equals: familyId } },
+    orderBy: { name: 'asc' },
+  });
 }

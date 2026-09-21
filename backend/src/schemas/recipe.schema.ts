@@ -12,6 +12,12 @@ const InstructionInputSchema = z.object({
 export const RecipeBodySchema = z.object({
   title: z.string().min(1),
   description: z.string().nullable().optional(),
+  // Accepted but never trusted. The edit form echoes back whatever it loaded —
+  // including the `/uploads/...` path of an already-attached photo — so rejecting
+  // here would 400 every edit of a recipe that has one. createRecipe runs the value
+  // through externalImageUrl, which keeps only remote http(s) URLs (how JSON-LD and
+  // URL imports carry a picture) and drops everything else; updateRecipe ignores it
+  // outright. The column is otherwise written only by setRecipePhoto.
   image_path: z.string().nullable().optional(),
   prep_time_minutes: z.number().nullable().optional(),
   cook_time_minutes: z.number().nullable().optional(),

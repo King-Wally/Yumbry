@@ -8,6 +8,11 @@ declare global {
        * Read fresh from the DB on each request rather than cached in the session
        * cookie, since joining or leaving a family changes it mid-session. */
       familyId?: number;
+      /** The validated, int4-range `:id` route param. Set by
+       * validateRecipeIdParam, so only routes that mount it can rely on it
+       * being present — anything reading this must fail closed when it isn't,
+       * since Prisma silently drops a `where` clause whose value is undefined. */
+      recipeId?: number;
       /** Set by requireAuth alongside userId, from the same user row getSession
        * already fetches — lets controllers that only need these fields
        * (getMe, postAiChat) skip a redundant re-fetch. */
