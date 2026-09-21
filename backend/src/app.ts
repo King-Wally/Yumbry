@@ -21,7 +21,20 @@ const PUBLIC_DIR = path.join(process.cwd(), 'public');
 
 export const app = express();
 app.set('trust proxy', 1);
-app.use(helmet());
+// img-src is widened beyond helmet's 'self' data: default: recipes imported via
+// JSON-LD/URL import store and render the original remote image URL as-is (no
+// local re-hosting), and the photo-import flow previews a local file as a blob:
+// URL before upload.
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        'img-src': ["'self'", 'data:', 'blob:', 'https:'],
+      },
+    },
+  })
+);
 
 // Body-agnostic, so it can sit above the auth handler and still cover it.
 app.use('/api', apiRateLimiter);
