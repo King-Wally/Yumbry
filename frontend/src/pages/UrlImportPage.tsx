@@ -52,6 +52,7 @@ export default function UrlImportPage() {
             <input
               id="import-url"
               type="url"
+              autoComplete="off"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://example.com/some-recipe"
