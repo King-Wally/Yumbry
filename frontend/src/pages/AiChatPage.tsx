@@ -132,7 +132,7 @@ export default function AiChatPage() {
                 className={
                   message.role === 'user'
                     ? 'bg-clay ml-auto w-fit max-w-[80%] rounded-lg px-3 py-2 text-sm text-white selection:bg-white/30 selection:text-white'
-                    : 'mr-auto w-fit max-w-[80%] rounded-lg bg-stone-100 px-3 py-2 text-sm text-stone-700'
+                    : 'selection:bg-clay/30 mr-auto w-fit max-w-[80%] rounded-lg bg-stone-100 px-3 py-2 text-sm text-stone-700 selection:text-stone-900'
                 }
               >
                 {message.content}
