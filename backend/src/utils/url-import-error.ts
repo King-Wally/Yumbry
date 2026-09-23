@@ -23,15 +23,17 @@ export class UrlImportError extends Error {
   }
 }
 
+// Never 502/504 here: behind Cloudflare, an origin 502/504 is replaced by Cloudflare's own error
+// page, so the user would lose this message and see a generic "server unavailable" instead.
 const STATUS_BY_KIND: Record<UrlImportErrorKind, number> = {
   invalid_url: 400,
   blocked_url: 400,
-  timeout: 502,
-  network_error: 502,
+  timeout: 422,
+  network_error: 422,
   unsupported_content_type: 400,
   too_large: 400,
   too_many_redirects: 400,
-  bot_challenge: 502,
+  bot_challenge: 422,
   no_jsonld: 400,
   no_recipe_found: 400,
 };

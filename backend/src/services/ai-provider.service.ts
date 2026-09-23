@@ -63,7 +63,7 @@ function createClient(apiKey: string, timeoutMs = REQUEST_TIMEOUT_MS): OpenAI {
   });
 }
 
-// Logged here (not just left to bubble up as a generic 502/503) so the real cause — Gemini's own
+// Logged here (not just left to bubble up as a generic 503) so the real cause — Gemini's own
 // status and message, e.g. a 503 "model overloaded" — is visible in server logs even though the
 // client only ever sees the generic AiProviderError kind/message.
 function toAiProviderError(err: unknown): AiProviderError {

@@ -160,25 +160,25 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
       expect(JSON.stringify(promptMessages)).toContain('There is no recipe yet.');
     });
 
-    it('returns 502 when the model response is not parseable JSON', async () => {
+    it('returns 503 when the model response is not parseable JSON', async () => {
       chatWithAi.mockResolvedValue('Sorry, I cannot do that.');
 
       const res = await agent
         .post('/api/ai/chat')
         .send({ messages: [{ role: 'user', content: 'hi' }], current_draft: null });
 
-      expect(res.status).toBe(502);
+      expect(res.status).toBe(503);
       expect(res.body.kind).toBe('malformed_response');
     });
 
-    it('maps a bad_status AiProviderError from the provider to 502', async () => {
+    it('maps a bad_status AiProviderError from the provider to 503', async () => {
       chatWithAi.mockRejectedValue(new AiProviderError('bad key', 'bad_status'));
 
       const res = await agent
         .post('/api/ai/chat')
         .send({ messages: [{ role: 'user', content: 'hi' }], current_draft: null });
 
-      expect(res.status).toBe(502);
+      expect(res.status).toBe(503);
       expect(res.body.kind).toBe('bad_status');
     });
 
@@ -562,12 +562,12 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
       expect(chatWithAi).not.toHaveBeenCalled();
     });
 
-    it('returns 502 when the model response is not parseable JSON', async () => {
+    it('returns 503 when the model response is not parseable JSON', async () => {
       chatWithAi.mockResolvedValue('I am unable to read that.');
 
       const res = await postPhoto();
 
-      expect(res.status).toBe(502);
+      expect(res.status).toBe(503);
       expect(res.body.kind).toBe('malformed_response');
     });
 
@@ -646,29 +646,29 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
       expect(chatWithAi).not.toHaveBeenCalled();
     });
 
-    it('returns 502 when the model answers with prose instead of JSON', async () => {
+    it('returns 503 when the model answers with prose instead of JSON', async () => {
       chatWithAi.mockResolvedValue('Sorry, I cannot estimate that.');
 
       const res = await agent.post('/api/ai/nutrition').send(body);
 
-      expect(res.status).toBe(502);
+      expect(res.status).toBe(503);
       expect(res.body.kind).toBe('malformed_response');
     });
 
     // All four null is a non-answer; the cook needs a "try again", not a button that did nothing.
-    it('returns 502 when the model estimated nothing at all', async () => {
+    it('returns 503 when the model estimated nothing at all', async () => {
       chatWithAi.mockResolvedValue('{}');
 
       const res = await agent.post('/api/ai/nutrition').send(body);
 
-      expect(res.status).toBe(502);
+      expect(res.status).toBe(503);
       expect(res.body.kind).toBe('malformed_response');
     });
 
     it('maps provider errors the same way the chat endpoint does', async () => {
       chatWithAi.mockRejectedValue(new AiProviderError('bad key', 'bad_status'));
       const badStatus = await agent.post('/api/ai/nutrition').send(body);
-      expect(badStatus.status).toBe(502);
+      expect(badStatus.status).toBe(503);
       expect(badStatus.body.kind).toBe('bad_status');
 
       chatWithAi.mockRejectedValue(new AiProviderError('no key set', 'not_configured'));

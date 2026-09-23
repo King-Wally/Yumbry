@@ -2,10 +2,12 @@ import type { Response } from 'express';
 import { AiProviderError, type AiProviderErrorKind } from 'yumbry-shared';
 import { sendKindedError } from './kinded-error-response.js';
 
+// 503, not 502: behind Cloudflare an origin 502/504 is replaced by Cloudflare's own error page,
+// dropping our message. 503 bodies pass through.
 const STATUS_BY_KIND: Record<AiProviderErrorKind, number> = {
-  unreachable: 502,
-  bad_status: 502,
-  malformed_response: 502,
+  unreachable: 503,
+  bad_status: 503,
+  malformed_response: 503,
   not_configured: 503,
 };
 

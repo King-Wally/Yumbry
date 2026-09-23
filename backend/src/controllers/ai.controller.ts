@@ -85,7 +85,7 @@ export async function postAiChat(req: Request, res: Response) {
   } catch (err) {
     if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
     if (isEnvelopeParseError(err)) {
-      return res.status(502).json({ error: err.message, kind: 'malformed_response' });
+      return res.status(503).json({ error: err.message, kind: 'malformed_response' });
     }
     sendAiProviderError(res, err);
   }
@@ -142,7 +142,7 @@ export async function postAiPhotoImport(req: Request, res: Response) {
       return res.status(400).json({ error: err.message, kind: 'unreadable_image' });
     }
     if (isEnvelopeParseError(err)) {
-      return res.status(502).json({ error: err.message, kind: 'malformed_response' });
+      return res.status(503).json({ error: err.message, kind: 'malformed_response' });
     }
     sendAiProviderError(res, err);
   }
@@ -173,7 +173,7 @@ export async function postAiNutrition(req: Request, res: Response) {
   } catch (err) {
     if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
     if (isEnvelopeParseError(err)) {
-      return res.status(502).json({ error: err.message, kind: 'malformed_response' });
+      return res.status(503).json({ error: err.message, kind: 'malformed_response' });
     }
     sendAiProviderError(res, err);
   }

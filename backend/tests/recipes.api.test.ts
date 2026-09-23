@@ -448,7 +448,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
       expect(res.body.kind).toBe('blocked_url');
     });
 
-    it('maps a timeout scrape error to 502', async () => {
+    it('maps a timeout scrape error to 422', async () => {
       const { UrlImportError } = await import('../src/utils/url-import-error.js');
       scrapeRecipeFromUrl.mockRejectedValue(
         new UrlImportError(
@@ -461,8 +461,25 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
         .post('/api/recipes/import-url')
         .send({ url: 'https://example.com/recipe' });
 
-      expect(res.status).toBe(502);
+      expect(res.status).toBe(422);
       expect(res.body.kind).toBe('timeout');
+    });
+
+    it('maps a bot_challenge scrape error to 422 with its message', async () => {
+      const { UrlImportError } = await import('../src/utils/url-import-error.js');
+      scrapeRecipeFromUrl.mockRejectedValue(
+        new UrlImportError("That site's bot protection blocked automatic import.", 'bot_challenge')
+      );
+
+      const res = await agent
+        .post('/api/recipes/import-url')
+        .send({ url: 'https://example.com/recipe' });
+
+      expect(res.status).toBe(422);
+      expect(res.body).toEqual({
+        error: "That site's bot protection blocked automatic import.",
+        kind: 'bot_challenge',
+      });
     });
 
     it('rejects unauthenticated requests with 401', async () => {
