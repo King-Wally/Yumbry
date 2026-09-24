@@ -23,4 +23,4 @@ export const malformedResponseMessage =
   'The AI provider response did not include an assistant message.';
 
 export const notConfiguredMessage =
-  'The AI assistant is not configured on this server. Ask your administrator to set GEMINI_API_KEY.';
+  'The AI assistant is not configured on this server. Ask your administrator to set OPENROUTER_API_KEY.';

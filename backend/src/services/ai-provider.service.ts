@@ -15,13 +15,64 @@ import {
 export type { AiChatMessage, AiProviderErrorKind, AiSamplingParams };
 export { AiProviderError };
 
-const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/';
-const DEFAULT_BIG_MODEL = 'gemini-3.6-flash';
-const DEFAULT_SMALL_MODEL = 'gemini-3.5-flash-lite';
+const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
 // `big` is reserved for the opening turn of a new recipe, where the model invents the whole thing
-// from one line of prompt. Every other turn edits an existing draft, which the small model handles.
-export type AiModelTier = 'big' | 'small';
+// from one line of prompt; `medium` edits a draft already in hand; `small` estimates nutrition for a
+// recipe that is already written; `image` reads a photo and so must be a vision-capable model.
+export type AiModelTier = 'big' | 'medium' | 'small' | 'image';
+
+const DEFAULT_MODELS: Record<AiModelTier, string> = {
+  big: 'google/gemini-3.6-flash',
+  medium: 'google/gemini-3.5-flash-lite',
+  small: 'google/gemini-3.5-flash-lite',
+  image: 'google/gemini-3.6-flash',
+};
+
+interface TierConfig {
+  model: string;
+  fallbackModel?: string;
+  /** OpenRouter provider slugs in priority order; empty lets OpenRouter route freely. */
+  providers: string[];
+}
+
+// Read lazily, like the API key, so a changed .env takes effect without touching module state.
+// Env names are AI_MODEL_<TIER>, AI_MODEL_<TIER>_FALLBACK, AI_PROVIDER_<TIER> and
+// AI_PROVIDER_<TIER>_FALLBACK.
+function resolveTierConfig(tier: AiModelTier): TierConfig {
+  const suffix = tier.toUpperCase();
+  const env = (name: string) => process.env[name]?.trim() || undefined;
+
+  const provider = env(`AI_PROVIDER_${suffix}`);
+  const fallbackProvider = env(`AI_PROVIDER_${suffix}_FALLBACK`);
+  // A fallback with no primary is almost certainly a typo in the config, and silently promoting it
+  // to primary would hide that.
+  if (fallbackProvider && !provider) {
+    console.warn(
+      `[ai-provider] AI_PROVIDER_${suffix}_FALLBACK is set without AI_PROVIDER_${suffix}; ignoring it`
+    );
+  }
+
+  return {
+    model: env(`AI_MODEL_${suffix}`) ?? DEFAULT_MODELS[tier],
+    fallbackModel: env(`AI_MODEL_${suffix}_FALLBACK`),
+    providers: provider ? [provider, ...(fallbackProvider ? [fallbackProvider] : [])] : [],
+  };
+}
+
+// OpenRouter extensions to the chat-completions body. `models` makes OpenRouter itself retry on the
+// fallback model when the primary errors (rate limit, downtime, moderation), so there is no retry
+// loop of our own. The provider list is a strict pin: `allow_fallbacks: false` means only the listed
+// providers are ever used, tried in order — which also applies to the fallback model.
+function routingBody(config: TierConfig): Record<string, unknown> {
+  return {
+    model: config.model,
+    ...(config.fallbackModel ? { models: [config.model, config.fallbackModel] } : {}),
+    ...(config.providers.length
+      ? { provider: { order: config.providers, allow_fallbacks: false } }
+      : {}),
+  };
+}
 
 type ChatResponseFormat =
   { type: 'json_object' } | { type: 'json_schema'; json_schema: AiJsonSchemaFormat };
@@ -29,78 +80,60 @@ type ChatResponseFormat =
 function samplingBody(sampling: AiSamplingParams | undefined): Record<string, unknown> {
   if (!sampling) return {};
   const { temperature, topP } = sampling;
-  return { temperature, topP };
+  return { temperature, top_p: topP };
 }
 
-// Read lazily (at call time, not import time) so the app still boots without a Gemini key
+// Read lazily (at call time, not import time) so the app still boots without an OpenRouter key
 // set — self-hosters who don't want the AI assistant shouldn't be forced to configure one.
 function requireApiKey(): string {
-  const key = process.env.GEMINI_API_KEY;
+  const key = process.env.OPENROUTER_API_KEY;
   if (!key) throw new AiProviderError(notConfiguredMessage, 'not_configured');
   return key;
 }
 
-function resolveModel(tier: AiModelTier): string {
-  return tier === 'big'
-    ? process.env.GEMINI_MODEL_BIG || DEFAULT_BIG_MODEL
-    : process.env.GEMINI_MODEL_SMALL || DEFAULT_SMALL_MODEL;
-}
-
-// Bounds how long a single Gemini call can hang before we give up and surface a clean
+// Bounds how long a single OpenRouter call can hang before we give up and surface a clean
 // `unreachable` error, rather than silently outliving whatever edge/proxy timeout fronts this
 // server in production.
-const REQUEST_TIMEOUT_MS = Number(process.env.GEMINI_REQUEST_TIMEOUT_MS) || 30_000;
+const REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS) || 30_000;
 
-// GEMINI_REQUEST_TIMEOUT_MS overrides the default for every call; a caller passing `timeoutMs`
+// AI_REQUEST_TIMEOUT_MS overrides the default for every call; a caller passing `timeoutMs`
 // overrides both, for the one request that is legitimately slower than the rest (reading a photo
-// on the big model, where 30s is not enough for a full cookbook page).
+// on the image model, where 30s is not enough for a full cookbook page).
 function createClient(apiKey: string, timeoutMs = REQUEST_TIMEOUT_MS): OpenAI {
   return new OpenAI({
-    baseURL: GEMINI_BASE_URL,
+    baseURL: OPENROUTER_BASE_URL,
     apiKey,
+    // Optional app attribution shown on OpenRouter's side (activity page, app rankings).
+    defaultHeaders: { 'X-Title': 'Yumbry' },
     maxRetries: 0,
     timeout: timeoutMs,
   });
 }
 
-// Logged here (not just left to bubble up as a generic 503) so the real cause — Gemini's own
+// Logged here (not just left to bubble up as a generic 503) so the real cause — OpenRouter's own
 // status and message, e.g. a 503 "model overloaded" — is visible in server logs even though the
 // client only ever sees the generic AiProviderError kind/message.
 function toAiProviderError(err: unknown): AiProviderError {
   if (err instanceof APIConnectionError) {
-    console.error(`[ai-provider] connection to Gemini failed: ${err.message}`);
+    console.error(`[ai-provider] connection to OpenRouter failed: ${err.message}`);
     return new AiProviderError(unreachableMessage(), 'unreachable', err);
   }
   if (err instanceof APIError) {
-    console.error(`[ai-provider] Gemini responded with HTTP ${err.status}: ${err.message}`);
+    console.error(`[ai-provider] OpenRouter responded with HTTP ${err.status}: ${err.message}`);
     return new AiProviderError(
       badStatusMessage(err.status ?? '???', err.message),
       'bad_status',
       err
     );
   }
-  console.error('[ai-provider] unexpected error calling Gemini:', err);
+  console.error('[ai-provider] unexpected error calling OpenRouter:', err);
   return new AiProviderError(unreachableMessage(), 'unreachable', err);
 }
 
-const QUOTA_PATTERN = /resource_exhausted|quota|rate limit|too many requests/i;
-
-// Gemini signals an exhausted quota as a 429, but also as a 403/400 carrying RESOURCE_EXHAUSTED
-// depending on which limit was hit — the only case where retrying on a different model helps.
-function isQuotaError(err: unknown): boolean {
-  if (!(err instanceof APIError)) return false;
-  if (err.status === 429) return true;
-  return (err.status === 403 || err.status === 400) && QUOTA_PATTERN.test(err.message);
-}
-
-// A 400/422 means Gemini's OpenAI-compat endpoint (or the underlying model) refused the request
-// shape (unknown response_format) rather than the model failing, so it's safe to resend once
-// asking only for JSON. A quota-shaped 400 is excluded: burning it through the downgrade ladder
-// would swallow the signal the tier fallback needs.
+// A 400/422 means the endpoint (or the underlying model) refused the request shape (unknown
+// response_format) rather than the model failing, so it's safe to resend once asking only for JSON.
 function rejectsRequestShape(err: unknown): boolean {
-  return (
-    err instanceof APIError && (err.status === 400 || err.status === 422) && !isQuotaError(err)
-  );
+  return err instanceof APIError && (err.status === 400 || err.status === 422);
 }
 
 // Whether the endpoint accepted our `json_schema` response_format is otherwise unobservable: the
@@ -120,7 +153,7 @@ type ChatOptions = {
 };
 
 async function runCompletion(
-  model: string,
+  config: TierConfig,
   messages: AiChatMessage[],
   options: ChatOptions
 ): Promise<string> {
@@ -128,7 +161,7 @@ async function runCompletion(
 
   const create = (responseFormat: ChatResponseFormat | undefined, withSampling: boolean) =>
     client.chat.completions.create({
-      model,
+      ...routingBody(config),
       messages,
       ...(responseFormat ? { response_format: responseFormat } : {}),
       ...(withSampling ? samplingBody(options.sampling) : {}),
@@ -172,17 +205,5 @@ export async function chatWithAi(
   messages: AiChatMessage[],
   options: ChatOptions & { tier?: AiModelTier }
 ): Promise<string> {
-  const tier = options.tier ?? 'small';
-  if (tier === 'small') return runCompletion(resolveModel('small'), messages, options);
-
-  try {
-    return await runCompletion(resolveModel('big'), messages, options);
-  } catch (err) {
-    // Only quota exhaustion is worth re-running on another model — a 5xx or an unreachable
-    // provider would fail identically on the small one, and a second call would just double the
-    // wait before the user sees the error.
-    if (!(err instanceof AiProviderError) || !isQuotaError(err.cause)) throw err;
-    console.warn(`[ai-provider] big model quota exhausted, falling back to small: ${err.message}`);
-    return runCompletion(resolveModel('small'), messages, options);
-  }
+  return runCompletion(resolveTierConfig(options.tier ?? 'medium'), messages, options);
 }

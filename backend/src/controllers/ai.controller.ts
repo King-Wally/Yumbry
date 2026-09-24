@@ -51,7 +51,7 @@ function readerPreferences(req: Request): ReaderPreferences {
 // Cheap, no-network check the frontend polls to decide whether to show AI entry points at all,
 // rather than only discovering the server has no key configured after a chat attempt 503s.
 export async function getAiStatus(_req: Request, res: Response) {
-  res.json({ configured: Boolean(process.env.GEMINI_API_KEY) });
+  res.json({ configured: Boolean(process.env.OPENROUTER_API_KEY) });
 }
 
 export async function postAiChat(req: Request, res: Response) {
@@ -65,8 +65,8 @@ export async function postAiChat(req: Request, res: Response) {
     // rather than a hope about the model.
     // The opening turn of a new recipe is the only one written from nothing, so it's the only one
     // that gets the big model; every later turn — and every improve turn — edits a draft that is
-    // already in hand.
-    const tier = body.mode === 'create' && body.messages.length === 1 ? 'big' : 'small';
+    // already in hand, which is what the medium model is for.
+    const tier = body.mode === 'create' && body.messages.length === 1 ? 'big' : 'medium';
 
     const raw = await chatWithAi(buildChatMessages(body.messages, body.current_draft, locale), {
       jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
@@ -91,7 +91,7 @@ export async function postAiChat(req: Request, res: Response) {
   }
 }
 
-// Reading a photo on the big model is slower than any chat turn — a dense cookbook page can run
+// Reading a photo is slower than any chat turn — a dense cookbook page can run
 // well past the 30s default, and a timeout here costs the user the whole upload.
 const PHOTO_IMPORT_TIMEOUT_MS = 90_000;
 
@@ -108,13 +108,12 @@ export async function postAiPhotoImport(req: Request, res: Response) {
     const prepared = await prepareImageForModel(req.file.buffer);
     const dataUrl = `data:image/jpeg;base64,${prepared.toString('base64')}`;
 
-    // Always the big model: reading handwriting off a photo is the hardest thing the app asks of
-    // the model, and unlike a chat turn there is no draft in hand to fall back on. chatWithAi's
-    // quota fallback to the small model still applies.
+    // Its own tier: reading handwriting off a photo needs a vision-capable model, and is the hardest
+    // thing the app asks of one — unlike a chat turn there is no draft in hand to fall back on.
     const raw = await chatWithAi(buildPhotoImportMessages(dataUrl, locale), {
       jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
       sampling: RECIPE_SAMPLING,
-      tier: 'big',
+      tier: 'image',
       timeoutMs: PHOTO_IMPORT_TIMEOUT_MS,
     });
 

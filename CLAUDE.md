@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Yumbry is a self-hosted, multi-user recipe manager: manual/JSON-LD recipe import, tag/category
 filtering, serving-size scaling, photo attachments, and an AI assistant for drafting/improving
-recipes, backed by a single server-wide Google Gemini API key (`GEMINI_API_KEY`) — there is no
+recipes, backed by a single server-wide OpenRouter API key (`OPENROUTER_API_KEY`) — there is no
 per-user AI configuration. Every user's data (recipes, tags, categories) is siloed — no sharing
 between accounts.
 
@@ -57,7 +57,7 @@ Never point `TEST_DATABASE_URL` at a real database — integration tests drop an
 `*.api.test.ts` files share/reset that same DB and would race otherwise; it also injects fixed
 dummy `BETTER_AUTH_SECRET`/`BETTER_AUTH_URL`/email env vars. Auth requests from supertest must set
 an `Origin` header matching `BETTER_AUTH_URL` — better-auth rejects state-changing calls without
-one, and browsers send it automatically where supertest does not (see `tests/helpers/auth.ts`). `GEMINI_API_KEY` is read lazily (not at import time), so AI chat tests mock
+one, and browsers send it automatically where supertest does not (see `tests/helpers/auth.ts`). `OPENROUTER_API_KEY` is read lazily (not at import time), so AI chat tests mock
 `chatWithAi` directly instead of needing a dummy key.
 
 To run a single test file: `npx vitest run tests/recipes.api.test.ts` (from `backend/` or
@@ -123,25 +123,28 @@ family and supplies the id.
 
 ### AI provider
 
-`services/ai-provider.service.ts` talks to Google Gemini
-(`https://generativelanguage.googleapis.com/v1beta/openai/`) through the `openai` npm SDK client,
-since Gemini exposes an OpenAI-compatible chat-completions endpoint.
-`GEMINI_API_KEY`, `GEMINI_MODEL_BIG` (default `gemini-3.6-flash`) and `GEMINI_MODEL_SMALL`
-(default `gemini-3.5-flash-lite`) are read from
+`services/ai-provider.service.ts` talks to OpenRouter (`https://openrouter.ai/api/v1`) through
+the `openai` npm SDK client, since OpenRouter exposes an OpenAI-compatible chat-completions endpoint.
+`OPENROUTER_API_KEY` and the per-tier `AI_MODEL_*`/`AI_PROVIDER_*` vars are read from
 `process.env` lazily, at call time inside `chatWithAi` — not at module import time — so the app
 still boots without them; a missing key throws an `AiProviderError` with kind `not_configured`
 (mapped to HTTP 503), meaning the AI assistant is simply unavailable rather than the whole app
 failing to start. SDK errors are normalized into the same `AiProviderError` (kind: `unreachable` |
 `bad_status` | `malformed_response` | `not_configured`) defined in `shared/src/ai-provider-error.ts`.
 
-Two model tiers: `chatWithAi` takes a `tier` (`'big' | 'small'`, default `small`) and
-`ai.controller.ts` asks for `big` only when the request's `mode` is `'create'` and it's the first
-turn (`messages.length === 1`) — the one turn written from nothing. Every follow-up and every
-`'improve'` turn edits an existing `current_draft` and uses `small`. `mode` comes from the client
-(`AiChatMode` in `shared/src/recipe-dto.ts`, Zod-defaulted to `'improve'` so an old client falls to
-the cheap tier) and never reaches the prompt. If the big model returns a quota error (429, or a
-403/400 mentioning `RESOURCE_EXHAUSTED`/quota), `chatWithAi` retries the same request once on the
-small model.
+Four model tiers: `chatWithAi` takes a `tier` (`'big' | 'medium' | 'small' | 'image'`, default
+`medium`). `ai.controller.ts` asks for `big` only when the chat request's `mode` is `'create'` and
+it's the first turn (`messages.length === 1`) — the one turn written from nothing; every follow-up
+and every `'improve'` turn edits an existing `current_draft` and uses `medium`. Nutrition estimates
+use `small`, photo import uses `image` (must be vision-capable). `mode` comes from the client
+(`AiChatMode` in `shared/src/recipe-dto.ts`, Zod-defaulted to `'improve'`) and never reaches the
+prompt.
+
+Each tier `<T>` reads `AI_MODEL_<T>` (defaults in `DEFAULT_MODELS`), optional
+`AI_MODEL_<T>_FALLBACK` (sent as OpenRouter's `models: [primary, fallback]` — OpenRouter does the
+retry, there is no retry loop of ours), and optional `AI_PROVIDER_<T>` / `AI_PROVIDER_<T>_FALLBACK`
+(sent as a strict pin, `provider: { order: [...], allow_fallbacks: false }`; a fallback provider
+without a primary is ignored with a warning). The pin also applies to the fallback model.
 There is no per-user provider/API key configuration — one server-wide key serves every user via
 `POST /api/ai/chat`.
 

@@ -49,22 +49,22 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
   });
 
   describe('GET /api/ai/status', () => {
-    const originalKey = process.env.GEMINI_API_KEY;
+    const originalKey = process.env.OPENROUTER_API_KEY;
 
     afterEach(() => {
-      if (originalKey === undefined) delete process.env.GEMINI_API_KEY;
-      else process.env.GEMINI_API_KEY = originalKey;
+      if (originalKey === undefined) delete process.env.OPENROUTER_API_KEY;
+      else process.env.OPENROUTER_API_KEY = originalKey;
     });
 
-    it('reports configured: true when GEMINI_API_KEY is set', async () => {
-      process.env.GEMINI_API_KEY = 'test-key';
+    it('reports configured: true when OPENROUTER_API_KEY is set', async () => {
+      process.env.OPENROUTER_API_KEY = 'test-key';
       const res = await agent.get('/api/ai/status');
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ configured: true });
     });
 
-    it('reports configured: false when GEMINI_API_KEY is unset', async () => {
-      delete process.env.GEMINI_API_KEY;
+    it('reports configured: false when OPENROUTER_API_KEY is unset', async () => {
+      delete process.env.OPENROUTER_API_KEY;
       const res = await agent.get('/api/ai/status');
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ configured: false });
@@ -373,7 +373,7 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
         expect(tierOfLastCall()).toBe('big');
       });
 
-      it('drops to the small model on follow-up messages of a new recipe', async () => {
+      it('drops to the medium model on follow-up messages of a new recipe', async () => {
         const res = await agent.post('/api/ai/chat').send({
           mode: 'create',
           messages: [
@@ -385,10 +385,10 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
         });
 
         expect(res.status).toBe(200);
-        expect(tierOfLastCall()).toBe('small');
+        expect(tierOfLastCall()).toBe('medium');
       });
 
-      it('uses the small model for every turn of an improve session', async () => {
+      it('uses the medium model for every turn of an improve session', async () => {
         const res = await agent.post('/api/ai/chat').send({
           mode: 'improve',
           messages: [{ role: 'user', content: 'make it spicier' }],
@@ -396,16 +396,16 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
         });
 
         expect(res.status).toBe(200);
-        expect(tierOfLastCall()).toBe('small');
+        expect(tierOfLastCall()).toBe('medium');
       });
 
-      it('falls back to the small model when a client sends no mode at all', async () => {
+      it('falls back to the medium model when a client sends no mode at all', async () => {
         const res = await agent
           .post('/api/ai/chat')
           .send({ messages: [{ role: 'user', content: 'a spicy curry' }], current_draft: null });
 
         expect(res.status).toBe(200);
-        expect(tierOfLastCall()).toBe('small');
+        expect(tierOfLastCall()).toBe('medium');
       });
     });
 
@@ -476,13 +476,13 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
       expect(res.body.reply).toContain('smudged');
     });
 
-    it('always asks for the big model, with a longer timeout than a chat turn', async () => {
+    it('always asks for the image model, with a longer timeout than a chat turn', async () => {
       chatWithAi.mockResolvedValue(READABLE_RECIPE);
 
       await postPhoto();
 
       const options = chatWithAi.mock.calls[0][1];
-      expect(options.tier).toBe('big');
+      expect(options.tier).toBe('image');
       expect(options.timeoutMs).toBeGreaterThan(30_000);
     });
 

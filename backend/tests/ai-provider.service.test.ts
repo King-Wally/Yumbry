@@ -10,22 +10,44 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe('chatWithAi', () => {
+  function clearAiEnv(): void {
+    for (const name of Object.keys(process.env)) {
+      if (
+        name === 'OPENROUTER_API_KEY' ||
+        name.startsWith('AI_MODEL_') ||
+        name.startsWith('AI_PROVIDER_')
+      ) {
+        delete process.env[name];
+      }
+    }
+  }
+
+  function okFetch() {
+    // A Response body can only be read once, so hand each call a fresh one.
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(async () => jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  function bodyOf(fetchMock: ReturnType<typeof vi.fn>, call = 0) {
+    return JSON.parse(fetchMock.mock.calls[call][1].body);
+  }
+
   beforeEach(() => {
-    process.env.GEMINI_API_KEY = 'test-gemini-key';
-    delete process.env.GEMINI_MODEL_BIG;
-    delete process.env.GEMINI_MODEL_SMALL;
+    clearAiEnv();
+    process.env.OPENROUTER_API_KEY = 'test-openrouter-key';
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
-    delete process.env.GEMINI_API_KEY;
-    delete process.env.GEMINI_MODEL_BIG;
-    delete process.env.GEMINI_MODEL_SMALL;
+    clearAiEnv();
   });
 
-  it('throws a not_configured AiProviderError when GEMINI_API_KEY is unset', async () => {
-    delete process.env.GEMINI_API_KEY;
+  it('throws a not_configured AiProviderError when OPENROUTER_API_KEY is unset', async () => {
+    delete process.env.OPENROUTER_API_KEY;
 
     await expect(chatWithAi([{ role: 'user', content: 'hi' }], {})).rejects.toMatchObject({
       kind: 'not_configured',
@@ -47,7 +69,7 @@ describe('chatWithAi', () => {
     expect(reply).toBe('Here is a recipe.');
   });
 
-  it('calls Gemini with the default model, messages and JSON schema', async () => {
+  it('calls OpenRouter with the medium tier’s default model, messages and JSON schema', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
@@ -57,83 +79,100 @@ describe('chatWithAi', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+      'https://openrouter.ai/api/v1/chat/completions',
       expect.objectContaining({ method: 'POST' })
     );
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body).toMatchObject({
-      model: 'gemini-3.5-flash-lite',
+      model: 'google/gemini-3.5-flash-lite',
       response_format: { type: 'json_schema', json_schema: { name: 'recipe_chat_turn' } },
     });
   });
 
-  it('uses GEMINI_MODEL_SMALL when set', async () => {
-    process.env.GEMINI_MODEL_SMALL = 'gemini-2.5-pro';
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
-    vi.stubGlobal('fetch', fetchMock);
+  it.each([
+    ['big', 'google/gemini-3.6-flash'],
+    ['medium', 'google/gemini-3.5-flash-lite'],
+    ['small', 'google/gemini-3.5-flash-lite'],
+    ['image', 'google/gemini-3.6-flash'],
+  ] as const)(
+    'resolves the %s tier from its own AI_MODEL_* var or default',
+    async (tier, fallback) => {
+      const fetchMock = okFetch();
 
-    await chatWithAi([{ role: 'user', content: 'hi' }], {});
+      await chatWithAi([{ role: 'user', content: 'hi' }], { tier });
+      expect(bodyOf(fetchMock, 0).model).toBe(fallback);
 
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body).model).toBe('gemini-2.5-pro');
-  });
+      process.env[`AI_MODEL_${tier.toUpperCase()}`] = `vendor/${tier}-model`;
+      await chatWithAi([{ role: 'user', content: 'hi' }], { tier });
+      expect(bodyOf(fetchMock, 1).model).toBe(`vendor/${tier}-model`);
+    }
+  );
 
-  it('uses the big model for the big tier, from GEMINI_MODEL_BIG or its default', async () => {
-    // A Response body can only be read once, so hand each call a fresh one.
-    const fetchMock = vi
-      .fn()
-      .mockImplementation(async () => jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
-    vi.stubGlobal('fetch', fetchMock);
+  it('sends no OpenRouter routing fields when none are configured', async () => {
+    const fetchMock = okFetch();
 
     await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'big' });
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body).model).toBe('gemini-3.6-flash');
 
-    process.env.GEMINI_MODEL_BIG = 'gemini-9-ultra';
+    const body = bodyOf(fetchMock);
+    expect(body.models).toBeUndefined();
+    expect(body.provider).toBeUndefined();
+  });
+
+  it('sends a fallback model as OpenRouter’s models array', async () => {
+    process.env.AI_MODEL_BIG = 'vendor/primary';
+    process.env.AI_MODEL_BIG_FALLBACK = 'vendor/backup';
+    const fetchMock = okFetch();
+
     await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'big' });
-    expect(JSON.parse(fetchMock.mock.calls[1][1].body).model).toBe('gemini-9-ultra');
+
+    expect(bodyOf(fetchMock)).toMatchObject({
+      model: 'vendor/primary',
+      models: ['vendor/primary', 'vendor/backup'],
+    });
   });
 
-  it('retries the big tier on the small model when the big model is rate limited', async () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ error: { message: 'quota exceeded' } }, 429))
-      .mockResolvedValueOnce(jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
-    vi.stubGlobal('fetch', fetchMock);
+  it('pins a tier strictly to its configured provider, then its fallback provider', async () => {
+    process.env.AI_PROVIDER_SMALL = 'google-vertex';
+    const fetchMock = okFetch();
 
-    const reply = await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'big' });
-
-    expect(reply).toBe('ok');
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body).model).toBe('gemini-3.6-flash');
-    expect(JSON.parse(fetchMock.mock.calls[1][1].body).model).toBe('gemini-3.5-flash-lite');
-  });
-
-  it('treats a RESOURCE_EXHAUSTED 403 as a quota error rather than a request-shape rejection', async () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ error: { message: 'RESOURCE_EXHAUSTED' } }, 403))
-      .mockResolvedValueOnce(jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
-    vi.stubGlobal('fetch', fetchMock);
-
-    const reply = await chatWithAi([{ role: 'user', content: 'hi' }], {
-      tier: 'big',
-      jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
+    await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'small' });
+    expect(bodyOf(fetchMock, 0).provider).toEqual({
+      order: ['google-vertex'],
+      allow_fallbacks: false,
     });
 
-    expect(reply).toBe('ok');
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(JSON.parse(fetchMock.mock.calls[1][1].body).model).toBe('gemini-3.5-flash-lite');
-    // The quota-shaped failure must not be spent on the response_format downgrade ladder.
-    expect(JSON.parse(fetchMock.mock.calls[1][1].body).response_format.type).toBe('json_schema');
+    process.env.AI_PROVIDER_SMALL_FALLBACK = 'google-ai-studio';
+    await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'small' });
+    expect(bodyOf(fetchMock, 1).provider).toEqual({
+      order: ['google-vertex', 'google-ai-studio'],
+      allow_fallbacks: false,
+    });
   });
 
-  it('does not fall back to the small model for non-quota failures', async () => {
+  it('only applies a tier’s provider pin to that tier', async () => {
+    process.env.AI_PROVIDER_IMAGE = 'google-vertex';
+    const fetchMock = okFetch();
+
+    await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'medium' });
+
+    expect(bodyOf(fetchMock).provider).toBeUndefined();
+  });
+
+  it('ignores a fallback provider that has no primary provider, with a warning', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    process.env.AI_PROVIDER_MEDIUM_FALLBACK = 'google-ai-studio';
+    const fetchMock = okFetch();
+
+    await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'medium' });
+
+    expect(bodyOf(fetchMock).provider).toBeUndefined();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('AI_PROVIDER_MEDIUM_FALLBACK'));
+  });
+
+  it('does not retry on another model itself when the provider fails', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValue(jsonResponse({ error: { message: 'server exploded' } }, 500));
+      .mockResolvedValue(jsonResponse({ error: { message: 'rate limited' } }, 429));
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(
@@ -141,21 +180,6 @@ describe('chatWithAi', () => {
     ).rejects.toMatchObject({ kind: 'bad_status' });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  it('surfaces the small model’s failure when the fallback attempt also fails', async () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ error: { message: 'quota exceeded' } }, 429))
-      .mockResolvedValueOnce(jsonResponse({ error: { message: 'quota exceeded' } }, 429));
-    vi.stubGlobal('fetch', fetchMock);
-
-    await expect(
-      chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'big' })
-    ).rejects.toMatchObject({ kind: 'bad_status' });
-
-    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('sends no response_format when no JSON schema is requested', async () => {
@@ -245,7 +269,7 @@ describe('chatWithAi', () => {
     });
   });
 
-  it('sends the standard sampling fields', async () => {
+  it('sends the standard sampling fields under their wire names', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
@@ -257,7 +281,8 @@ describe('chatWithAi', () => {
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.temperature).toBe(0.6);
-    expect(body.topP).toBe(0.95);
+    expect(body.top_p).toBe(0.95);
+    expect(body.topP).toBeUndefined();
   });
 
   it('drops sampling on the final retry if the json_object-with-sampling call also rejects the request shape', async () => {
