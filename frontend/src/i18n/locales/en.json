@@ -149,7 +149,21 @@
       "calories": "Calories",
       "fat": "Fat",
       "carbs": "Carbs",
-      "protein": "Protein"
+      "protein": "Protein",
+      "share": "Share"
+    },
+    "share": {
+      "title": "Share recipe",
+      "description": "Anyone with the link can view this recipe, no account needed. People with a Yumbry account can save their own copy.",
+      "createLink": "Create link",
+      "linkLabel": "Share link",
+      "copyLink": "Copy link",
+      "copied": "Copied!",
+      "hint": "Copies are independent: edits to this recipe don't reach them, and theirs don't reach you.",
+      "done": "Done",
+      "stop": "Stop sharing",
+      "stopDialogTitle": "Stop sharing this recipe?",
+      "stopDialogDescription": "The link stops working right away. Copies people already saved stay theirs. Sharing again creates a new link."
     },
     "card": {
       "noPhoto": "No photo"
@@ -292,6 +306,19 @@
     "logInToJoin": "Log in to join",
     "joining": "Joining...",
     "joinedToast": "You've joined the family"
+  },
+  "sharedRecipe": {
+    "saveCopy": "Like this recipe? Save your own copy to your recipes. You can change it without affecting the original.",
+    "import": "Add to my recipes",
+    "importing": "Adding...",
+    "importedToast": "Added to your recipes",
+    "alreadyYours": "This recipe is already in your collection.",
+    "openYours": "Open recipe",
+    "signUpPrompt": "Want to keep this recipe? Create a free account to save it to your own collection.",
+    "createAccount": "Create account",
+    "logIn": "Log in",
+    "unavailableTitle": "This link is no longer active",
+    "unavailableDescription": "The owner may have stopped sharing this recipe, or the link is incomplete."
   },
   "onboarding": {
     "stepCounter": "Step {{step}} of {{total}}",

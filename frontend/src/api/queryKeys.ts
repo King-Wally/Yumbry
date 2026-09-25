@@ -10,6 +10,7 @@ export const queryKeys = {
       ? (['recipes', filters.search, filters.tag, filters.category] as const)
       : (['recipes'] as const),
   recipe: (id: string | number) => ['recipe', String(id)] as const,
+  sharedRecipe: (token: string) => ['shared-recipe', token] as const,
   tags: ['tags'] as const,
   categories: ['categories'] as const,
   appConfig: ['app', 'config'] as const,

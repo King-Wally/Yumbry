@@ -149,7 +149,21 @@
       "calories": "Calories",
       "fat": "Lipides",
       "carbs": "Glucides",
-      "protein": "Protéines"
+      "protein": "Protéines",
+      "share": "Partager"
+    },
+    "share": {
+      "title": "Partager la recette",
+      "description": "Toute personne disposant du lien peut consulter cette recette, sans compte. Les utilisateurs de Yumbry peuvent en enregistrer leur propre copie.",
+      "createLink": "Créer un lien",
+      "linkLabel": "Lien de partage",
+      "copyLink": "Copier le lien",
+      "copied": "Copié !",
+      "hint": "Les copies sont indépendantes : vos modifications ne s'y appliquent pas, et inversement.",
+      "done": "Terminé",
+      "stop": "Arrêter le partage",
+      "stopDialogTitle": "Arrêter de partager cette recette ?",
+      "stopDialogDescription": "Le lien cesse de fonctionner immédiatement. Les copies déjà enregistrées restent à leurs propriétaires. Partager à nouveau crée un nouveau lien."
     },
     "card": {
       "noPhoto": "Aucune photo"
@@ -292,6 +306,19 @@
     "logInToJoin": "Se connecter pour rejoindre",
     "joining": "Adhésion en cours...",
     "joinedToast": "Vous avez rejoint la famille"
+  },
+  "sharedRecipe": {
+    "saveCopy": "Cette recette vous plaît ? Enregistrez-en une copie dans vos recettes. Vous pourrez la modifier sans toucher à l'originale.",
+    "import": "Ajouter à mes recettes",
+    "importing": "Ajout...",
+    "importedToast": "Ajoutée à vos recettes",
+    "alreadyYours": "Cette recette fait déjà partie de votre collection.",
+    "openYours": "Ouvrir la recette",
+    "signUpPrompt": "Envie de garder cette recette ? Créez un compte gratuit pour l'enregistrer dans votre propre collection.",
+    "createAccount": "Créer un compte",
+    "logIn": "Se connecter",
+    "unavailableTitle": "Ce lien n'est plus actif",
+    "unavailableDescription": "Le propriétaire a peut-être arrêté de partager cette recette, ou le lien est incomplet."
   },
   "onboarding": {
     "stepCounter": "Étape {{step}} sur {{total}}",

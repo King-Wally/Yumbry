@@ -135,6 +135,11 @@ model Recipe {
   /// familyId, and the recipe outlives its author (SetNull) so that leaving or
   /// deleting an account doesn't take the family's recipes with it.
   authorId         String?  @map("author_id")
+  /// Bearer secret for the public, read-only share link (/share/:token). Null
+  /// while the recipe isn't shared; stopping sharing nulls it, so a leaked link
+  /// dies with it and sharing again mints a new one. Stored raw like
+  /// Family.inviteToken, since the owner's share dialog keeps re-displaying it.
+  shareToken       String?  @unique @map("share_token")
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime @default(now()) @map("updated_at") @db.Timestamptz
 

@@ -48,6 +48,7 @@ type PrismaRecipeWithRelations = {
   carbohydrateContent: { toString(): string } | null;
   proteinContent: { toString(): string } | null;
   categoryId: number | null;
+  shareToken: string | null;
   createdAt: Date;
   updatedAt: Date;
   category: CategoryRef | null;
@@ -72,6 +73,7 @@ function toRecipeRow(recipe: PrismaRecipeWithRelations): RecipeRow & {
     carbohydrate_content: recipe.carbohydrateContent?.toString() ?? null,
     protein_content: recipe.proteinContent?.toString() ?? null,
     category_id: recipe.categoryId,
+    share_token: recipe.shareToken,
     created_at: recipe.createdAt,
     updated_at: recipe.updatedAt,
     category: recipe.category,
@@ -143,17 +145,19 @@ export async function listRecipes(
   return recipes.map(toRecipeRow);
 }
 
+const RECIPE_WITH_RELATIONS_INCLUDE = {
+  ...RECIPE_WITH_TAGS_INCLUDE,
+  ingredients: { orderBy: { sortOrder: 'asc' } },
+  instructions: { orderBy: { stepNumber: 'asc' } },
+} as const;
+
 export async function getRecipeById(
   id: number,
   familyId: number
 ): Promise<RecipeWithRelations | null> {
   const recipe = await prisma.recipe.findFirst({
     where: { id: { equals: id }, familyId: { equals: familyId } },
-    include: {
-      ...RECIPE_WITH_TAGS_INCLUDE,
-      ingredients: { orderBy: { sortOrder: 'asc' } },
-      instructions: { orderBy: { stepNumber: 'asc' } },
-    },
+    include: RECIPE_WITH_RELATIONS_INCLUDE,
   });
   if (!recipe) return null;
 
@@ -161,6 +165,26 @@ export async function getRecipeById(
     ...toRecipeRow(recipe),
     ingredients: recipe.ingredients.map(toIngredientRow),
     instructions: recipe.instructions.map(toInstructionRow),
+  };
+}
+
+/** The one read that is not family-scoped: the token itself is the credential.
+ * Returns the owning familyId alongside so the caller can tell whether the
+ * viewer is looking at their own household's recipe. */
+export async function getRecipeByShareToken(
+  token: string
+): Promise<(RecipeWithRelations & { familyId: number }) | null> {
+  const recipe = await prisma.recipe.findUnique({
+    where: { shareToken: token },
+    include: RECIPE_WITH_RELATIONS_INCLUDE,
+  });
+  if (!recipe) return null;
+
+  return {
+    ...toRecipeRow(recipe),
+    ingredients: recipe.ingredients.map(toIngredientRow),
+    instructions: recipe.instructions.map(toInstructionRow),
+    familyId: recipe.familyId,
   };
 }
 

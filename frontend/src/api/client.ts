@@ -7,6 +7,7 @@ import type {
   Recipe,
   RecipeInput,
   RecipeSummary,
+  SharedRecipe,
   Tag,
 } from '../types';
 import type {
@@ -92,6 +93,28 @@ export function updateRecipe(id: string | number, data: RecipeInput) {
 
 export function deleteRecipe(id: string | number) {
   return request<null>(`/recipes/${id}`, { method: 'DELETE' });
+}
+
+export function enableRecipeShare(id: string | number) {
+  return request<{ share_token: string }>(`/recipes/${id}/share`, { method: 'POST' });
+}
+
+export function disableRecipeShare(id: string | number) {
+  return request<null>(`/recipes/${id}/share`, { method: 'DELETE' });
+}
+
+export function getRecipeShareUrl(token: string) {
+  return `${window.location.origin}/share/${token}`;
+}
+
+/** Public: works without a session, so it never 401s an anonymous visitor. */
+export function getSharedRecipe(token: string) {
+  return request<SharedRecipe>(`/shared/${token}`);
+}
+
+/** Copies a shared recipe into the signed-in user's own library. */
+export function importSharedRecipe(token: string) {
+  return request<Recipe>(`/shared/${token}/import`, { method: 'POST' });
 }
 
 export function getRecipeExportUrl(id: string | number) {

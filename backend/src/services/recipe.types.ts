@@ -22,6 +22,9 @@ export interface RecipeRow {
   carbohydrate_content: string | null;
   protein_content: string | null;
   category_id: number | null;
+  /** Null while the recipe isn't shared. Family-visible only — the public share
+   * DTO (recipe-share.service.ts) strips it. */
+  share_token: string | null;
   created_at: Date;
   updated_at: Date;
 }
