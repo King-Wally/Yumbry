@@ -476,14 +476,13 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
       expect(res.body.reply).toContain('smudged');
     });
 
-    it('always asks for the image model, with a longer timeout than a chat turn', async () => {
+    it('always asks for the image model', async () => {
       chatWithAi.mockResolvedValue(READABLE_RECIPE);
 
       await postPhoto();
 
       const options = chatWithAi.mock.calls[0][1];
       expect(options.tier).toBe('image');
-      expect(options.timeoutMs).toBeGreaterThan(30_000);
     });
 
     it('sends the photo as a base64 data URL alongside the instruction', async () => {

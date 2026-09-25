@@ -14,6 +14,7 @@ describe('chatWithAi', () => {
     for (const name of Object.keys(process.env)) {
       if (
         name === 'OPENROUTER_API_KEY' ||
+        name === 'GEMINI_API_KEY' ||
         name.startsWith('AI_MODEL_') ||
         name.startsWith('AI_PROVIDER_')
       ) {
@@ -38,6 +39,7 @@ describe('chatWithAi', () => {
   beforeEach(() => {
     clearAiEnv();
     process.env.OPENROUTER_API_KEY = 'test-openrouter-key';
+    process.env.GEMINI_API_KEY = 'test-gemini-key';
   });
 
   afterEach(() => {
@@ -92,7 +94,7 @@ describe('chatWithAi', () => {
   it.each([
     ['big', 'google/gemini-3.6-flash'],
     ['medium', 'google/gemini-3.5-flash-lite'],
-    ['small', 'google/gemini-3.5-flash-lite'],
+    ['small', 'gemini-3.5-flash-lite'],
     ['image', 'google/gemini-3.6-flash'],
   ] as const)(
     'resolves the %s tier from its own AI_MODEL_* var or default',
@@ -131,22 +133,84 @@ describe('chatWithAi', () => {
     });
   });
 
-  it('pins a tier strictly to its configured provider, then its fallback provider', async () => {
+  it('sends the small tier straight to Gemini, with none of OpenRouter’s routing fields', async () => {
+    process.env.AI_MODEL_SMALL_FALLBACK = 'vendor/backup';
     process.env.AI_PROVIDER_SMALL = 'google-vertex';
     const fetchMock = okFetch();
 
     await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'small' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+      expect.objectContaining({ method: 'POST' })
+    );
+    const body = bodyOf(fetchMock);
+    expect(body.model).toBe('gemini-3.5-flash-lite');
+    expect(body.models).toBeUndefined();
+    expect(body.provider).toBeUndefined();
+    expect(body.reasoning).toBeUndefined();
+  });
+
+  it('throws not_configured for the small tier when GEMINI_API_KEY is unset', async () => {
+    delete process.env.GEMINI_API_KEY;
+    const fetchMock = okFetch();
+
+    await expect(
+      chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'small' })
+    ).rejects.toMatchObject({ kind: 'not_configured' });
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    // The OpenRouter tiers are unaffected.
+    await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'medium' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not downgrade a Gemini quota error disguised as a 400', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ error: { message: 'RESOURCE_EXHAUSTED: quota exceeded' } }, 400)
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      chatWithAi([{ role: 'user', content: 'hi' }], {
+        tier: 'small',
+        jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
+      })
+    ).rejects.toMatchObject({ kind: 'bad_status' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('pins a tier strictly to its configured provider, then its fallback provider', async () => {
+    process.env.AI_PROVIDER_MEDIUM = 'google-vertex';
+    const fetchMock = okFetch();
+
+    await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'medium' });
     expect(bodyOf(fetchMock, 0).provider).toEqual({
       order: ['google-vertex'],
       allow_fallbacks: false,
     });
 
-    process.env.AI_PROVIDER_SMALL_FALLBACK = 'google-ai-studio';
-    await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'small' });
+    process.env.AI_PROVIDER_MEDIUM_FALLBACK = 'google-ai-studio';
+    await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'medium' });
     expect(bodyOf(fetchMock, 1).provider).toEqual({
       order: ['google-vertex', 'google-ai-studio'],
       allow_fallbacks: false,
     });
+  });
+
+  it.each([
+    ['big', { effort: 'high' }],
+    ['medium', { effort: 'low' }],
+    ['small', undefined],
+    ['image', { effort: 'high' }],
+  ] as const)('sends the %s tier’s reasoning effort', async (tier, reasoning) => {
+    const fetchMock = okFetch();
+
+    await chatWithAi([{ role: 'user', content: 'hi' }], { tier });
+
+    expect(bodyOf(fetchMock).reasoning).toEqual(reasoning);
   });
 
   it('only applies a tier’s provider pin to that tier', async () => {

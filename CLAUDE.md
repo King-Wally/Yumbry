@@ -145,6 +145,12 @@ Each tier `<T>` reads `AI_MODEL_<T>` (defaults in `DEFAULT_MODELS`), optional
 retry, there is no retry loop of ours), and optional `AI_PROVIDER_<T>` / `AI_PROVIDER_<T>_FALLBACK`
 (sent as a strict pin, `provider: { order: [...], allow_fallbacks: false }`; a fallback provider
 without a primary is ignored with a warning). The pin also applies to the fallback model.
+
+Exception: the `small` tier (nutrition) bypasses OpenRouter and calls Gemini's OpenAI-compatible
+endpoint (`https://generativelanguage.googleapis.com/v1beta/openai/`) with `GEMINI_API_KEY`
+(`TIER_BACKEND` in the service). It reads only `AI_MODEL_SMALL`, a Gemini model id with no
+`google/` prefix — no fallback model, provider pin or reasoning field. A missing `GEMINI_API_KEY`
+makes only nutrition return `not_configured`; `/api/config` still keys on `OPENROUTER_API_KEY`.
 There is no per-user provider/API key configuration — one server-wide key serves every user via
 `POST /api/ai/chat`.
 

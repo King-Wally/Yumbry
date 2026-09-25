@@ -91,10 +91,6 @@ export async function postAiChat(req: Request, res: Response) {
   }
 }
 
-// Reading a photo is slower than any chat turn — a dense cookbook page can run
-// well past the 30s default, and a timeout here costs the user the whole upload.
-const PHOTO_IMPORT_TIMEOUT_MS = 90_000;
-
 export async function postAiPhotoImport(req: Request, res: Response) {
   try {
     if (!req.file) {
@@ -114,7 +110,6 @@ export async function postAiPhotoImport(req: Request, res: Response) {
       jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
       sampling: RECIPE_SAMPLING,
       tier: 'image',
-      timeoutMs: PHOTO_IMPORT_TIMEOUT_MS,
     });
 
     const envelope = parseChatEnvelope(raw, {

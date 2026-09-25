@@ -25,37 +25,15 @@ export class ApiError extends Error {
   }
 }
 
-const DEFAULT_TIMEOUT_MS = 60_000;
-
-async function request<T>(
-  path: string,
-  options: RequestInit = {},
-  timeoutMs = DEFAULT_TIMEOUT_MS
-): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {};
   if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
 
-  // Bounds how long we wait on a hung request — without this, a stalled connection (e.g. an
-  // overloaded AI provider) waits on the browser/proxy's own timeout with no clear feedback.
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-  let res: Response;
-  try {
-    res = await fetch(`/api${path}`, {
-      credentials: 'include',
-      ...options,
-      headers,
-      signal: controller.signal,
-    });
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new ApiError('The request took too long to respond. Please try again.');
-    }
-    throw err;
-  } finally {
-    clearTimeout(timeout);
-  }
+  const res = await fetch(`/api${path}`, {
+    credentials: 'include',
+    ...options,
+    headers,
+  });
 
   if (!res.ok) {
     const body: ApiErrorBody = await res.json().catch(() => ({}));
@@ -134,19 +112,11 @@ export function uploadRecipePhoto(id: string | number, file: File) {
 /**
  * Reads a recipe off a photo. Returns a draft for review — like importRecipeFromUrl, and unlike
  * importRecipe, nothing is persisted until the user saves the form.
- *
- * The longer timeout is deliberate: this runs on the big model with an image attached, and the
- * server bounds the same call at 90s. Staying above that lets the server's own clean error win the
- * race rather than a generic client-side abort.
  */
 export function importRecipeFromPhoto(file: File) {
   const formData = new FormData();
   formData.append('photo', file);
-  return request<AiChatTurnResponse>(
-    '/ai/photo-import',
-    { method: 'POST', body: formData },
-    120_000
-  );
+  return request<AiChatTurnResponse>('/ai/photo-import', { method: 'POST', body: formData });
 }
 
 export function getTags() {
