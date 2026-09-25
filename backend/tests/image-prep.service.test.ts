@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import sharp from 'sharp';
-import { prepareImageForModel, UnreadableImageError } from '../src/services/image-prep.service.js';
+import {
+  optimizeRecipePhoto,
+  prepareImageForModel,
+  UnreadableImageError,
+} from '../src/services/image-prep.service.js';
 
 /** A plain landscape image, no EXIF. */
 function landscape(width = 2400, height = 1200): Promise<Buffer> {
@@ -78,5 +82,56 @@ describe('prepareImageForModel', () => {
     const truncated = (await landscape()).subarray(0, 64);
 
     await expect(prepareImageForModel(truncated)).rejects.toThrow(UnreadableImageError);
+  });
+});
+
+describe('optimizeRecipePhoto', () => {
+  it('bounds the longest edge at 1600px, keeping the aspect ratio', async () => {
+    const meta = await sharp(await optimizeRecipePhoto(await landscape(3200, 2400))).metadata();
+
+    expect(meta.width).toBe(1600);
+    expect(meta.height).toBe(1200);
+  });
+
+  it('applies EXIF orientation and strips the metadata', async () => {
+    const rotated = await sharp(await landscape(2400, 1200))
+      .withMetadata({ orientation: 6 })
+      .toBuffer();
+
+    const meta = await sharp(await optimizeRecipePhoto(rotated)).metadata();
+
+    expect(meta.width).toBe(800);
+    expect(meta.height).toBe(1600);
+    expect(meta.orientation).toBeUndefined();
+    expect(meta.exif).toBeUndefined();
+  });
+
+  it('never enlarges an image that is already small', async () => {
+    const meta = await sharp(await optimizeRecipePhoto(await landscape(400, 300))).metadata();
+
+    expect(meta.width).toBe(400);
+    expect(meta.height).toBe(300);
+  });
+
+  it('always produces a WebP, whatever arrived', async () => {
+    const png = await sharp({
+      create: { width: 100, height: 100, channels: 3, background: '#fff' },
+    })
+      .png()
+      .toBuffer();
+
+    expect((await sharp(await optimizeRecipePhoto(png)).metadata()).format).toBe('webp');
+  });
+
+  it('shrinks a large photo to a fraction of its original size', async () => {
+    const original = await landscape(4000, 3000);
+
+    expect((await optimizeRecipePhoto(original)).byteLength).toBeLessThan(original.byteLength);
+  });
+
+  it('throws UnreadableImageError for something that is not an image', async () => {
+    await expect(optimizeRecipePhoto(Buffer.from('not an image at all'))).rejects.toThrow(
+      UnreadableImageError
+    );
   });
 });

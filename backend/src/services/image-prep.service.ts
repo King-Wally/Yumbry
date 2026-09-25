@@ -9,6 +9,15 @@ const MAX_EDGE = 1600;
 /** High enough that faint pencil survives, low enough to keep the request small. */
 const QUALITY = 85;
 
+/**
+ * Longest edge of a stored recipe photo. Comfortably sharp on the detail page's full-width hero at
+ * 2x density, and a fraction of what a phone camera writes.
+ */
+const PHOTO_MAX_EDGE = 1600;
+
+/** WebP at 80 is visually indistinguishable from the original for food photos at this size. */
+const PHOTO_QUALITY = 80;
+
 /** Thrown when the upload is not an image any decoder here understands. */
 export class UnreadableImageError extends Error {
   constructor(cause?: unknown) {
@@ -45,6 +54,33 @@ export async function prepareImageForModel(input: Buffer): Promise<Buffer> {
     // actually looks at the bytes — a renamed file, a truncated upload or a format libvips was not
     // built with all land here.
     console.error('[image-prep] could not process uploaded photo:', err);
+    throw new UnreadableImageError(err);
+  }
+}
+
+/**
+ * Normalizes a recipe photo before it is written to disk, so a full-resolution camera original
+ * never lands under uploads/ or gets served to every card that shows it.
+ *
+ * Same straighten-then-bound steps as prepareImageForModel, but encoded as WebP: this file is kept
+ * and served to browsers, so the smaller format pays off on every view. sharp writes no metadata
+ * unless asked, so EXIF — including a phone's GPS position — is dropped along the way. An animated
+ * GIF keeps only its first frame, which is all a cover photo shows anyway.
+ */
+export async function optimizeRecipePhoto(input: Buffer): Promise<Buffer> {
+  try {
+    return await sharp(input)
+      .rotate()
+      .resize({
+        width: PHOTO_MAX_EDGE,
+        height: PHOTO_MAX_EDGE,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .webp({ quality: PHOTO_QUALITY })
+      .toBuffer();
+  } catch (err) {
+    console.error('[image-prep] could not process uploaded recipe photo:', err);
     throw new UnreadableImageError(err);
   }
 }
