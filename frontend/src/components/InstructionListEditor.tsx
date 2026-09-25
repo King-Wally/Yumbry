@@ -27,11 +27,13 @@ export default function InstructionListEditor({
       rowClassName="flex items-center gap-2 "
       controlsClassName="mt-2 flex items-center gap-2"
       handleClassName="mt-2"
+      removeLabel={(index) => t('recipeForm.instructions.removeItem', { number: index + 1 })}
       renderItem={(step, update, index) => (
         <>
           <span className="mt-2 w-4 text-sm text-stone-400">{index + 1}</span>
           <div className="flex-1 space-y-2">
             <textarea
+              aria-label={t('recipeForm.instructions.itemLabel', { number: index + 1 })}
               value={step.text}
               onChange={(e) => update({ ...step, text: e.target.value })}
               rows={2}

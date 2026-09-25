@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
 interface ServingsStepperProps {
@@ -8,9 +9,12 @@ interface ServingsStepperProps {
 
 export default function ServingsStepper({ value, onChange, min = 1 }: ServingsStepperProps) {
   const { t } = useTranslation();
+  const labelId = useId();
   return (
     <div className="flex items-center gap-3">
-      <span className="text-sm text-stone-500">{t('recipes.detail.servings')}</span>
+      <span id={labelId} className="text-sm text-stone-500">
+        {t('recipes.detail.servings')}
+      </span>
       <div className="flex items-center rounded-full border border-stone-300 bg-white">
         <button
           type="button"
@@ -21,7 +25,13 @@ export default function ServingsStepper({ value, onChange, min = 1 }: ServingsSt
         >
           −
         </button>
-        <span className="w-10 text-center font-medium">{value}</span>
+        <output
+          aria-labelledby={labelId}
+          aria-live="polite"
+          className="w-10 text-center font-medium"
+        >
+          {value}
+        </output>
         <button
           type="button"
           onClick={() => onChange(value + 1)}

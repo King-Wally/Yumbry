@@ -26,6 +26,7 @@
     "paste": "Paste URL"
   },
   "settings": {
+    "title": "Settings",
     "language": {
       "title": "Language",
       "description": "Choose the language used across the app and by the AI assistant.",
@@ -195,13 +196,17 @@
       "label": "Ingredients",
       "addButton": "+ Add ingredient",
       "placeholder": "e.g. 1 1/2 cups flour",
-      "dragHandle": "Reorder ingredient"
+      "dragHandle": "Reorder ingredient",
+      "itemLabel": "Ingredient {{number}}",
+      "removeItem": "Remove ingredient {{number}}"
     },
     "instructions": {
       "label": "Instructions",
       "addButton": "+ Add step",
       "placeholder": "Describe this step",
-      "dragHandle": "Reorder step"
+      "dragHandle": "Reorder step",
+      "itemLabel": "Step {{number}}",
+      "removeItem": "Remove step {{number}}"
     },
     "reviewingPhotoDraft": "Reviewing a recipe read from a photo — check the amounts carefully before saving."
   },

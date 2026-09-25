@@ -26,6 +26,7 @@
     "paste": "Coller l'URL"
   },
   "settings": {
+    "title": "Paramètres",
     "language": {
       "title": "Langue",
       "description": "Choisissez la langue utilisée dans l'application et par l'assistant IA.",
@@ -195,13 +196,17 @@
       "label": "Ingrédients",
       "addButton": "+ Ajouter un ingrédient",
       "placeholder": "ex. 1 1/2 tasse de farine",
-      "dragHandle": "Réorganiser l'ingrédient"
+      "dragHandle": "Réorganiser l'ingrédient",
+      "itemLabel": "Ingrédient {{number}}",
+      "removeItem": "Supprimer l'ingrédient {{number}}"
     },
     "instructions": {
       "label": "Préparation",
       "addButton": "+ Ajouter une étape",
       "placeholder": "Décrivez cette étape",
-      "dragHandle": "Réorganiser l'étape"
+      "dragHandle": "Réorganiser l'étape",
+      "itemLabel": "Étape {{number}}",
+      "removeItem": "Supprimer l'étape {{number}}"
     },
     "reviewingPhotoDraft": "Vous examinez une recette lue depuis une photo — vérifiez attentivement les quantités avant d'enregistrer."
   },

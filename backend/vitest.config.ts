@@ -13,9 +13,9 @@ export default defineConfig({
       // deployment secret, so a fixed test-only value is fine here.
       BETTER_AUTH_SECRET: 'test-better-auth-secret-not-for-production',
       BETTER_AUTH_URL: 'http://localhost:3000',
-      // services/email.service.ts throws at import time if these are unset.
-      // Real sends never happen in tests — auth-reset.api.test.ts mocks
-      // sendPasswordResetEmail — these just need to satisfy the fail-fast check.
+      // services/email.service.ts reads these lazily; isEmailConfigured() needs all
+      // three for /api/config to report password reset as enabled. Real sends never
+      // happen in tests — auth-reset.api.test.ts mocks sendPasswordResetEmail.
       RESEND_API_KEY: 'test-resend-api-key-not-for-production',
       EMAIL_FROM: 'Yumbry <no-reply@test.local>',
       APP_BASE_URL: 'http://localhost:5173',

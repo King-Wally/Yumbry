@@ -43,6 +43,19 @@ function parseAllowedUrl(rawUrl: string): URL {
   return url;
 }
 
+// Exact `host:port` entries (comma-separated) exempt from the private-address check, so the E2E
+// suite can import from a fixture server on loopback. Unset in production. Read lazily.
+function isAllowlistedForTests(url: URL): boolean {
+  const raw = process.env.E2E_SAFE_FETCH_ALLOW;
+  if (!raw) return false;
+  const port = url.port || (url.protocol === 'https:' ? '443' : '80');
+  const target = `${url.hostname}:${port}`;
+  return raw
+    .split(',')
+    .map((entry) => entry.trim())
+    .some((entry) => entry === target);
+}
+
 interface ResolvedAddress {
   address: string;
   family: number;
@@ -63,6 +76,8 @@ async function assertSafeTarget(url: URL): Promise<ResolvedAddress[]> {
       err
     );
   }
+
+  if (isAllowlistedForTests(url)) return addresses;
 
   for (const { address } of addresses) {
     const range = ipaddr.process(address).range();

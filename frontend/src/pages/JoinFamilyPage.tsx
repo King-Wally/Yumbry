@@ -51,7 +51,9 @@ export default function JoinFamilyPage() {
       </div>
 
       {joinMutation.isError && (
-        <p className="text-sm text-red-600">{joinMutation.error?.message}</p>
+        <p role="alert" className="text-sm text-red-600">
+          {joinMutation.error?.message}
+        </p>
       )}
 
       <div className="flex gap-2">

@@ -11,31 +11,25 @@ import { useFamily } from '../hooks/useFamily';
 import { useInvalidateFamilyData } from '../hooks/useInvalidateFamilyData';
 import Card from '../components/Card';
 import Dialog from '../components/Dialog';
-import { SUPPORTED_LOCALES, type SupportedLocale } from 'yumbry-shared';
+import {
+  formatRetryAt,
+  nextUtcMidnight,
+  sharedPoolDaysLeft,
+  SUPPORTED_LOCALES,
+  userAllowancePercentLeft,
+  type SupportedLocale,
+} from 'yumbry-shared';
 import { Link } from 'react-router-dom';
 import { LOCALE_LABELS } from '../i18n/localeLabels';
-import { formatRetryAt } from '../lib/format-retry-at';
-
-// The user's cap resets, and the shared pool gains a day's share, at every UTC midnight.
-function nextUtcMidnight(now = new Date()): string {
-  return new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)
-  ).toISOString();
-}
 
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
   const { data: aiStatus } = useAiStatus();
   const budget = aiStatus?.configured ? aiStatus.budget : undefined;
-  const userLeftPercent =
-    budget && budget.userDailyCapUsd !== null
-      ? Math.round(
-          Math.min(1, Math.max(0, 1 - budget.userSpentTodayUsd / budget.userDailyCapUsd)) * 100
-        )
-      : null;
+  const userLeftPercent = budget ? userAllowancePercentLeft(budget) : null;
   const sharedDaysLeft = budget
     ? new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 }).format(
-        Math.max(0, budget.availableUsd / budget.dailyAllowanceUsd)
+        sharedPoolDaysLeft(budget)
       )
     : null;
   const queryClient = useQueryClient();
@@ -169,7 +163,9 @@ export default function SettingsPage() {
             <p className="mt-2.5 text-[13px] text-green-700">{t('settings.language.saved')}</p>
           )}
           {localeMutation.isError && (
-            <p className="mt-2.5 text-[13px] text-red-600">{localeMutation.error?.message}</p>
+            <p role="alert" className="mt-2.5 text-[13px] text-red-600">
+              {localeMutation.error?.message}
+            </p>
           )}
         </Card>
 
@@ -220,10 +216,14 @@ export default function SettingsPage() {
             </label>
 
             {passwordMismatch && (
-              <p className="text-[13px] text-red-600">{t('settings.password.mismatch')}</p>
+              <p role="alert" className="text-[13px] text-red-600">
+                {t('settings.password.mismatch')}
+              </p>
             )}
             {changePasswordMutation.isError && (
-              <p className="text-[13px] text-red-600">{changePasswordMutation.error?.message}</p>
+              <p role="alert" className="text-[13px] text-red-600">
+                {changePasswordMutation.error?.message}
+              </p>
             )}
             {changePasswordMutation.isSuccess && (
               <p className="text-[13px] text-green-700">{t('settings.password.saved')}</p>
@@ -361,7 +361,7 @@ export default function SettingsPage() {
                   })}
                 </p>
               ) : (
-                <p className="text-[13px] text-red-600">
+                <p role="status" className="text-[13px] text-red-600">
                   {t(
                     budget.blockedBy === 'user'
                       ? 'aiQuota.userExceededAt'
@@ -394,7 +394,7 @@ export default function SettingsPage() {
             </SwitchPrimitive.Root>
           </label>
           {jsonImportExportMutation.isError && (
-            <p className="mt-2.5 text-[13px] text-red-600">
+            <p role="alert" className="mt-2.5 text-[13px] text-red-600">
               {jsonImportExportMutation.error?.message}
             </p>
           )}
@@ -427,7 +427,9 @@ export default function SettingsPage() {
       >
         <div className="space-y-3">
           {leaveFamilyMutation.isError && (
-            <p className="text-sm text-red-600">{leaveFamilyMutation.error?.message}</p>
+            <p role="alert" className="text-sm text-red-600">
+              {leaveFamilyMutation.error?.message}
+            </p>
           )}
 
           <div className="flex gap-2">
@@ -475,7 +477,9 @@ export default function SettingsPage() {
           </label>
 
           {deleteAccountMutation.isError && (
-            <p className="text-sm text-red-600">{deleteAccountMutation.error?.message}</p>
+            <p role="alert" className="text-sm text-red-600">
+              {deleteAccountMutation.error?.message}
+            </p>
           )}
 
           <div className="flex gap-2">

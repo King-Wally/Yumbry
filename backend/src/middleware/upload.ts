@@ -68,10 +68,12 @@ export function imageFileFilter(
   cb(null, true);
 }
 
+export const PHOTO_LIMIT_MB = 8;
+
 export const uploadPhoto = multer({
   storage,
   fileFilter: imageFileFilter,
-  limits: { fileSize: 8 * 1024 * 1024 },
+  limits: { fileSize: PHOTO_LIMIT_MB * 1024 * 1024 },
 });
 
 // Memory storage, unlike uploadPhoto: a photo imported into the AI is downscaled by sharp,

@@ -27,6 +27,8 @@ interface ReorderableListEditorProps<T> {
   label: string;
   addLabel: string;
   dragHandleLabel: string;
+  /** Accessible name of the remove button on the row at `index`. */
+  removeLabel: (index: number) => string;
   rowClassName?: string;
   controlsClassName?: string;
   handleClassName?: string;
@@ -119,6 +121,7 @@ export default function ReorderableListEditor<T>({
   label,
   addLabel,
   dragHandleLabel,
+  removeLabel,
   rowClassName = 'flex items-center gap-2',
   controlsClassName = 'flex items-center gap-2',
   handleClassName,
@@ -178,6 +181,7 @@ export default function ReorderableListEditor<T>({
                   <button
                     type="button"
                     onClick={() => removeItem(index)}
+                    aria-label={removeLabel(index)}
                     className="text-stone-400 hover:text-red-600"
                   >
                     ✕

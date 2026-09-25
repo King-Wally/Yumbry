@@ -55,6 +55,7 @@ export default function ForgotPasswordPage() {
           type="email"
           required
           autoComplete="email"
+          aria-label={t('auth.emailPlaceholder')}
           placeholder={t('auth.emailPlaceholder')}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -69,7 +70,11 @@ export default function ForgotPasswordPage() {
         </button>
       </form>
 
-      {error && <p className="text-red-600">{error}</p>}
+      {error && (
+        <p role="alert" className="text-red-600">
+          {error}
+        </p>
+      )}
 
       <p className="text-sm text-stone-500">
         <Link to="/login" className="text-clay hover:underline">

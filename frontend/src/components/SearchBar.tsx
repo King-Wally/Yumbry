@@ -15,6 +15,7 @@ export default function SearchBar({ value, onChange }: SearchBarProps) {
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        aria-label={t('recipes.list.searchPlaceholder')}
         placeholder={t('recipes.list.searchPlaceholder')}
         className="focus:border-clay w-full rounded-full border border-stone-300 bg-white py-2 pr-4 pl-10 text-stone-800 transition-colors hover:border-stone-400 focus:outline-none"
       />
