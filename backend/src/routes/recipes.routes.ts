@@ -3,9 +3,12 @@ import {
   exportRecipe,
   getRecipe,
   getRecipes,
+  getRecipeVersion,
+  getRecipeVersions,
   importRecipe,
   importRecipeFromUrl,
   postRecipe,
+  postRevertRecipeVersion,
   putRecipe,
   removeRecipe,
   uploadRecipePhoto,
@@ -26,6 +29,17 @@ recipesRouter.get('/', asyncHandler(getRecipes));
 // router.use('/:id', …): `/import` and `/import-url` match that pattern too.
 recipesRouter.get('/:id', validateRecipeIdParam, asyncHandler(getRecipe));
 recipesRouter.get('/:id/export', validateRecipeIdParam, asyncHandler(exportRecipe));
+recipesRouter.get('/:id/versions', validateRecipeIdParam, asyncHandler(getRecipeVersions));
+recipesRouter.get(
+  '/:id/versions/:versionId',
+  validateRecipeIdParam,
+  asyncHandler(getRecipeVersion)
+);
+recipesRouter.post(
+  '/:id/versions/:versionId/revert',
+  validateRecipeIdParam,
+  asyncHandler(postRevertRecipeVersion)
+);
 recipesRouter.post('/', asyncHandler(postRecipe));
 recipesRouter.put('/:id', validateRecipeIdParam, asyncHandler(putRecipe));
 recipesRouter.delete('/:id', validateRecipeIdParam, asyncHandler(removeRecipe));

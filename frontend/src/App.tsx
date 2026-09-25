@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import RecipeListPage from './pages/RecipeListPage';
 import RecipeDetailPage from './pages/RecipeDetailPage';
 import RecipeFormPage from './pages/RecipeFormPage';
+import RecipeVersionsPage from './pages/RecipeVersionsPage';
 import ImportPage from './pages/ImportPage';
 import UrlImportPage from './pages/UrlImportPage';
 import PhotoImportPage from './pages/PhotoImportPage';
@@ -160,6 +161,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <RecipeFormPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/recipes/:id/versions"
+            element={
+              <ProtectedRoute>
+                <RecipeVersionsPage />
               </ProtectedRoute>
             }
           />

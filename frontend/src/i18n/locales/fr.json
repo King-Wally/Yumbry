@@ -149,7 +149,8 @@
       "calories": "Calories",
       "fat": "Lipides",
       "carbs": "Glucides",
-      "protein": "Protéines"
+      "protein": "Protéines",
+      "versionHistory": "Historique des versions"
     },
     "card": {
       "noPhoto": "Aucune photo"
@@ -157,6 +158,22 @@
     "hero": {
       "noPhotoYet": "Pas encore de photo"
     }
+  },
+  "recipeVersions": {
+    "title": "Historique des versions",
+    "back": "Retour à la recette",
+    "compareWith": "Comparer avec",
+    "selectedVersion": "Version sélectionnée",
+    "currentVersion": "Version actuelle",
+    "differences_one": "{{count}} différence surlignée",
+    "differences_other": "{{count}} différences surlignées",
+    "noDifferences": "Aucune différence",
+    "empty": "Pas encore de versions antérieures — une version est enregistrée à chaque modification de cette recette.",
+    "revert": "Restaurer cette version",
+    "reverting": "Restauration...",
+    "revertedToast": "Recette restaurée à la version sélectionnée",
+    "servings_one": "{{count}} portion",
+    "servings_other": "{{count}} portions"
   },
   "recipeForm": {
     "eyebrow": "Recette",
