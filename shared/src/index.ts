@@ -4,6 +4,7 @@ export * from './ai-json.js';
 export * from './ai-recipe-draft.js';
 export * from './ai-photo-import.js';
 export * from './ai-nutrition.js';
+export * from './ai-budget.js';
 export * from './ai-provider-error.js';
 export * from './recipe-dto.js';
 export * from './family-dto.js';

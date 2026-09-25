@@ -71,6 +71,15 @@
       "confirmPassword": "Confirm your password",
       "deleting": "Deleting...",
       "permanentlyDelete": "Permanently delete account"
+    },
+    "aiUsage": {
+      "title": "AI usage",
+      "description": "The AI assistant runs on a budget shared by everyone on this server. A day's share is added every day, and whatever goes unused carries over until the month ends.",
+      "yourAllowance": "Your allowance today",
+      "percentLeft": "{{percent}}% left",
+      "sharedBudget": "Shared budget",
+      "daysLeft": "About {{days}} days' worth left",
+      "refills": "Your allowance resets at {{time}}."
     }
   },
   "auth": {
@@ -354,5 +363,11 @@
     "title": "Page not found",
     "description": "The page you're looking for doesn't exist or may have been moved.",
     "backHome": "Back to home"
+  },
+  "aiQuota": {
+    "sharedExceeded": "The shared AI budget is used up for now. Please try again later.",
+    "sharedExceededAt": "The shared AI budget is used up for now. Try again after {{time}}.",
+    "userExceeded": "You've used up your AI allowance for today.",
+    "userExceededAt": "You've used up your AI allowance for today. Try again after {{time}}."
   }
 }

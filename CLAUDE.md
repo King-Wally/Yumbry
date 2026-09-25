@@ -125,7 +125,7 @@ family and supplies the id.
 
 `services/ai-provider.service.ts` talks to OpenRouter (`https://openrouter.ai/api/v1`) through
 the `openai` npm SDK client, since OpenRouter exposes an OpenAI-compatible chat-completions endpoint.
-`OPENROUTER_API_KEY` and the per-tier `AI_MODEL_*`/`AI_PROVIDER_*` vars are read from
+`OPENROUTER_API_KEY` and the per-tier `AI_MODEL_*` vars are read from
 `process.env` lazily, at call time inside `chatWithAi` — not at module import time — so the app
 still boots without them; a missing key throws an `AiProviderError` with kind `not_configured`
 (mapped to HTTP 503), meaning the AI assistant is simply unavailable rather than the whole app
@@ -140,19 +140,27 @@ use `small`, photo import uses `image` (must be vision-capable). `mode` comes fr
 (`AiChatMode` in `shared/src/recipe-dto.ts`, Zod-defaulted to `'improve'`) and never reaches the
 prompt.
 
-Each tier `<T>` reads `AI_MODEL_<T>` (defaults in `DEFAULT_MODELS`), optional
-`AI_MODEL_<T>_FALLBACK` (sent as OpenRouter's `models: [primary, fallback]` — OpenRouter does the
-retry, there is no retry loop of ours), and optional `AI_PROVIDER_<T>` / `AI_PROVIDER_<T>_FALLBACK`
-(sent as a strict pin, `provider: { order: [...], allow_fallbacks: false }`; a fallback provider
-without a primary is ignored with a warning). The pin also applies to the fallback model.
+Each tier `<T>` reads only `AI_MODEL_<T>` (defaults in `DEFAULT_MODELS`). No fallback model and no
+`provider` field are sent — OpenRouter's default provider routing (load balancing plus automatic
+provider fallback) applies, and there is no retry loop of ours.
 
 Exception: the `small` tier (nutrition) bypasses OpenRouter and calls Gemini's OpenAI-compatible
 endpoint (`https://generativelanguage.googleapis.com/v1beta/openai/`) with `GEMINI_API_KEY`
-(`TIER_BACKEND` in the service). It reads only `AI_MODEL_SMALL`, a Gemini model id with no
-`google/` prefix — no fallback model, provider pin or reasoning field. A missing `GEMINI_API_KEY`
+(`TIER_BACKEND` in the service). `AI_MODEL_SMALL` is a Gemini model id with no `google/` prefix,
+and no reasoning field is sent. A missing `GEMINI_API_KEY`
 makes only nutrition return `not_configured`; `/api/config` still keys on `OPENROUTER_API_KEY`.
 There is no per-user provider/API key configuration — one server-wide key serves every user via
 `POST /api/ai/chat`.
+
+Budget: every call is written to the `AiUsage` ledger (`services/ai-budget.service.ts`) —
+OpenRouter's `usage.cost` for paid tiers; attempt counts, including failed ones, for Gemini.
+`middleware/require-ai-budget.ts` enforces it on the route, not in `chatWithAi`, so it runs before
+multer and still applies in tests that mock `chatWithAi`. The OpenRouter pool is
+`AI_MONTHLY_BUDGET_USD × dayOfMonth / daysInMonth − spentThisMonth`, so unused days roll forward
+and it resets on the 1st (UTC). There is also a per-user UTC-day cap (`AI_USER_DAILY_BUDGET_USD`,
+where `0` turns it off). Gemini is capped at `GEMINI_DAILY_REQUEST_LIMIT` requests per Pacific-time
+day. Refusals are `429 { kind: 'quota_exceeded', scope: 'shared' | 'user', retryAt }`, and
+`GET /api/ai/status` returns the caller's `AiBudgetStatus`.
 
 ### Prisma
 

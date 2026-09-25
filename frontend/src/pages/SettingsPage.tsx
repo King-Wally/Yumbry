@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, FileBraces, Globe, Lock, TriangleAlert, Users } from 'lucide-react';
+import { ArrowLeft, FileBraces, Globe, Lock, Sparkles, TriangleAlert, Users } from 'lucide-react';
 import * as SwitchPrimitive from '@radix-ui/react-switch';
 import { leaveFamily, updateProfile } from '../api/client';
 import { authClient, refreshSession } from '../lib/auth-client';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { useAiStatus } from '../hooks/useAiStatus';
 import { useFamily } from '../hooks/useFamily';
 import { useInvalidateFamilyData } from '../hooks/useInvalidateFamilyData';
 import Card from '../components/Card';
@@ -13,9 +14,30 @@ import Dialog from '../components/Dialog';
 import { SUPPORTED_LOCALES, type SupportedLocale } from 'yumbry-shared';
 import { Link } from 'react-router-dom';
 import { LOCALE_LABELS } from '../i18n/localeLabels';
+import { formatRetryAt } from '../lib/format-retry-at';
+
+// The user's cap resets, and the shared pool gains a day's share, at every UTC midnight.
+function nextUtcMidnight(now = new Date()): string {
+  return new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)
+  ).toISOString();
+}
 
 export default function SettingsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { data: aiStatus } = useAiStatus();
+  const budget = aiStatus?.configured ? aiStatus.budget : undefined;
+  const userLeftPercent =
+    budget && budget.userDailyCapUsd !== null
+      ? Math.round(
+          Math.min(1, Math.max(0, 1 - budget.userSpentTodayUsd / budget.userDailyCapUsd)) * 100
+        )
+      : null;
+  const sharedDaysLeft = budget
+    ? new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 }).format(
+        Math.max(0, budget.availableUsd / budget.dailyAllowanceUsd)
+      )
+    : null;
   const queryClient = useQueryClient();
   const { user } = useCurrentUser();
 
@@ -284,6 +306,71 @@ export default function SettingsPage() {
                 {t('settings.family.leave')}
               </button>
             )}
+          </Card>
+        )}
+
+        {/* AI usage */}
+        {budget && (
+          <Card>
+            <Card.Header
+              icon={<Sparkles size={20} strokeWidth={2} />}
+              title={t('settings.aiUsage.title')}
+              description={t('settings.aiUsage.description')}
+            />
+
+            <div className="flex flex-col gap-4">
+              {userLeftPercent !== null && (
+                <div>
+                  <div className="mb-1.5 flex items-baseline justify-between text-sm">
+                    <span className="font-medium text-stone-700">
+                      {t('settings.aiUsage.yourAllowance')}
+                    </span>
+                    <span className="text-stone-500">
+                      {t('settings.aiUsage.percentLeft', { percent: userLeftPercent })}
+                    </span>
+                  </div>
+                  <div
+                    role="meter"
+                    aria-label={t('settings.aiUsage.yourAllowance')}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={userLeftPercent}
+                    className="h-2 overflow-hidden rounded-full bg-stone-200"
+                  >
+                    <div
+                      className="bg-clay h-full rounded-full transition-[width]"
+                      style={{ width: `${userLeftPercent}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-baseline justify-between text-sm">
+                <span className="font-medium text-stone-700">
+                  {t('settings.aiUsage.sharedBudget')}
+                </span>
+                <span className="text-stone-500">
+                  {t('settings.aiUsage.daysLeft', { days: sharedDaysLeft })}
+                </span>
+              </div>
+
+              {budget.allowed ? (
+                <p className="text-xs text-stone-500">
+                  {t('settings.aiUsage.refills', {
+                    time: formatRetryAt(nextUtcMidnight(), i18n.language),
+                  })}
+                </p>
+              ) : (
+                <p className="text-[13px] text-red-600">
+                  {t(
+                    budget.blockedBy === 'user'
+                      ? 'aiQuota.userExceededAt'
+                      : 'aiQuota.sharedExceededAt',
+                    { time: formatRetryAt(budget.retryAt ?? nextUtcMidnight(), i18n.language) }
+                  )}
+                </p>
+              )}
+            </div>
           </Card>
         )}
 

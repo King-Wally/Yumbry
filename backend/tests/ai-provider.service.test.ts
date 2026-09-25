@@ -2,6 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AI_ENVELOPE_JSON_SCHEMA } from 'yumbry-shared';
 import { chatWithAi } from '../src/services/ai-provider.service.js';
 
+const { recordAiUsage } = vi.hoisted(() => ({ recordAiUsage: vi.fn() }));
+
+// The usage ledger is a database write; these tests only look at what would be written.
+vi.mock('../src/services/ai-budget.service.js', () => ({ recordAiUsage }));
+
+const USER_ID = 'user-1';
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -15,8 +22,7 @@ describe('chatWithAi', () => {
       if (
         name === 'OPENROUTER_API_KEY' ||
         name === 'GEMINI_API_KEY' ||
-        name.startsWith('AI_MODEL_') ||
-        name.startsWith('AI_PROVIDER_')
+        name.startsWith('AI_MODEL_')
       ) {
         delete process.env[name];
       }
@@ -37,6 +43,7 @@ describe('chatWithAi', () => {
   }
 
   beforeEach(() => {
+    recordAiUsage.mockClear();
     clearAiEnv();
     process.env.OPENROUTER_API_KEY = 'test-openrouter-key';
     process.env.GEMINI_API_KEY = 'test-gemini-key';
@@ -51,7 +58,9 @@ describe('chatWithAi', () => {
   it('throws a not_configured AiProviderError when OPENROUTER_API_KEY is unset', async () => {
     delete process.env.OPENROUTER_API_KEY;
 
-    await expect(chatWithAi([{ role: 'user', content: 'hi' }], {})).rejects.toMatchObject({
+    await expect(
+      chatWithAi([{ role: 'user', content: 'hi' }], { userId: USER_ID })
+    ).rejects.toMatchObject({
       kind: 'not_configured',
     });
   });
@@ -66,7 +75,7 @@ describe('chatWithAi', () => {
         )
     );
 
-    const reply = await chatWithAi([{ role: 'user', content: 'hi' }], {});
+    const reply = await chatWithAi([{ role: 'user', content: 'hi' }], { userId: USER_ID });
 
     expect(reply).toBe('Here is a recipe.');
   });
@@ -77,7 +86,10 @@ describe('chatWithAi', () => {
       .mockResolvedValue(jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
     vi.stubGlobal('fetch', fetchMock);
 
-    await chatWithAi([{ role: 'user', content: 'hi' }], { jsonSchema: AI_ENVELOPE_JSON_SCHEMA });
+    await chatWithAi([{ role: 'user', content: 'hi' }], {
+      userId: USER_ID,
+      jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
+    });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
@@ -101,44 +113,29 @@ describe('chatWithAi', () => {
     async (tier, fallback) => {
       const fetchMock = okFetch();
 
-      await chatWithAi([{ role: 'user', content: 'hi' }], { tier });
+      await chatWithAi([{ role: 'user', content: 'hi' }], { userId: USER_ID, tier });
       expect(bodyOf(fetchMock, 0).model).toBe(fallback);
 
       process.env[`AI_MODEL_${tier.toUpperCase()}`] = `vendor/${tier}-model`;
-      await chatWithAi([{ role: 'user', content: 'hi' }], { tier });
+      await chatWithAi([{ role: 'user', content: 'hi' }], { userId: USER_ID, tier });
       expect(bodyOf(fetchMock, 1).model).toBe(`vendor/${tier}-model`);
     }
   );
 
-  it('sends no OpenRouter routing fields when none are configured', async () => {
+  it('leaves provider routing to OpenRouter’s defaults', async () => {
     const fetchMock = okFetch();
 
-    await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'big' });
+    await chatWithAi([{ role: 'user', content: 'hi' }], { userId: USER_ID, tier: 'big' });
 
     const body = bodyOf(fetchMock);
     expect(body.models).toBeUndefined();
     expect(body.provider).toBeUndefined();
   });
 
-  it('sends a fallback model as OpenRouter’s models array', async () => {
-    process.env.AI_MODEL_BIG = 'vendor/primary';
-    process.env.AI_MODEL_BIG_FALLBACK = 'vendor/backup';
-    const fetchMock = okFetch();
-
-    await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'big' });
-
-    expect(bodyOf(fetchMock)).toMatchObject({
-      model: 'vendor/primary',
-      models: ['vendor/primary', 'vendor/backup'],
-    });
-  });
-
   it('sends the small tier straight to Gemini, with none of OpenRouter’s routing fields', async () => {
-    process.env.AI_MODEL_SMALL_FALLBACK = 'vendor/backup';
-    process.env.AI_PROVIDER_SMALL = 'google-vertex';
     const fetchMock = okFetch();
 
-    await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'small' });
+    await chatWithAi([{ role: 'user', content: 'hi' }], { userId: USER_ID, tier: 'small' });
 
     expect(fetchMock).toHaveBeenCalledWith(
       'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
@@ -156,12 +153,12 @@ describe('chatWithAi', () => {
     const fetchMock = okFetch();
 
     await expect(
-      chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'small' })
+      chatWithAi([{ role: 'user', content: 'hi' }], { userId: USER_ID, tier: 'small' })
     ).rejects.toMatchObject({ kind: 'not_configured' });
     expect(fetchMock).not.toHaveBeenCalled();
 
     // The OpenRouter tiers are unaffected.
-    await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'medium' });
+    await chatWithAi([{ role: 'user', content: 'hi' }], { userId: USER_ID, tier: 'medium' });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -175,29 +172,12 @@ describe('chatWithAi', () => {
 
     await expect(
       chatWithAi([{ role: 'user', content: 'hi' }], {
+        userId: USER_ID,
         tier: 'small',
         jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
       })
     ).rejects.toMatchObject({ kind: 'bad_status' });
     expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  it('pins a tier strictly to its configured provider, then its fallback provider', async () => {
-    process.env.AI_PROVIDER_MEDIUM = 'google-vertex';
-    const fetchMock = okFetch();
-
-    await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'medium' });
-    expect(bodyOf(fetchMock, 0).provider).toEqual({
-      order: ['google-vertex'],
-      allow_fallbacks: false,
-    });
-
-    process.env.AI_PROVIDER_MEDIUM_FALLBACK = 'google-ai-studio';
-    await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'medium' });
-    expect(bodyOf(fetchMock, 1).provider).toEqual({
-      order: ['google-vertex', 'google-ai-studio'],
-      allow_fallbacks: false,
-    });
   });
 
   it.each([
@@ -208,29 +188,9 @@ describe('chatWithAi', () => {
   ] as const)('sends the %s tier’s reasoning effort', async (tier, reasoning) => {
     const fetchMock = okFetch();
 
-    await chatWithAi([{ role: 'user', content: 'hi' }], { tier });
+    await chatWithAi([{ role: 'user', content: 'hi' }], { userId: USER_ID, tier });
 
     expect(bodyOf(fetchMock).reasoning).toEqual(reasoning);
-  });
-
-  it('only applies a tier’s provider pin to that tier', async () => {
-    process.env.AI_PROVIDER_IMAGE = 'google-vertex';
-    const fetchMock = okFetch();
-
-    await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'medium' });
-
-    expect(bodyOf(fetchMock).provider).toBeUndefined();
-  });
-
-  it('ignores a fallback provider that has no primary provider, with a warning', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    process.env.AI_PROVIDER_MEDIUM_FALLBACK = 'google-ai-studio';
-    const fetchMock = okFetch();
-
-    await chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'medium' });
-
-    expect(bodyOf(fetchMock).provider).toBeUndefined();
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('AI_PROVIDER_MEDIUM_FALLBACK'));
   });
 
   it('does not retry on another model itself when the provider fails', async () => {
@@ -240,7 +200,7 @@ describe('chatWithAi', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(
-      chatWithAi([{ role: 'user', content: 'hi' }], { tier: 'big' })
+      chatWithAi([{ role: 'user', content: 'hi' }], { userId: USER_ID, tier: 'big' })
     ).rejects.toMatchObject({ kind: 'bad_status' });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -252,7 +212,7 @@ describe('chatWithAi', () => {
       .mockResolvedValue(jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
     vi.stubGlobal('fetch', fetchMock);
 
-    await chatWithAi([{ role: 'user', content: 'hi' }], {});
+    await chatWithAi([{ role: 'user', content: 'hi' }], { userId: USER_ID });
 
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).response_format).toBeUndefined();
   });
@@ -267,6 +227,7 @@ describe('chatWithAi', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const reply = await chatWithAi([{ role: 'user', content: 'hi' }], {
+      userId: USER_ID,
       jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
     });
 
@@ -285,7 +246,10 @@ describe('chatWithAi', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(
-      chatWithAi([{ role: 'user', content: 'hi' }], { jsonSchema: AI_ENVELOPE_JSON_SCHEMA })
+      chatWithAi([{ role: 'user', content: 'hi' }], {
+        userId: USER_ID,
+        jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
+      })
     ).rejects.toMatchObject({ kind: 'bad_status' });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -299,7 +263,10 @@ describe('chatWithAi', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(
-      chatWithAi([{ role: 'user', content: 'hi' }], { jsonSchema: AI_ENVELOPE_JSON_SCHEMA })
+      chatWithAi([{ role: 'user', content: 'hi' }], {
+        userId: USER_ID,
+        jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
+      })
     ).rejects.toMatchObject({ kind: 'bad_status', message: expect.stringContaining('bad key') });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -308,7 +275,9 @@ describe('chatWithAi', () => {
   it('throws an unreachable AiProviderError when the connection fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('fetch failed')));
 
-    await expect(chatWithAi([{ role: 'user', content: 'hi' }], {})).rejects.toMatchObject({
+    await expect(
+      chatWithAi([{ role: 'user', content: 'hi' }], { userId: USER_ID })
+    ).rejects.toMatchObject({
       kind: 'unreachable',
     });
   });
@@ -319,7 +288,9 @@ describe('chatWithAi', () => {
       vi.fn().mockResolvedValue(jsonResponse({ error: { message: 'bad key' } }, 401))
     );
 
-    await expect(chatWithAi([{ role: 'user', content: 'hi' }], {})).rejects.toMatchObject({
+    await expect(
+      chatWithAi([{ role: 'user', content: 'hi' }], { userId: USER_ID })
+    ).rejects.toMatchObject({
       kind: 'bad_status',
       message: expect.stringContaining('bad key'),
     });
@@ -328,7 +299,9 @@ describe('chatWithAi', () => {
   it('throws a malformed_response AiProviderError when message.content is missing', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ choices: [{ message: {} }] })));
 
-    await expect(chatWithAi([{ role: 'user', content: 'hi' }], {})).rejects.toMatchObject({
+    await expect(
+      chatWithAi([{ role: 'user', content: 'hi' }], { userId: USER_ID })
+    ).rejects.toMatchObject({
       kind: 'malformed_response',
     });
   });
@@ -340,6 +313,7 @@ describe('chatWithAi', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     await chatWithAi([{ role: 'user', content: 'hi' }], {
+      userId: USER_ID,
       sampling: { temperature: 0.6, topP: 0.95 },
     });
 
@@ -360,6 +334,7 @@ describe('chatWithAi', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const reply = await chatWithAi([{ role: 'user', content: 'hi' }], {
+      userId: USER_ID,
       jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
       sampling: { temperature: 0.6, topP: 0.95 },
     });
@@ -373,5 +348,97 @@ describe('chatWithAi', () => {
     const thirdBody = JSON.parse(fetchMock.mock.calls[2][1].body);
     expect(thirdBody.response_format).toEqual({ type: 'json_object' });
     expect(thirdBody.temperature).toBeUndefined();
+  });
+  describe('usage ledger', () => {
+    it('records OpenRouter’s reported cost, tokens and serving model against the user', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(
+          jsonResponse({
+            model: 'vendor/backup',
+            choices: [{ message: { content: 'ok' } }],
+            usage: { prompt_tokens: 120, completion_tokens: 40, total_tokens: 160, cost: 0.00042 },
+          })
+        )
+      );
+
+      await chatWithAi([{ role: 'user', content: 'hi' }], { userId: USER_ID, tier: 'big' });
+
+      expect(recordAiUsage).toHaveBeenCalledWith({
+        userId: USER_ID,
+        backend: 'openrouter',
+        tier: 'big',
+        model: 'vendor/backup',
+        promptTokens: 120,
+        completionTokens: 40,
+        costUsd: 0.00042,
+        requestCount: 1,
+      });
+    });
+
+    it('records $0 with a warning when OpenRouter reports no cost', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      okFetch();
+
+      await chatWithAi([{ role: 'user', content: 'hi' }], { userId: USER_ID });
+
+      expect(recordAiUsage).toHaveBeenCalledWith(expect.objectContaining({ costUsd: 0 }));
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('usage.cost'));
+    });
+
+    it('counts every downgrade retry as a request', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      vi.stubGlobal(
+        'fetch',
+        vi
+          .fn()
+          .mockResolvedValueOnce(jsonResponse({ error: { message: 'unsupported' } }, 400))
+          .mockResolvedValueOnce(jsonResponse({ choices: [{ message: { content: '{}' } }] }))
+      );
+
+      await chatWithAi([{ role: 'user', content: 'hi' }], {
+        userId: USER_ID,
+        tier: 'small',
+        jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
+      });
+
+      expect(recordAiUsage).toHaveBeenCalledWith(
+        expect.objectContaining({ backend: 'gemini', costUsd: 0, requestCount: 2 })
+      );
+    });
+
+    it('records a failed Gemini call, since it still spent a request of the daily quota', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(jsonResponse({ error: { message: 'server exploded' } }, 500))
+      );
+
+      await expect(
+        chatWithAi([{ role: 'user', content: 'hi' }], { userId: USER_ID, tier: 'small' })
+      ).rejects.toMatchObject({ kind: 'bad_status' });
+
+      expect(recordAiUsage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          backend: 'gemini',
+          model: 'gemini-3.5-flash-lite',
+          requestCount: 1,
+        })
+      );
+    });
+
+    it('records nothing for a failed OpenRouter call, which is not billed', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(jsonResponse({ error: { message: 'server exploded' } }, 500))
+      );
+
+      await expect(
+        chatWithAi([{ role: 'user', content: 'hi' }], { userId: USER_ID })
+      ).rejects.toMatchObject({ kind: 'bad_status' });
+
+      expect(recordAiUsage).not.toHaveBeenCalled();
+    });
   });
 });

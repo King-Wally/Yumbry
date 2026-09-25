@@ -9,6 +9,7 @@ const STATUS_BY_KIND: Record<AiProviderErrorKind, number> = {
   bad_status: 503,
   malformed_response: 503,
   not_configured: 503,
+  quota_exceeded: 429,
 };
 
 /** Turns an AiProviderError into the right HTTP response; rethrows anything

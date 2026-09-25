@@ -9,19 +9,33 @@ import type {
   RecipeSummary,
   Tag,
 } from '../types';
-import type { Family, SmallVolumeStyle, SupportedLocale, UnitSystem } from 'yumbry-shared';
+import type {
+  AiQuotaScope,
+  AiStatusResponse,
+  Family,
+  SmallVolumeStyle,
+  SupportedLocale,
+  UnitSystem,
+} from 'yumbry-shared';
 
 interface ApiErrorBody {
   error?: string;
   kind?: string;
+  // Only on `quota_exceeded`: which budget ran out, and when a request will next be accepted.
+  scope?: AiQuotaScope;
+  retryAt?: string | null;
 }
 
 export class ApiError extends Error {
   readonly kind?: string;
+  readonly scope?: AiQuotaScope;
+  readonly retryAt?: string | null;
 
-  constructor(message: string, kind?: string) {
+  constructor(message: string, kind?: string, quota?: Pick<ApiErrorBody, 'scope' | 'retryAt'>) {
     super(message);
     this.kind = kind;
+    this.scope = quota?.scope;
+    this.retryAt = quota?.retryAt;
   }
 }
 
@@ -44,7 +58,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       !body.error && [502, 503, 504].includes(res.status)
         ? 'The server is temporarily unavailable. Please try again in a moment.'
         : body.error || `Request failed with status ${res.status}`;
-    throw new ApiError(message, kind);
+    throw new ApiError(message, kind, { scope: body.scope, retryAt: body.retryAt });
   }
 
   if (res.status === 204) return null as T;
@@ -128,7 +142,7 @@ export function getCategories() {
 }
 
 export function getAiStatus() {
-  return request<{ configured: boolean }>('/ai/status');
+  return request<AiStatusResponse>('/ai/status');
 }
 
 export function chatAboutRecipe(data: AiChatTurnRequest) {

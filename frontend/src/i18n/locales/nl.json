@@ -71,6 +71,15 @@
       "confirmPassword": "Bevestig je wachtwoord",
       "deleting": "Verwijderen...",
       "permanentlyDelete": "Account permanent verwijderen"
+    },
+    "aiUsage": {
+      "title": "AI-gebruik",
+      "description": "De AI-assistent werkt met een budget dat iedereen op deze server deelt. Elke dag komt er een dagdeel bij, en wat niet gebruikt wordt schuift door tot het einde van de maand.",
+      "yourAllowance": "Jouw tegoed vandaag",
+      "percentLeft": "Nog {{percent}}%",
+      "sharedBudget": "Gedeeld budget",
+      "daysLeft": "Nog ongeveer {{days}} dagen",
+      "refills": "Je tegoed wordt aangevuld om {{time}}."
     }
   },
   "auth": {
@@ -354,5 +363,11 @@
     "title": "Pagina niet gevonden",
     "description": "De pagina die je zoekt bestaat niet of is mogelijk verplaatst.",
     "backHome": "Terug naar home"
+  },
+  "aiQuota": {
+    "sharedExceeded": "Het gedeelde AI-budget is voorlopig op. Probeer het later opnieuw.",
+    "sharedExceededAt": "Het gedeelde AI-budget is voorlopig op. Probeer het opnieuw na {{time}}.",
+    "userExceeded": "Je AI-tegoed voor vandaag is op.",
+    "userExceededAt": "Je AI-tegoed voor vandaag is op. Probeer het opnieuw na {{time}}."
   }
 }

@@ -1,5 +1,8 @@
 import OpenAI, { APIConnectionError, APIError } from 'openai';
-import type { ChatCompletionCreateParamsNonStreaming } from 'openai/resources/chat/completions';
+import type {
+  ChatCompletion as OpenAIChatCompletion,
+  ChatCompletionCreateParamsNonStreaming,
+} from 'openai/resources/chat/completions';
 import {
   AiProviderError,
   badStatusMessage,
@@ -11,6 +14,7 @@ import {
   type AiProviderErrorKind,
   type AiSamplingParams,
 } from 'yumbry-shared';
+import { recordAiUsage } from './ai-budget.service.js';
 
 export type { AiChatMessage, AiProviderErrorKind, AiSamplingParams };
 export { AiProviderError };
@@ -57,57 +61,23 @@ const REASONING_EFFORT: Partial<Record<AiModelTier, ReasoningEffort>> = {
 interface TierConfig {
   backend: AiBackend;
   model: string;
-  fallbackModel?: string;
-  /** OpenRouter provider slugs in priority order; empty lets OpenRouter route freely. */
-  providers: string[];
   reasoningEffort?: ReasoningEffort;
 }
 
 // Read lazily, like the API key, so a changed .env takes effect without touching module state.
-// Env names are AI_MODEL_<TIER>, AI_MODEL_<TIER>_FALLBACK, AI_PROVIDER_<TIER> and
-// AI_PROVIDER_<TIER>_FALLBACK. The Gemini tier reads only AI_MODEL_<TIER>: Gemini has no
-// OpenRouter-style fallback models or provider pinning.
+// Each tier reads only AI_MODEL_<TIER>.
 function resolveTierConfig(tier: AiModelTier): TierConfig {
-  const suffix = tier.toUpperCase();
-  const env = (name: string) => process.env[name]?.trim() || undefined;
-  const backend = TIER_BACKEND[tier];
-  const model = env(`AI_MODEL_${suffix}`) ?? DEFAULT_MODELS[tier];
-  const reasoningEffort = REASONING_EFFORT[tier];
-
-  if (backend === 'gemini') return { backend, model, providers: [], reasoningEffort };
-
-  const provider = env(`AI_PROVIDER_${suffix}`);
-  const fallbackProvider = env(`AI_PROVIDER_${suffix}_FALLBACK`);
-  // A fallback with no primary is almost certainly a typo in the config, and silently promoting it
-  // to primary would hide that.
-  if (fallbackProvider && !provider) {
-    console.warn(
-      `[ai-provider] AI_PROVIDER_${suffix}_FALLBACK is set without AI_PROVIDER_${suffix}; ignoring it`
-    );
-  }
-
-  return {
-    backend,
-    model,
-    fallbackModel: env(`AI_MODEL_${suffix}_FALLBACK`),
-    providers: provider ? [provider, ...(fallbackProvider ? [fallbackProvider] : [])] : [],
-    reasoningEffort,
-  };
+  const model = process.env[`AI_MODEL_${tier.toUpperCase()}`]?.trim() || DEFAULT_MODELS[tier];
+  return { backend: TIER_BACKEND[tier], model, reasoningEffort: REASONING_EFFORT[tier] };
 }
 
-// OpenRouter extensions to the chat-completions body. `models` makes OpenRouter itself retry on the
-// fallback model when the primary errors (rate limit, downtime, moderation), so there is no retry
-// loop of our own. The provider list is a strict pin: `allow_fallbacks: false` means only the listed
-// providers are ever used, tried in order — which also applies to the fallback model. `reasoning`
-// is OpenRouter's unified reasoning control; models without reasoning support ignore it.
+// No `provider` field is sent, so OpenRouter applies its default provider routing (price-weighted
+// load balancing with automatic fallback to other providers). `reasoning` is OpenRouter's unified
+// reasoning control; models without reasoning support ignore it.
 function routingBody(config: TierConfig): Record<string, unknown> {
   if (config.backend === 'gemini') return { model: config.model };
   return {
     model: config.model,
-    ...(config.fallbackModel ? { models: [config.model, config.fallbackModel] } : {}),
-    ...(config.providers.length
-      ? { provider: { order: config.providers, allow_fallbacks: false } }
-      : {}),
     ...(config.reasoningEffort ? { reasoning: { effort: config.reasoningEffort } } : {}),
   };
 }
@@ -197,51 +167,61 @@ function warnDowngrade(from: string, to: string, err: unknown): void {
 }
 
 type ChatOptions = {
+  /** Who the call is billed to in the usage ledger that the AI budget is enforced from. */
+  userId: string;
   jsonSchema?: AiJsonSchemaFormat;
   sampling?: AiSamplingParams;
 };
 
+// OpenRouter adds `cost` to the standard usage block.
+type ChatCompletion = OpenAIChatCompletion & { usage?: { cost?: number } };
+
+// OpenRouter reports what it charged as `usage.cost`, in credits (1 credit = 1 USD), on every
+// response. Gemini's free tier costs nothing, but each of its requests — failed ones and downgrade
+// retries included — spends one of the day's quota, so a Gemini call is recorded even when it fails.
+async function recordUsage(
+  config: TierConfig,
+  tier: AiModelTier,
+  userId: string,
+  requestCount: number,
+  response: ChatCompletion | undefined
+): Promise<void> {
+  if (!response && config.backend !== 'gemini') return;
+  let costUsd = 0;
+  if (config.backend === 'openrouter') {
+    const cost = response?.usage?.cost;
+    if (typeof cost === 'number') costUsd = cost;
+    else console.warn('[ai-provider] OpenRouter response carried no usage.cost; recording $0');
+  }
+  await recordAiUsage({
+    userId,
+    backend: config.backend,
+    tier,
+    model: response?.model || config.model,
+    promptTokens: response?.usage?.prompt_tokens,
+    completionTokens: response?.usage?.completion_tokens,
+    costUsd,
+    requestCount,
+  });
+}
+
 async function runCompletion(
   config: TierConfig,
+  tier: AiModelTier,
   messages: AiChatMessage[],
   options: ChatOptions
 ): Promise<string> {
   const client = createClient(config.backend, requireApiKey(config.backend));
   const fail = (err: unknown) => toAiProviderError(err, config.backend);
 
-  const create = (responseFormat: ChatResponseFormat | undefined, withSampling: boolean) =>
-    client.chat.completions.create({
-      ...routingBody(config),
-      messages,
-      ...(responseFormat ? { response_format: responseFormat } : {}),
-      ...(withSampling ? samplingBody(options.sampling) : {}),
-    } as ChatCompletionCreateParamsNonStreaming);
-
-  const schemaFormat: ChatResponseFormat | undefined = options.jsonSchema
-    ? { type: 'json_schema', json_schema: options.jsonSchema }
-    : undefined;
-
-  let response;
+  let requestCount = 0;
+  let response: ChatCompletion | undefined;
   try {
-    response = await create(schemaFormat, true);
-  } catch (err) {
-    if (!options.jsonSchema || !rejectsRequestShape(err)) throw fail(err);
-    // A 400/422 on the schema request means the endpoint refused the request shape rather than
-    // the model failing, so it's safe to retry once with less asked of it. Sampling params are
-    // carried into this first retry since a schema-only endpoint often still accepts them; if
-    // that retry itself 400s, drop sampling too on the last attempt.
-    warnDowngrade('json_schema', 'json_object', err);
-    try {
-      response = await create({ type: 'json_object' }, true);
-    } catch (retryErr) {
-      if (!rejectsRequestShape(retryErr)) throw fail(retryErr);
-      warnDowngrade('json_object with sampling', 'json_object alone', retryErr);
-      try {
-        response = await create({ type: 'json_object' }, false);
-      } catch (finalErr) {
-        throw fail(finalErr);
-      }
-    }
+    response = await requestCompletion(client, config, messages, options, fail, () => {
+      requestCount++;
+    });
+  } finally {
+    await recordUsage(config, tier, options.userId, requestCount, response);
   }
 
   const content = response.choices[0]?.message?.content;
@@ -251,9 +231,55 @@ async function runCompletion(
   return content;
 }
 
+async function requestCompletion(
+  client: OpenAI,
+  config: TierConfig,
+  messages: AiChatMessage[],
+  options: ChatOptions,
+  fail: (err: unknown) => AiProviderError,
+  onAttempt: () => void
+): Promise<ChatCompletion> {
+  const create = (responseFormat: ChatResponseFormat | undefined, withSampling: boolean) => {
+    onAttempt();
+    return client.chat.completions.create({
+      ...routingBody(config),
+      messages,
+      ...(responseFormat ? { response_format: responseFormat } : {}),
+      ...(withSampling ? samplingBody(options.sampling) : {}),
+    } as ChatCompletionCreateParamsNonStreaming);
+  };
+
+  const schemaFormat: ChatResponseFormat | undefined = options.jsonSchema
+    ? { type: 'json_schema', json_schema: options.jsonSchema }
+    : undefined;
+
+  try {
+    return await create(schemaFormat, true);
+  } catch (err) {
+    if (!options.jsonSchema || !rejectsRequestShape(err)) throw fail(err);
+    // A 400/422 on the schema request means the endpoint refused the request shape rather than
+    // the model failing, so it's safe to retry once with less asked of it. Sampling params are
+    // carried into this first retry since a schema-only endpoint often still accepts them; if
+    // that retry itself 400s, drop sampling too on the last attempt.
+    warnDowngrade('json_schema', 'json_object', err);
+    try {
+      return await create({ type: 'json_object' }, true);
+    } catch (retryErr) {
+      if (!rejectsRequestShape(retryErr)) throw fail(retryErr);
+      warnDowngrade('json_object with sampling', 'json_object alone', retryErr);
+      try {
+        return await create({ type: 'json_object' }, false);
+      } catch (finalErr) {
+        throw fail(finalErr);
+      }
+    }
+  }
+}
+
 export async function chatWithAi(
   messages: AiChatMessage[],
   options: ChatOptions & { tier?: AiModelTier }
 ): Promise<string> {
-  return runCompletion(resolveTierConfig(options.tier ?? 'medium'), messages, options);
+  const tier = options.tier ?? 'medium';
+  return runCompletion(resolveTierConfig(tier), tier, messages, options);
 }

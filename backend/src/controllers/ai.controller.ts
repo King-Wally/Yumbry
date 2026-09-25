@@ -17,6 +17,7 @@ import {
   parseChatEnvelope,
   parseNutritionEstimate,
   RECIPE_SAMPLING,
+  type AiStatusResponse,
   type SmallVolumeStyle,
   type SupportedLocale,
   type UnitSystem,
@@ -25,6 +26,7 @@ import { AiChatTurnRequestSchema } from '../schemas/ai-chat.schema.js';
 import { prepareImageForModel, UnreadableImageError } from '../services/image-prep.service.js';
 import { AiNutritionRequestSchema } from '../schemas/ai-nutrition.schema.js';
 import { sendAiProviderError } from '../utils/ai-provider-error-response.js';
+import { getOpenRouterBudget } from '../services/ai-budget.service.js';
 
 function isEnvelopeParseError(err: unknown): err is Error {
   return err instanceof Error && err.message.startsWith('The AI response');
@@ -49,9 +51,14 @@ function readerPreferences(req: Request): ReaderPreferences {
 }
 
 // Cheap, no-network check the frontend polls to decide whether to show AI entry points at all,
-// rather than only discovering the server has no key configured after a chat attempt 503s.
-export async function getAiStatus(_req: Request, res: Response) {
-  res.json({ configured: Boolean(process.env.OPENROUTER_API_KEY) });
+// rather than only discovering the server has no key configured after a chat attempt 503s. Also
+// carries the caller's view of the AI budget, for the Settings page's usage meter.
+export async function getAiStatus(req: Request, res: Response) {
+  const response: AiStatusResponse = {
+    configured: Boolean(process.env.OPENROUTER_API_KEY),
+    budget: await getOpenRouterBudget(req.userId!),
+  };
+  res.json(response);
 }
 
 export async function postAiChat(req: Request, res: Response) {
@@ -69,6 +76,7 @@ export async function postAiChat(req: Request, res: Response) {
     const tier = body.mode === 'create' && body.messages.length === 1 ? 'big' : 'medium';
 
     const raw = await chatWithAi(buildChatMessages(body.messages, body.current_draft, locale), {
+      userId: req.userId!,
       jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
       sampling: RECIPE_SAMPLING,
       tier,
@@ -107,6 +115,7 @@ export async function postAiPhotoImport(req: Request, res: Response) {
     // Its own tier: reading handwriting off a photo needs a vision-capable model, and is the hardest
     // thing the app asks of one — unlike a chat turn there is no draft in hand to fall back on.
     const raw = await chatWithAi(buildPhotoImportMessages(dataUrl, locale), {
+      userId: req.userId!,
       jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
       sampling: RECIPE_SAMPLING,
       tier: 'image',
@@ -156,6 +165,7 @@ export async function postAiNutrition(req: Request, res: Response) {
     const body = AiNutritionRequestSchema.parse(req.body);
 
     const raw = await chatWithAi(buildNutritionMessages(body), {
+      userId: req.userId!,
       jsonSchema: AI_NUTRITION_JSON_SCHEMA,
       sampling: NUTRITION_SAMPLING,
       // Always the cheap tier: this measures a recipe already in hand rather than inventing one,

@@ -33,6 +33,13 @@ Inspect uploaded photos via `docker compose exec app ls /app/uploads` (there's
 no host filesystem path for them in the Docker deployment — see Development
 below for the separate local-dev location).
 
+The AI assistant (optional, via `OPENROUTER_API_KEY`) spends from one server-wide
+budget, $1 a month by default. A day's share is added every day, unused budget
+carries over until the month resets, and each user also has a daily cap. Every
+user can see what's left on the Settings page. See the `AI_MONTHLY_BUDGET_USD`
+block in `.env.example`, and set the same limit on the OpenRouter key itself as
+a backstop.
+
 ## Importing a recipe
 
 Most recipe blogs embed a `<script type="application/ld+json">` tag containing

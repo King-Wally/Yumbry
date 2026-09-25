@@ -71,6 +71,15 @@
       "confirmPassword": "Confirmez votre mot de passe",
       "deleting": "Suppression...",
       "permanentlyDelete": "Supprimer définitivement le compte"
+    },
+    "aiUsage": {
+      "title": "Utilisation de l'IA",
+      "description": "L'assistant IA fonctionne avec un budget partagé par tous les utilisateurs de ce serveur. Une part est ajoutée chaque jour, et ce qui n'est pas utilisé est reporté jusqu'à la fin du mois.",
+      "yourAllowance": "Votre quota aujourd'hui",
+      "percentLeft": "{{percent}} % restant",
+      "sharedBudget": "Budget partagé",
+      "daysLeft": "Environ {{days}} jours restants",
+      "refills": "Votre quota se renouvelle à {{time}}."
     }
   },
   "auth": {
@@ -354,5 +363,11 @@
     "title": "Page introuvable",
     "description": "La page que vous recherchez n'existe pas ou a peut-être été déplacée.",
     "backHome": "Retour à l'accueil"
+  },
+  "aiQuota": {
+    "sharedExceeded": "Le budget IA partagé est épuisé pour le moment. Réessayez plus tard.",
+    "sharedExceededAt": "Le budget IA partagé est épuisé pour le moment. Réessayez après {{time}}.",
+    "userExceeded": "Vous avez épuisé votre quota IA pour aujourd'hui.",
+    "userExceededAt": "Vous avez épuisé votre quota IA pour aujourd'hui. Réessayez après {{time}}."
   }
 }

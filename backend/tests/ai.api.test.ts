@@ -21,6 +21,7 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
   let app: Express;
   let pool: pg.Pool;
   let agent: Awaited<ReturnType<typeof registerTestUser>>['agent'];
+  let userId: string;
   let AiProviderError: typeof import('../src/services/ai-provider.service.js').AiProviderError;
 
   beforeAll(async () => {
@@ -31,7 +32,7 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
 
     ({ app } = await import('../src/app.js'));
     ({ AiProviderError } = await import('../src/services/ai-provider.service.js'));
-    ({ agent } = await registerTestUser(app));
+    ({ agent, userId } = await registerTestUser(app));
   });
 
   afterAll(async () => {
@@ -40,7 +41,7 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
 
   beforeEach(async () => {
     await pool.query(
-      'TRUNCATE recipes, ingredients, instructions, tags, recipe_tags, categories RESTART IDENTITY CASCADE'
+      'TRUNCATE recipes, ingredients, instructions, tags, recipe_tags, categories, ai_usage RESTART IDENTITY CASCADE'
     );
   });
 
@@ -60,14 +61,14 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
       process.env.OPENROUTER_API_KEY = 'test-key';
       const res = await agent.get('/api/ai/status');
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ configured: true });
+      expect(res.body).toMatchObject({ configured: true, budget: { allowed: true } });
     });
 
     it('reports configured: false when OPENROUTER_API_KEY is unset', async () => {
       delete process.env.OPENROUTER_API_KEY;
       const res = await agent.get('/api/ai/status');
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ configured: false });
+      expect(res.body.configured).toBe(false);
     });
   });
 
@@ -679,6 +680,120 @@ describe.skipIf(!TEST_DATABASE_URL)('AI API', () => {
     it('rejects unauthenticated requests with 401', async () => {
       const res = await request(app).post('/api/ai/nutrition').send(body);
       expect(res.status).toBe(401);
+    });
+  });
+
+  describe('AI budget', () => {
+    const BUDGET_ENV = [
+      'AI_MONTHLY_BUDGET_USD',
+      'AI_USER_DAILY_BUDGET_USD',
+      'GEMINI_DAILY_REQUEST_LIMIT',
+    ] as const;
+    const chatBody = { messages: [{ role: 'user', content: 'hi' }], current_draft: null };
+
+    function seedUsage(backend: 'openrouter' | 'gemini', costUsd: number, requestCount = 1) {
+      return pool.query(
+        `INSERT INTO ai_usage (user_id, backend, tier, model, cost_usd, request_count)
+         VALUES ($1, $2, 'medium', 'test/model', $3, $4)`,
+        [userId, backend, costUsd, requestCount]
+      );
+    }
+
+    afterEach(() => {
+      for (const name of BUDGET_ENV) delete process.env[name];
+    });
+
+    it('refuses chat with 429 once the shared monthly pool is spent', async () => {
+      await seedUsage('openrouter', 5);
+
+      const res = await agent.post('/api/ai/chat').send(chatBody);
+
+      expect(res.status).toBe(429);
+      expect(res.body).toMatchObject({ kind: 'quota_exceeded', scope: 'shared' });
+      expect(res.body.retryAt).toEqual(expect.any(String));
+      expect(chatWithAi).not.toHaveBeenCalled();
+    });
+
+    it('refuses chat once the user’s own daily cap is spent, while the pool still has budget', async () => {
+      process.env.AI_MONTHLY_BUDGET_USD = '100';
+      process.env.AI_USER_DAILY_BUDGET_USD = '0.01';
+      await seedUsage('openrouter', 0.02);
+
+      const res = await agent.post('/api/ai/chat').send(chatBody);
+
+      expect(res.status).toBe(429);
+      expect(res.body).toMatchObject({ kind: 'quota_exceeded', scope: 'user' });
+    });
+
+    it('does not count another user’s spend against this user’s daily cap', async () => {
+      process.env.AI_MONTHLY_BUDGET_USD = '100';
+      process.env.AI_USER_DAILY_BUDGET_USD = '0.01';
+      await pool.query(
+        `INSERT INTO ai_usage (user_id, backend, tier, model, cost_usd) VALUES (NULL, 'openrouter', 'medium', 'm', 0.5)`
+      );
+      chatWithAi.mockResolvedValue(JSON.stringify({ reply: 'ok', recipe: null }));
+
+      const res = await agent.post('/api/ai/chat').send(chatBody);
+
+      expect(res.status).toBe(200);
+    });
+
+    it('refuses a photo import before the upload is even read', async () => {
+      await seedUsage('openrouter', 5);
+
+      // No photo attached: without the budget check running first this would be a 400. Its own IP,
+      // since the earlier photo tests have already used up photoImportRateLimiter's allowance.
+      const res = await agent.post('/api/ai/photo-import').set('X-Forwarded-For', '10.98.0.1');
+
+      expect(res.status).toBe(429);
+      expect(res.body.kind).toBe('quota_exceeded');
+    });
+
+    it('refuses nutrition once the Gemini daily request quota is spent', async () => {
+      process.env.GEMINI_DAILY_REQUEST_LIMIT = '3';
+      await seedUsage('gemini', 0, 3);
+
+      const res = await agent.post('/api/ai/nutrition').send({
+        title: 'Pasta',
+        servings: 2,
+        ingredients: ['200 g spaghetti'],
+        instructions: ['Boil.'],
+      });
+
+      expect(res.status).toBe(429);
+      expect(res.body).toMatchObject({ kind: 'quota_exceeded', scope: 'shared' });
+    });
+
+    it('leaves nutrition alone when only the OpenRouter pool is spent', async () => {
+      await seedUsage('openrouter', 5);
+      chatWithAi.mockResolvedValue(
+        JSON.stringify({ calories: 1, fat_content: 1, carbohydrate_content: 1, protein_content: 1 })
+      );
+
+      const res = await agent.post('/api/ai/nutrition').send({
+        title: 'Pasta',
+        servings: 2,
+        ingredients: ['200 g spaghetti'],
+        instructions: ['Boil.'],
+      });
+
+      expect(res.status).toBe(200);
+    });
+
+    it('reports the caller’s budget on /ai/status', async () => {
+      process.env.AI_MONTHLY_BUDGET_USD = '100';
+      process.env.AI_USER_DAILY_BUDGET_USD = '1';
+      await seedUsage('openrouter', 0.25);
+
+      const res = await agent.get('/api/ai/status');
+
+      expect(res.body.budget).toMatchObject({
+        monthlyBudgetUsd: 100,
+        userDailyCapUsd: 1,
+        userSpentTodayUsd: 0.25,
+        allowed: true,
+        blockedBy: null,
+      });
     });
   });
 });

@@ -49,6 +49,7 @@ model User {
   authoredRecipes Recipe[]  @relation("RecipeAuthor")
   sessions        Session[]
   accounts        Account[]
+  aiUsage         AiUsage[]
 
   @@index([familyId], map: "idx_users_family_id")
   @@map("users")
@@ -242,4 +243,33 @@ model RecipeImportAttempt {
   @@index([errorKind], map: "idx_recipe_import_attempts_error_kind")
   @@index([createdAt], map: "idx_recipe_import_attempts_created_at")
   @@map("recipe_import_attempts")
+}
+
+/// One row per completed AI call, the ledger the monthly OpenRouter budget and
+/// the daily Gemini request quota are both enforced from. userId is SetNull on
+/// delete, not Cascade: deleting an account must not refund what it already
+/// spent from the month's shared pool. backend is 'openrouter' | 'gemini' and
+/// tier mirrors AiModelTier, both plain strings like the rest of this schema.
+model AiUsage {
+  id               Int      @id @default(autoincrement())
+  userId           String?  @map("user_id")
+  backend          String
+  tier             String
+  /// The model that actually served the call — OpenRouter's fallback model
+  /// when the primary errored — as reported in the response, not as requested.
+  model            String
+  promptTokens     Int?     @map("prompt_tokens")
+  completionTokens Int?     @map("completion_tokens")
+  /// OpenRouter's own `usage.cost` in USD credits; always 0 for Gemini.
+  costUsd          Decimal  @default(0) @map("cost_usd") @db.Decimal(12, 8)
+  /// Upstream requests this call took, counting the response_format downgrade
+  /// retries — each one spends a request of Gemini's daily quota.
+  requestCount     Int      @default(1) @map("request_count")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([backend, createdAt], map: "idx_ai_usage_backend_created_at")
+  @@index([userId, createdAt], map: "idx_ai_usage_user_created_at")
+  @@map("ai_usage")
 }

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import RecipeFormPage from '../src/pages/RecipeFormPage';
 import * as apiClient from '../src/api/client';
 import type { Recipe, RecipeInput } from '../src/types';
+import { aiStatus } from './helpers/ai-status';
 
 vi.mock('../src/api/client');
 
@@ -179,7 +180,7 @@ describe('RecipeFormPage nutrition', () => {
 
   beforeEach(() => {
     vi.mocked(apiClient.getCategories).mockResolvedValue([]);
-    vi.mocked(apiClient.getAiStatus).mockResolvedValue({ configured: true });
+    vi.mocked(apiClient.getAiStatus).mockResolvedValue(aiStatus(true));
     vi.mocked(apiClient.getRecipe).mockResolvedValue({
       ...existingRecipe,
       calories: '420.00',
@@ -279,7 +280,7 @@ describe('RecipeFormPage nutrition', () => {
   });
 
   it('hides the button entirely when the server has no AI key', async () => {
-    vi.mocked(apiClient.getAiStatus).mockResolvedValue({ configured: false });
+    vi.mocked(apiClient.getAiStatus).mockResolvedValue(aiStatus(false));
     renderForm();
 
     await screen.findByDisplayValue('Original Title');

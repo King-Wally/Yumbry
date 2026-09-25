@@ -9,6 +9,7 @@ import { useSession } from '../src/lib/auth-client';
 import * as pwa from '../src/pwa';
 import { sessionFor } from './helpers/auth-client';
 import type { Recipe } from '../src/types';
+import { aiStatus } from './helpers/ai-status';
 
 vi.mock('../src/api/client');
 // Async factory with a dynamic import: vi.mock is hoisted above the imports,
@@ -155,7 +156,7 @@ describe('RecipeDetailPage export button', () => {
 
 describe('RecipeDetailPage nutrition', () => {
   beforeEach(() => {
-    vi.mocked(apiClient.getAiStatus).mockResolvedValue({ configured: false });
+    vi.mocked(apiClient.getAiStatus).mockResolvedValue(aiStatus(false));
   });
 
   it('shows the four per-serving values', async () => {
