@@ -11,6 +11,7 @@ import {
   uploadRecipePhoto,
 } from '../controllers/recipes.controller.js';
 import { uploadJsonFile, uploadPhoto } from '../middleware/upload.js';
+import { handleUploadError } from '../middleware/multer-error.js';
 import { requireRecipeAccess } from '../middleware/require-recipe-access.js';
 import { validateRecipeIdParam } from '../middleware/validate-recipe-id.js';
 import { urlImportRateLimiter } from '../middleware/rate-limit.js';
@@ -22,7 +23,7 @@ recipesRouter.post('/import', uploadJsonFile.single('file'), asyncHandler(import
 recipesRouter.post('/import-url', urlImportRateLimiter, asyncHandler(importRecipeFromUrl));
 recipesRouter.get('/', asyncHandler(getRecipes));
 // validateRecipeIdParam goes first on every `:id` chain — requireRecipeAccess and
-// uploadPhoto's destination callback both read req.recipeId. Note this cannot be a
+// uploadRecipePhoto both read req.recipeId. Note this cannot be a
 // router.use('/:id', …): `/import` and `/import-url` match that pattern too.
 recipesRouter.get('/:id', validateRecipeIdParam, asyncHandler(getRecipe));
 recipesRouter.get('/:id/export', validateRecipeIdParam, asyncHandler(exportRecipe));
@@ -34,5 +35,6 @@ recipesRouter.post(
   validateRecipeIdParam,
   asyncHandler(requireRecipeAccess),
   uploadPhoto.single('photo'),
+  handleUploadError,
   asyncHandler(uploadRecipePhoto)
 );
