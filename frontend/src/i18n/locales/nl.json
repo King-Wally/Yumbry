@@ -26,6 +26,7 @@
     "paste": "URL plakken"
   },
   "settings": {
+    "title": "Instellingen",
     "language": {
       "title": "Taal",
       "description": "Kies de taal die in de app en door de AI-assistent wordt gebruikt.",
@@ -195,13 +196,17 @@
       "label": "Ingrediënten",
       "addButton": "+ Ingrediënt toevoegen",
       "placeholder": "bijv. 1 1/2 kopjes bloem",
-      "dragHandle": "Ingrediënt verplaatsen"
+      "dragHandle": "Ingrediënt verplaatsen",
+      "itemLabel": "Ingrediënt {{number}}",
+      "removeItem": "Ingrediënt {{number}} verwijderen"
     },
     "instructions": {
       "label": "Bereidingswijze",
       "addButton": "+ Stap toevoegen",
       "placeholder": "Beschrijf deze stap",
-      "dragHandle": "Stap verplaatsen"
+      "dragHandle": "Stap verplaatsen",
+      "itemLabel": "Stap {{number}}",
+      "removeItem": "Stap {{number}} verwijderen"
     },
     "reviewingPhotoDraft": "Je bekijkt een recept dat van een foto is gelezen — controleer de hoeveelheden zorgvuldig voordat je opslaat."
   },

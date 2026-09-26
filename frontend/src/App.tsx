@@ -95,7 +95,10 @@ export default function App() {
                   </NavigationMenuPrimitive.List>
                   <NavigationMenuPrimitive.List>
                     <NavigationMenuPrimitive.Item>
-                      <NavigationMenuPrimitive.Trigger className="hover:text-clay data-[state=open]:text-clay rounded-full border border-gray-300 p-1.5 transition hover:bg-stone-100 data-[state=open]:bg-stone-100">
+                      <NavigationMenuPrimitive.Trigger
+                        aria-label={t('nav.profile')}
+                        className="hover:text-clay data-[state=open]:text-clay rounded-full border border-gray-300 p-1.5 transition hover:bg-stone-100 data-[state=open]:bg-stone-100"
+                      >
                         <UserCircle className="h-5 w-5" />
                       </NavigationMenuPrimitive.Trigger>
                       <NavigationMenuPrimitive.Content className="absolute top-full right-0 mt-2 rounded-md border border-stone-200 bg-white text-nowrap shadow-lg">

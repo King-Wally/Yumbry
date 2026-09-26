@@ -35,7 +35,11 @@ export default function RecipeListPage() {
       </div>
 
       {isLoading && <p className="text-stone-500">{t('recipes.list.loading')}</p>}
-      {isError && <p className="text-red-600">{t('recipes.list.loadError')}</p>}
+      {isError && (
+        <p role="alert" className="text-red-600">
+          {t('recipes.list.loadError')}
+        </p>
+      )}
 
       {recipes && recipes.length === 0 && (
         <p className="text-stone-500">{t('recipes.list.empty')}</p>

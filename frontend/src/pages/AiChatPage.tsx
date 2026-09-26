@@ -15,8 +15,7 @@ import AiErrorBanner from '../components/AiErrorBanner';
 import RecipePreview from '../components/RecipePreview';
 import { refreshSession } from '../lib/auth-client';
 import { useCurrentUser } from '../hooks/useCurrentUser';
-import { renderDraftForReader } from '../utils/render-draft';
-import { toRecipeInput } from '../utils/recipe-mapping';
+import { draftFromRecipe, renderDraftForReader } from 'yumbry-shared';
 import type { AiTextChatMessage, AiRecipeDraft } from '../types';
 import { ArrowLeft } from 'lucide-react';
 
@@ -42,7 +41,7 @@ export default function AiChatPage() {
   // Seed preview from recipe once, in improve mode only
   if (isImproving && recipe && seededForId !== recipe.id) {
     setSeededForId(recipe.id);
-    setDraft(toRecipeInput(recipe));
+    setDraft(draftFromRecipe(recipe));
   }
 
   const chatMutation = useMutation({
@@ -167,6 +166,9 @@ export default function AiChatPage() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
+                aria-label={
+                  isImproving ? t('aiChat.changePlaceholder') : t('aiChat.cookPlaceholder')
+                }
                 placeholder={
                   isImproving ? t('aiChat.changePlaceholder') : t('aiChat.cookPlaceholder')
                 }

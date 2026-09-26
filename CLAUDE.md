@@ -63,6 +63,29 @@ one, and browsers send it automatically where supertest does not (see `tests/hel
 To run a single test file: `npx vitest run tests/recipes.api.test.ts` (from `backend/` or
 `frontend/`).
 
+End-to-end (`e2e/` workspace, Playwright): `npm run e2e:build && npm run e2e` from the root. It
+resets `E2E_DATABASE_URL` (default `.../yumbry_e2e`), then starts a fakes server plus two app
+servers (full, and minimal with no AI/email). This suite is the stack-neutral source of truth
+for the app's behaviour, so specs must stay independent of the implementation:
+
+- Seed through `e2e/support/db.ts` (the only file that knows table names).
+- Act and assert through the UI with accessible selectors (no `data-testid`).
+- Never call the app's JSON API. Only `/api/auth/*`, `/api/health` and `/uploads/*` may be
+  called directly.
+
+The app honours a few test-only env vars for the fakes: `OPENROUTER_BASE_URL`,
+`GEMINI_BASE_URL`, `RESEND_BASE_URL`, `E2E_SAFE_FETCH_ALLOW` and `DISABLE_RATE_LIMITS`. See
+`e2e/README.md`.
+
+Framework-free UI logic lives in `shared/` so a rewrite can reuse it:
+
+- recipe scaling (`recipe-scaling.ts`)
+- recipe-form rules (`recipe-form.ts`)
+- draft rendering (`render-draft.ts`)
+- budget display (`ai-budget-display.ts`)
+
+Keep new logic of that kind there, with unit tests, rather than in components.
+
 ## Architecture
 
 ### Backend layering

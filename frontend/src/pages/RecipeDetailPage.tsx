@@ -14,7 +14,7 @@ import { useAiStatus } from '../hooks/useAiStatus';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { fetchExportFile, shareOrDownloadFile } from '../lib/export-share';
 import { isStandalonePwa } from '../pwa';
-import { toNumber } from '../utils/numeric';
+import { toNumber } from 'yumbry-shared';
 import CollapsibleActions from '../components/CollapsibleActions';
 import ConfirmDialog from '../components/ConfirmDialog';
 import IngredientList from '../components/IngredientList';

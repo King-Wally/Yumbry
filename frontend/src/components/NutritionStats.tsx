@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { toNullableNumber } from '../utils/numeric';
+import { toNullableNumber } from 'yumbry-shared';
 
 interface NutritionStatsProps {
   /** Decimal columns arrive as strings from the API and as numbers from an AI draft. */

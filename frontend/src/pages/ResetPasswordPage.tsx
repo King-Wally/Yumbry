@@ -54,6 +54,7 @@ export default function ResetPasswordPage() {
           required
           minLength={8}
           autoComplete="new-password"
+          aria-label={t('auth.resetPassword.passwordPlaceholder')}
           placeholder={t('auth.resetPassword.passwordPlaceholder')}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -68,7 +69,11 @@ export default function ResetPasswordPage() {
         </button>
       </form>
 
-      {error && <p className="text-red-600">{error}</p>}
+      {error && (
+        <p role="alert" className="text-red-600">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

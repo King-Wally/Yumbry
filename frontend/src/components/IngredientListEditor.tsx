@@ -16,9 +16,11 @@ export default function IngredientListEditor({ ingredients, onChange }: Ingredie
       label={t('recipeForm.ingredients.label')}
       addLabel={t('recipeForm.ingredients.addButton')}
       dragHandleLabel={t('recipeForm.ingredients.dragHandle')}
-      renderItem={(line, update) => (
+      removeLabel={(index) => t('recipeForm.ingredients.removeItem', { number: index + 1 })}
+      renderItem={(line, update, index) => (
         <input
           type="text"
+          aria-label={t('recipeForm.ingredients.itemLabel', { number: index + 1 })}
           value={line}
           onChange={(e) => update(e.target.value)}
           placeholder={t('recipeForm.ingredients.placeholder')}

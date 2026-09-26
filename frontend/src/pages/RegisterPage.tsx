@@ -54,6 +54,7 @@ export default function RegisterPage() {
           type="email"
           required
           autoComplete="email"
+          aria-label={t('auth.emailPlaceholder')}
           placeholder={t('auth.emailPlaceholder')}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -64,6 +65,7 @@ export default function RegisterPage() {
           required
           minLength={8}
           autoComplete="new-password"
+          aria-label={t('auth.register.passwordPlaceholder')}
           placeholder={t('auth.register.passwordPlaceholder')}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -78,7 +80,11 @@ export default function RegisterPage() {
         </button>
       </form>
 
-      {error && <p className="text-red-600">{error}</p>}
+      {error && (
+        <p role="alert" className="text-red-600">
+          {error}
+        </p>
+      )}
 
       <p className="text-sm text-stone-500">
         {t('auth.register.hasAccount')}{' '}

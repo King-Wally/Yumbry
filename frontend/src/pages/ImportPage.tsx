@@ -55,6 +55,7 @@ export default function ImportPage() {
           />
           <form onSubmit={handlePaste} className="space-y-3">
             <textarea
+              aria-label={t('importJson.cardTitle')}
               value={jsonLd}
               onChange={(e) => setJsonLd(e.target.value)}
               rows={12}

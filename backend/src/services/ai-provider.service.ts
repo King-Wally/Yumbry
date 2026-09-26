@@ -108,12 +108,15 @@ function requireApiKey(backend: AiBackend): string {
   return key;
 }
 
+// The *_BASE_URL overrides exist so the E2E suite can point both backends at a local fake; they are
+// unset in production. Read lazily, like the keys.
 function createClient(backend: AiBackend, apiKey: string): OpenAI {
   if (backend === 'gemini') {
-    return new OpenAI({ baseURL: GEMINI_BASE_URL, apiKey, maxRetries: 0 });
+    const baseURL = process.env.GEMINI_BASE_URL?.trim() || GEMINI_BASE_URL;
+    return new OpenAI({ baseURL, apiKey, maxRetries: 0 });
   }
   return new OpenAI({
-    baseURL: OPENROUTER_BASE_URL,
+    baseURL: process.env.OPENROUTER_BASE_URL?.trim() || OPENROUTER_BASE_URL,
     apiKey,
     // Optional app attribution shown on OpenRouter's side (activity page, app rankings).
     defaultHeaders: { 'X-Title': 'Yumbry' },

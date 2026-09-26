@@ -9,6 +9,8 @@ export const queryKeys = {
     filters
       ? (['recipes', filters.search, filters.tag, filters.category] as const)
       : (['recipes'] as const),
+  /** Prefix of every single-recipe query, for dropping them all at once. */
+  recipeDetails: ['recipe'] as const,
   recipe: (id: string | number) => ['recipe', String(id)] as const,
   tags: ['tags'] as const,
   categories: ['categories'] as const,

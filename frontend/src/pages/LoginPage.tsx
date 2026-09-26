@@ -47,6 +47,7 @@ export default function LoginPage() {
           type="email"
           required
           autoComplete="email"
+          aria-label={t('auth.emailPlaceholder')}
           placeholder={t('auth.emailPlaceholder')}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -56,6 +57,7 @@ export default function LoginPage() {
           type="password"
           required
           autoComplete="current-password"
+          aria-label={t('auth.passwordPlaceholder')}
           placeholder={t('auth.passwordPlaceholder')}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -70,7 +72,11 @@ export default function LoginPage() {
         </button>
       </form>
 
-      {error && <p className="text-red-600">{error}</p>}
+      {error && (
+        <p role="alert" className="text-red-600">
+          {error}
+        </p>
+      )}
 
       {appConfig?.passwordResetEnabled && (
         <p className="text-sm text-stone-500">

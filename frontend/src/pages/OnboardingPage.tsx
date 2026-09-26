@@ -292,11 +292,15 @@ export default function OnboardingPage() {
                       ))}
                     </ul>
 
-                    <h3 className="mb-2 text-xs font-semibold text-stone-400">
+                    <label
+                      htmlFor="onboarding-invite-link"
+                      className="mb-2 block text-xs font-semibold text-stone-400"
+                    >
                       {t('settings.family.inviteLabel')}
-                    </h3>
+                    </label>
                     <div className="flex gap-2">
                       <input
+                        id="onboarding-invite-link"
                         type="text"
                         readOnly
                         value={inviteUrl}

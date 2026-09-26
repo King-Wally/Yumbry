@@ -4,10 +4,14 @@
   "workspaces": [
     "backend",
     "frontend",
-    "shared"
+    "shared",
+    "e2e"
   ],
   "scripts": {
-    "release": "bash scripts/release.sh"
+    "release": "bash scripts/release.sh",
+    "e2e:build": "npm run build --workspace=shared && npm run build --workspace=frontend && npm run build --workspace=backend",
+    "e2e": "npm run test --workspace=e2e",
+    "e2e:ui": "npm run test:ui --workspace=e2e"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",
