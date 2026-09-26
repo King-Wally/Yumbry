@@ -6,7 +6,8 @@ type TimeStatIcon = 'clock' | 'flame' | 'timer';
 interface TimeStatProps {
   icon: TimeStatIcon;
   label: string;
-  minutes: number;
+  /** `null` renders a dash — the version-history page shows a time one side lacks. */
+  minutes: number | null;
 }
 
 function StatIcon({ icon }: { icon: TimeStatIcon }) {
@@ -27,7 +28,7 @@ export default function TimeStat({ icon, label, minutes }: TimeStatProps) {
       <div className="leading-tight">
         <div className="text-xs text-stone-400">{label}</div>
         <div className="text-sm font-medium text-stone-700">
-          {t('common.minutes', { count: minutes })}
+          {minutes === null ? '—' : t('common.minutes', { count: minutes })}
         </div>
       </div>
     </div>

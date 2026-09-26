@@ -37,7 +37,7 @@ export default function CollapsibleActions({
       {open && (
         <div
           onClick={() => setOpen(false)}
-          className="absolute top-full right-0 z-20 mt-2 w-36 divide-y divide-stone-100 overflow-hidden rounded-md border border-stone-200 bg-white shadow-lg md:hidden [&_a]:block [&_a]:w-full [&_a]:rounded-none [&_a]:border-0 [&_a]:px-4 [&_a]:py-2.5 [&_a]:text-left [&_button]:block [&_button]:w-full [&_button]:rounded-none [&_button]:border-0 [&_button]:bg-transparent [&_button]:px-4 [&_button]:py-2.5 [&_button]:text-left"
+          className="absolute top-full right-0 z-20 mt-2 flex w-max max-w-[calc(100vw-2rem)] flex-col divide-y divide-stone-200 overflow-hidden rounded-md border border-stone-200 bg-white shadow-lg md:hidden [&_a]:block [&_a]:w-full [&_a]:rounded-none [&_a]:border-x-0 [&_a]:border-b-0 [&_a]:px-4 [&_a]:py-2.5 [&_a]:text-left [&_a]:whitespace-nowrap [&_button]:block [&_button]:w-full [&_button]:rounded-none [&_button]:border-x-0 [&_button]:border-b-0 [&_button]:bg-transparent [&_button]:px-4 [&_button]:py-2.5 [&_button]:text-left [&_button]:whitespace-nowrap [&>*:first-child]:border-t-0"
         >
           {children}
         </div>

@@ -1,3 +1,5 @@
+import { toRecipeSnapshot } from 'yumbry-shared';
+import type { Prisma } from '../generated/prisma/client.js';
 import { prisma } from '../db/prisma.js';
 import { withTransaction, type Queryable } from '../db/transaction.js';
 import { deleteRecipeUploadsDir, deleteUploadedFile } from '../middleware/upload.js';
@@ -153,9 +155,10 @@ const RECIPE_WITH_RELATIONS_INCLUDE = {
 
 export async function getRecipeById(
   id: number,
-  familyId: number
+  familyId: number,
+  client: Queryable = prisma
 ): Promise<RecipeWithRelations | null> {
-  const recipe = await prisma.recipe.findFirst({
+  const recipe = await client.recipe.findFirst({
     where: { id: { equals: id }, familyId: { equals: familyId } },
     include: RECIPE_WITH_RELATIONS_INCLUDE,
   });
@@ -288,6 +291,19 @@ export async function updateRecipe(
   familyId: number
 ): Promise<RecipeWithRelations | null> {
   const result = await withTransaction(async (client) => {
+    // Snapshot the state this write is about to replace, inside the same transaction so a
+    // failed update leaves no version behind. A miss means the recipe isn't this family's —
+    // nothing is recorded and the updateMany below reports the 404.
+    const previous = await getRecipeById(id, familyId, client);
+    if (!previous) return null;
+    await client.recipeVersion.create({
+      data: {
+        recipeId: id,
+        savedAt: previous.updated_at,
+        snapshot: toRecipeSnapshot(previous) as unknown as Prisma.InputJsonValue,
+      },
+    });
+
     const categoryId = await upsertCategory(client, data.category, familyId);
 
     // imagePath is deliberately absent from the update: the column is owned by

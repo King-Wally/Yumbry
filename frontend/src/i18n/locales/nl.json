@@ -150,6 +150,7 @@
       "fat": "Vet",
       "carbs": "Koolhydraten",
       "protein": "Eiwit",
+      "versionHistory": "Versiegeschiedenis",
       "share": "Delen"
     },
     "share": {
@@ -171,6 +172,22 @@
     "hero": {
       "noPhotoYet": "Nog geen foto"
     }
+  },
+  "recipeVersions": {
+    "title": "Versiegeschiedenis",
+    "back": "Terug naar recept",
+    "compareWith": "Vergelijk met",
+    "selectedVersion": "Geselecteerde versie",
+    "currentVersion": "Huidige versie",
+    "differences_one": "{{count}} verschil gemarkeerd",
+    "differences_other": "{{count}} verschillen gemarkeerd",
+    "noDifferences": "Geen verschillen",
+    "empty": "Nog geen eerdere versies — elke keer dat je dit recept bewerkt, wordt er een versie opgeslagen.",
+    "revert": "Terugzetten naar deze versie",
+    "reverting": "Terugzetten...",
+    "revertedToast": "Recept teruggezet naar de geselecteerde versie",
+    "servings_one": "{{count}} portie",
+    "servings_other": "{{count}} porties"
   },
   "recipeForm": {
     "eyebrow": "Recept",

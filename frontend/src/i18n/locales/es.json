@@ -150,6 +150,7 @@
       "fat": "Grasas",
       "carbs": "Carbohidratos",
       "protein": "Proteínas",
+      "versionHistory": "Historial de versiones",
       "share": "Compartir"
     },
     "share": {
@@ -171,6 +172,22 @@
     "hero": {
       "noPhotoYet": "Aún sin foto"
     }
+  },
+  "recipeVersions": {
+    "title": "Historial de versiones",
+    "back": "Volver a la receta",
+    "compareWith": "Comparar con",
+    "selectedVersion": "Versión seleccionada",
+    "currentVersion": "Versión actual",
+    "differences_one": "{{count}} diferencia resaltada",
+    "differences_other": "{{count}} diferencias resaltadas",
+    "noDifferences": "Sin diferencias",
+    "empty": "Aún no hay versiones anteriores: se guarda una versión cada vez que editas esta receta.",
+    "revert": "Restaurar esta versión",
+    "reverting": "Restaurando...",
+    "revertedToast": "Receta restaurada a la versión seleccionada",
+    "servings_one": "{{count}} ración",
+    "servings_other": "{{count}} raciones"
   },
   "recipeForm": {
     "eyebrow": "Receta",

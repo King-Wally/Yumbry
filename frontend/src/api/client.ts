@@ -13,6 +13,8 @@ import type {
 import type {
   AiQuotaScope,
   AiStatusResponse,
+  RecipeVersion,
+  RecipeVersionSummary,
   Family,
   SmallVolumeStyle,
   SupportedLocale,
@@ -115,6 +117,20 @@ export function getSharedRecipe(token: string) {
 /** Copies a shared recipe into the signed-in user's own library. */
 export function importSharedRecipe(token: string) {
   return request<Recipe>(`/shared/${token}/import`, { method: 'POST' });
+}
+
+export function getRecipeVersions(id: string | number) {
+  return request<RecipeVersionSummary[]>(`/recipes/${id}/versions`);
+}
+
+export function getRecipeVersion(id: string | number, versionId: number) {
+  return request<RecipeVersion>(`/recipes/${id}/versions/${versionId}`);
+}
+
+/** Overwrites the recipe with an earlier version. The server snapshots the state it replaces
+ * first, so the revert itself shows up in the history. */
+export function revertRecipeVersion(id: string | number, versionId: number) {
+  return request<Recipe>(`/recipes/${id}/versions/${versionId}/revert`, { method: 'POST' });
 }
 
 export function getRecipeExportUrl(id: string | number) {

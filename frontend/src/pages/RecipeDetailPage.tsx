@@ -100,6 +100,12 @@ export default function RecipeDetailPage() {
           >
             {t('recipes.detail.edit')}
           </Link>
+          <Link
+            to={`/recipes/${id}/versions`}
+            className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
+          >
+            {t('recipes.detail.versionHistory')}
+          </Link>
           {aiStatus?.configured && (
             <Link
               to={`/recipes/${id}/ai-improve`}

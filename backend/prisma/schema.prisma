@@ -149,6 +149,7 @@ model Recipe {
   ingredients  Ingredient[]
   instructions Instruction[]
   recipeTags   RecipeTag[]
+  versions     RecipeVersion[]
 
   @@index([categoryId], map: "idx_recipes_category_id")
   @@index([familyId], map: "idx_recipes_family_id")
@@ -277,4 +278,20 @@ model AiUsage {
   @@index([backend, createdAt], map: "idx_ai_usage_backend_created_at")
   @@index([userId, createdAt], map: "idx_ai_usage_user_created_at")
   @@map("ai_usage")
+}
+
+/// One past state of a recipe, written by updateRecipe just before it overwrites the row. The
+/// snapshot is the shared `RecipeSnapshot` shape; `savedAt` is the replaced state's `updatedAt`,
+/// i.e. when that content became current. Never pruned.
+model RecipeVersion {
+  id        Int      @id @default(autoincrement())
+  recipeId  Int      @map("recipe_id")
+  savedAt   DateTime @map("saved_at") @db.Timestamptz
+  snapshot  Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId, savedAt], map: "idx_recipe_versions_recipe_id_saved_at")
+  @@map("recipe_versions")
 }
