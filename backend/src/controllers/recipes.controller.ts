@@ -14,6 +14,8 @@ import {
   updateRecipe,
 } from '../services/recipe.service.js';
 import type { IngredientInput } from '../services/recipe.types.js';
+import { getVersion, listVersions, revertToVersion } from '../services/recipe-version.service.js';
+import { RecipeVersionIdParamSchema } from '../schemas/recipe-id.schema.js';
 import { publicUploadPath } from '../middleware/upload.js';
 import { RecipeBodySchema, type RecipeBody } from '../schemas/recipe.schema.js';
 import { UrlImportBodySchema } from '../schemas/url-import.schema.js';
@@ -206,4 +208,34 @@ export async function uploadRecipePhoto(req: Request, res: Response) {
   const updated = await setRecipePhoto(req.recipeId as number, imagePath, req.familyId as number);
   if (!updated) return res.status(404).json({ error: 'Recipe not found' });
   res.json({ image_path: imagePath });
+}
+
+export async function getRecipeVersions(req: Request, res: Response) {
+  const recipe = await getRecipeById(req.recipeId as number, req.familyId as number);
+  if (!recipe) return res.status(404).json({ error: 'Recipe not found' });
+  res.json(await listVersions(req.recipeId as number, req.familyId as number));
+}
+
+export async function getRecipeVersion(req: Request, res: Response) {
+  try {
+    const { versionId } = RecipeVersionIdParamSchema.parse(req.params);
+    const version = await getVersion(req.recipeId as number, versionId, req.familyId as number);
+    if (!version) return res.status(404).json({ error: 'Version not found' });
+    res.json(version);
+  } catch (err) {
+    if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
+    throw err;
+  }
+}
+
+export async function postRevertRecipeVersion(req: Request, res: Response) {
+  try {
+    const { versionId } = RecipeVersionIdParamSchema.parse(req.params);
+    const recipe = await revertToVersion(req.recipeId as number, versionId, req.familyId as number);
+    if (!recipe) return res.status(404).json({ error: 'Version not found' });
+    res.json(recipe);
+  } catch (err) {
+    if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
+    throw err;
+  }
 }

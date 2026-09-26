@@ -12,6 +12,8 @@ import type {
 import type {
   AiQuotaScope,
   AiStatusResponse,
+  RecipeVersion,
+  RecipeVersionSummary,
   Family,
   SmallVolumeStyle,
   SupportedLocale,
@@ -92,6 +94,20 @@ export function updateRecipe(id: string | number, data: RecipeInput) {
 
 export function deleteRecipe(id: string | number) {
   return request<null>(`/recipes/${id}`, { method: 'DELETE' });
+}
+
+export function getRecipeVersions(id: string | number) {
+  return request<RecipeVersionSummary[]>(`/recipes/${id}/versions`);
+}
+
+export function getRecipeVersion(id: string | number, versionId: number) {
+  return request<RecipeVersion>(`/recipes/${id}/versions/${versionId}`);
+}
+
+/** Overwrites the recipe with an earlier version. The server snapshots the state it replaces
+ * first, so the revert itself shows up in the history. */
+export function revertRecipeVersion(id: string | number, versionId: number) {
+  return request<Recipe>(`/recipes/${id}/versions/${versionId}/revert`, { method: 'POST' });
 }
 
 export function getRecipeExportUrl(id: string | number) {
