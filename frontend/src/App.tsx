@@ -40,7 +40,7 @@ export default function App() {
     <div className={`bg-cream flex flex-col ${isOnboarding ? 'h-dvh' : 'min-h-screen'}`}>
       {!isOnboarding && (
         <header className="sticky top-0 z-10 border-b border-stone-200 bg-white/90 backdrop-blur">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
             <Link
               to="/"
               className="hover:text-clay font-serif text-2xl tracking-tight text-stone-900 transition-colors"
@@ -124,7 +124,7 @@ export default function App() {
 
       <main
         className={
-          isOnboarding ? 'flex flex-1 flex-col' : 'mx-auto w-full max-w-7xl flex-1 px-4 py-6'
+          isOnboarding ? 'flex flex-1 flex-col' : 'mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6'
         }
       >
         <Routes>
