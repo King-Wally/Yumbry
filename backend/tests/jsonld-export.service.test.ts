@@ -16,6 +16,7 @@ const fullRecipe: RecipeWithRelations = {
   carbohydrate_content: '58',
   protein_content: '16',
   category_id: 1,
+  share_token: null,
   created_at: new Date('2024-01-01'),
   updated_at: new Date('2024-01-01'),
   ingredients: [

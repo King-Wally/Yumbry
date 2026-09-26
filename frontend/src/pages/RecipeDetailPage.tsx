@@ -6,21 +6,14 @@ import { useTranslation } from 'react-i18next';
 import { deleteRecipe, getRecipe, getRecipeExportUrl } from '../api/client';
 import { queryKeys } from '../api/queryKeys';
 import AiErrorBanner from '../components/AiErrorBanner';
-import RecipeHero from '../components/RecipeHero';
-import ServingsStepper from '../components/ServingsStepper';
-import TimeStat from '../components/TimeStat';
-import { useScaledIngredients } from '../hooks/useScaledIngredients';
 import { useAiStatus } from '../hooks/useAiStatus';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { fetchExportFile, shareOrDownloadFile } from '../lib/export-share';
 import { isStandalonePwa } from '../pwa';
-import { toNumber } from '../utils/numeric';
 import CollapsibleActions from '../components/CollapsibleActions';
 import ConfirmDialog from '../components/ConfirmDialog';
-import IngredientList from '../components/IngredientList';
-import InstructionList from '../components/InstructionList';
-import NutritionStats from '../components/NutritionStats';
-import RecipeTagBadges from '../components/RecipeTagBadges';
+import RecipeDetailView from '../components/RecipeDetailView';
+import ShareRecipeDialog from '../components/ShareRecipeDialog';
 
 export default function RecipeDetailPage() {
   const { t } = useTranslation();
@@ -35,24 +28,11 @@ export default function RecipeDetailPage() {
   const { data: aiStatus } = useAiStatus();
   const { user } = useCurrentUser();
 
-  const [servings, setServings] = useState(1);
-  const [servingsForRecipeId, setServingsForRecipeId] = useState<number | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   // Computed once: a standalone/installed PWA can't rely on `<a download>` (see
   // exportFileQuery below), so this decides which export control to render.
   const [standalone] = useState(isStandalonePwa);
-
-  // Form hydration in render (not useEffect) to avoid stale-value flash
-  if (recipe && servingsForRecipeId !== recipe.id) {
-    setServingsForRecipeId(recipe.id);
-    setServings(toNumber(recipe.servings, 1));
-  }
-
-  const scaledIngredients = useScaledIngredients(
-    recipe?.ingredients,
-    toNumber(recipe?.servings, 1),
-    servings
-  );
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteRecipe(id!),
@@ -107,6 +87,13 @@ export default function RecipeDetailPage() {
                 {t('recipes.detail.export')}
               </a>
             ))}
+          <button
+            type="button"
+            onClick={() => setShareOpen(true)}
+            className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
+          >
+            {t('recipes.detail.share')}
+          </button>
           <Link
             to={`/recipes/${id}/edit`}
             className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
@@ -152,84 +139,14 @@ export default function RecipeDetailPage() {
         onConfirm={() => deleteMutation.mutate()}
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="flex flex-col gap-4 rounded-xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5 lg:col-span-1">
-          <div>
-            <h1 className="font-serif text-3xl text-stone-900">{recipe.title}</h1>
-            {recipe.description && <p className="mt-2 text-stone-600">{recipe.description}</p>}
-          </div>
+      <ShareRecipeDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        recipeId={recipe.id}
+        shareToken={recipe.share_token}
+      />
 
-          <RecipeTagBadges
-            category={recipe.category?.name}
-            tags={recipe.tags.map((tag) => tag.name)}
-          />
-
-          <div className="flex flex-wrap gap-3 lg:flex-col">
-            {recipe.prep_time_minutes != null && (
-              <TimeStat
-                icon="clock"
-                label={t('recipes.detail.prep')}
-                minutes={recipe.prep_time_minutes}
-              />
-            )}
-            {recipe.cook_time_minutes != null && (
-              <TimeStat
-                icon="flame"
-                label={t('recipes.detail.cook')}
-                minutes={recipe.cook_time_minutes}
-              />
-            )}
-            {recipe.total_time_minutes != null && (
-              <TimeStat
-                icon="timer"
-                label={t('recipes.detail.total')}
-                minutes={recipe.total_time_minutes}
-              />
-            )}
-          </div>
-
-          <NutritionStats
-            calories={recipe.calories}
-            fatContent={recipe.fat_content}
-            carbohydrateContent={recipe.carbohydrate_content}
-            proteinContent={recipe.protein_content}
-          />
-        </div>
-
-        <div className="lg:col-span-2">
-          <RecipeHero title={recipe.title} imagePath={recipe.image_path} />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <section className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5 lg:col-span-1">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-serif text-xl text-stone-900">{t('recipes.detail.ingredients')}</h2>
-          </div>
-          <ServingsStepper value={servings} onChange={setServings} />
-          <div className="mt-4">
-            <IngredientList
-              items={scaledIngredients.map((ingredient) => ({
-                key: ingredient.id,
-                text: ingredient.displayText,
-              }))}
-            />
-          </div>
-        </section>
-
-        <section className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5 lg:col-span-2">
-          <h2 className="mb-3 font-serif text-xl text-stone-900">
-            {t('recipes.detail.instructions')}
-          </h2>
-          <InstructionList
-            items={(recipe.instructions ?? []).map((step) => ({
-              key: step.id,
-              step_number: step.step_number,
-              text: step.text,
-            }))}
-          />
-        </section>
-      </div>
+      <RecipeDetailView key={recipe.id} recipe={recipe} />
     </article>
   );
 }

@@ -10,6 +10,7 @@ import PhotoImportPage from './pages/PhotoImportPage';
 import AiChatPage from './pages/AiChatPage';
 import SettingsPage from './pages/SettingsPage';
 import JoinFamilyPage from './pages/JoinFamilyPage';
+import SharedRecipePage from './pages/SharedRecipePage';
 import OnboardingPage from './pages/OnboardingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -213,6 +214,7 @@ export default function App() {
             }
           />
           <Route path="/join-family/:token" element={<JoinFamilyPage />} />
+          <Route path="/share/:token" element={<SharedRecipePage />} />
           <Route
             path="/onboarding"
             element={

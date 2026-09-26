@@ -39,4 +39,12 @@ export type RecipeSummary = RecipeBase;
 export interface Recipe extends RecipeBase {
   ingredients: Ingredient[];
   instructions: Instruction[];
+  /** Null while the recipe isn't shared publicly. */
+  share_token: string | null;
 }
+
+/** GET /api/shared/:token — a recipe viewed through its public share link. No id
+ * or token of its own; `own_recipe_id` is set when the viewer's family owns it. */
+export type SharedRecipe = Omit<Recipe, 'id' | 'share_token'> & {
+  own_recipe_id: number | null;
+};
