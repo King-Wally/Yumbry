@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
+import sharp from 'sharp';
 import pg from 'pg';
 import type { Express } from 'express';
 import { absoluteUploadPath, UPLOADS_DIR } from '../src/middleware/upload.js';
@@ -56,10 +57,17 @@ describe.skipIf(!TEST_DATABASE_URL)('recipe share links API', () => {
     return res.body as { id: number };
   }
 
+  // A real, decodable image: photo uploads are re-encoded by sharp, so arbitrary bytes are refused.
+  function realPng(): Promise<Buffer> {
+    return sharp({ create: { width: 64, height: 48, channels: 3, background: '#c8b4a0' } })
+      .png()
+      .toBuffer();
+  }
+
   async function attachPhoto(recipeId: number) {
     const res = await owner
       .post(`/api/recipes/${recipeId}/photo`)
-      .attach('photo', Buffer.from('fake-image-bytes'), {
+      .attach('photo', await realPng(), {
         filename: 'photo.png',
         contentType: 'image/png',
       });
@@ -132,9 +140,9 @@ describe.skipIf(!TEST_DATABASE_URL)('recipe share links API', () => {
 
       const photo = await request(app).get(`/api/shared/${token}/photo`).responseType('blob');
       expect(photo.status).toBe(200);
-      expect(photo.headers['content-type']).toBe('image/png');
+      expect(photo.headers['content-type']).toBe('image/webp');
       expect(photo.headers['x-content-type-options']).toBe('nosniff');
-      expect(Buffer.from(photo.body).toString()).toBe('fake-image-bytes');
+      expect((await sharp(Buffer.from(photo.body)).metadata()).format).toBe('webp');
     });
 
     it('404s the photo endpoint when the recipe has no local photo', async () => {

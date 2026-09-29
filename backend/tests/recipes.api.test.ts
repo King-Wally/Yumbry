@@ -3,6 +3,7 @@ import path from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import pg from 'pg';
+import sharp from 'sharp';
 import type { Express } from 'express';
 import { absoluteUploadPath, UPLOADS_DIR } from '../src/middleware/upload.js';
 import { registerTestUser } from './helpers/auth.js';
@@ -23,6 +24,13 @@ vi.mock('../src/services/url-recipe-import.service.js', async (importOriginal) =
 
 // These integration tests need a real, disposable Postgres database. Set
 // TEST_DATABASE_URL (see README) to run them; otherwise they're skipped.
+// A real, decodable image: photo uploads are re-encoded by sharp, so arbitrary bytes are refused.
+function realPng(width = 64, height = 48): Promise<Buffer> {
+  return sharp({ create: { width, height, channels: 3, background: '#c8b4a0' } })
+    .png()
+    .toBuffer();
+}
+
 describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
   let app: Express;
   let pool: pg.Pool;
@@ -38,7 +46,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
     ({ agent } = await registerTestUser(app));
 
     // Nothing creates UPLOADS_DIR at startup — it's only ever made lazily by a
-    // successful photo upload (upload.ts's destination callback). The traversal
+    // successful photo upload (upload.ts's saveRecipePhoto). The traversal
     // test's sanity check needs the root to already exist so it can tell "still
     // there" from "never existed".
     fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -640,7 +648,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
 
       const ownPhoto = await agent
         .post(`/api/recipes/${created.body.id}/photo`)
-        .attach('photo', Buffer.from('fake-image-bytes'), {
+        .attach('photo', await realPng(), {
           filename: 'photo.png',
           contentType: 'image/png',
         });
@@ -679,13 +687,11 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
   });
 
   describe('photo files on disk', () => {
-    const attachPhoto = (recipeId: number) =>
-      agent
-        .post(`/api/recipes/${recipeId}/photo`)
-        .attach('photo', Buffer.from('fake-image-bytes'), {
-          filename: 'photo.png',
-          contentType: 'image/png',
-        });
+    const attachPhoto = async (recipeId: number) =>
+      agent.post(`/api/recipes/${recipeId}/photo`).attach('photo', await realPng(), {
+        filename: 'photo.png',
+        contentType: 'image/png',
+      });
 
     it('deletes the uploaded file and its directory when the recipe is deleted', async () => {
       const created = await agent.post('/api/recipes').send({ title: 'With Photo', servings: 1 });
@@ -771,12 +777,50 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
 
       const uploaded = await agent
         .post(`/api/recipes/${created.body.id}/photo`)
-        .attach('photo', Buffer.from('fake-image-bytes'), {
+        .attach('photo', await realPng(), {
           filename: 'evil.html',
           contentType: 'image/png',
         });
       expect(uploaded.status).toBe(200);
-      expect(uploaded.body.image_path).toMatch(/\.png$/);
+      expect(uploaded.body.image_path).toMatch(/\.webp$/);
+
+      await agent.delete(`/api/recipes/${created.body.id}`);
+    });
+
+    it('stores the photo re-encoded as WebP and bounded in size', async () => {
+      const created = await agent.post('/api/recipes').send({ title: 'Big Photo', servings: 1 });
+
+      const uploaded = await agent
+        .post(`/api/recipes/${created.body.id}/photo`)
+        .attach('photo', await realPng(3200, 2400), {
+          filename: 'photo.png',
+          contentType: 'image/png',
+        });
+      expect(uploaded.status).toBe(200);
+
+      const meta = await sharp(absoluteUploadPath(uploaded.body.image_path) as string).metadata();
+      expect(meta.format).toBe('webp');
+      expect(meta.width).toBe(1600);
+      expect(meta.height).toBe(1200);
+
+      await agent.delete(`/api/recipes/${created.body.id}`);
+    });
+
+    it('refuses bytes that are not actually an image, writing nothing', async () => {
+      const created = await agent.post('/api/recipes').send({ title: 'Fake', servings: 1 });
+
+      const uploaded = await agent
+        .post(`/api/recipes/${created.body.id}/photo`)
+        .attach('photo', Buffer.from('fake-image-bytes'), {
+          filename: 'photo.png',
+          contentType: 'image/png',
+        });
+      expect(uploaded.status).toBe(400);
+      expect(uploaded.body.kind).toBe('unreadable_image');
+
+      const recipe = await agent.get(`/api/recipes/${created.body.id}`);
+      expect(recipe.body.image_path).toBeNull();
+      expect(fs.existsSync(path.join(UPLOADS_DIR, 'recipes', String(created.body.id)))).toBe(false);
 
       await agent.delete(`/api/recipes/${created.body.id}`);
     });
@@ -790,7 +834,7 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
           filename: 'x.svg',
           contentType: 'image/svg+xml',
         });
-      expect(uploaded.status).toBe(500);
+      expect(uploaded.status).toBe(400);
 
       const recipe = await agent.get(`/api/recipes/${created.body.id}`);
       expect(recipe.body.image_path).toBeNull();
