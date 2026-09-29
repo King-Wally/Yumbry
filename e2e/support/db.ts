@@ -150,6 +150,22 @@ export class Db {
     return rows[0]?.image_path ?? null;
   }
 
+  async recipeShareToken(recipeId: number): Promise<string | null> {
+    const { rows } = await this.pool.query<{ share_token: string | null }>(
+      'SELECT share_token FROM recipes WHERE id = $1',
+      [recipeId]
+    );
+    return rows[0]?.share_token ?? null;
+  }
+
+  async recipeVersionCount(recipeId: number): Promise<number> {
+    const { rows } = await this.pool.query<{ count: string }>(
+      'SELECT count(*) FROM recipe_versions WHERE recipe_id = $1',
+      [recipeId]
+    );
+    return Number(rows[0].count);
+  }
+
   /** Books AI spend against a user (or the shared pool, with `null`) for today. */
   async addAiSpend(userId: string | null, costUsd: number): Promise<void> {
     await this.pool.query(

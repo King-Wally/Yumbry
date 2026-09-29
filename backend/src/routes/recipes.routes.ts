@@ -15,8 +15,8 @@ import {
   removeRecipe,
   uploadRecipePhoto,
 } from '../controllers/recipes.controller.js';
-import { uploadJsonFile, uploadPhoto } from '../middleware/upload.js';
-import { handleUploadError } from '../middleware/multer-error.js';
+import { MEMORY_PHOTO_LIMIT_MB, uploadJsonFile, uploadPhoto } from '../middleware/upload.js';
+import { uploadErrorHandler } from '../middleware/multer-error.js';
 import { requireRecipeAccess } from '../middleware/require-recipe-access.js';
 import { validateRecipeIdParam } from '../middleware/validate-recipe-id.js';
 import { urlImportRateLimiter } from '../middleware/rate-limit.js';
@@ -51,7 +51,7 @@ recipesRouter.post(
   validateRecipeIdParam,
   asyncHandler(requireRecipeAccess),
   uploadPhoto.single('photo'),
-  handleUploadError,
+  uploadErrorHandler(MEMORY_PHOTO_LIMIT_MB),
   asyncHandler(uploadRecipePhoto)
 );
 recipesRouter.post('/:id/share', validateRecipeIdParam, asyncHandler(postRecipeShare));

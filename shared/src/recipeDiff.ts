@@ -1,5 +1,5 @@
-import type { RecipeSnapshot } from 'yumbry-shared';
-import { toNullableNumber } from './numeric';
+import type { RecipeSnapshot } from './recipe-snapshot.js';
+import { toNullableNumber } from './numeric.js';
 
 /** A run of text on one side of a comparison; `changed` runs get highlighted. */
 export interface Segment {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useScaledIngredients } from '../hooks/useScaledIngredients';
-import { toNumber } from '../utils/numeric';
+import { toNumber } from 'yumbry-shared';
 import type { SharedRecipe } from '../types';
 import IngredientList from './IngredientList';
 import InstructionList from './InstructionList';
