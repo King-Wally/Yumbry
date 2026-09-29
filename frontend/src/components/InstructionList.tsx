@@ -1,5 +1,7 @@
+import type { ReactNode } from 'react';
+
 interface InstructionListProps {
-  items: { key: string | number; step_number: number; text: string }[];
+  items: { key: string | number; step_number: number; text: ReactNode }[];
 }
 
 export default function InstructionList({ items }: InstructionListProps) {
