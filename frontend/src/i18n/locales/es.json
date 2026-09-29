@@ -150,7 +150,22 @@
       "calories": "Calorías",
       "fat": "Grasas",
       "carbs": "Carbohidratos",
-      "protein": "Proteínas"
+      "protein": "Proteínas",
+      "versionHistory": "Historial de versiones",
+      "share": "Compartir"
+    },
+    "share": {
+      "title": "Compartir receta",
+      "description": "Cualquiera con el enlace puede ver esta receta, sin necesidad de cuenta. Quien tenga una cuenta de Yumbry puede guardar su propia copia.",
+      "createLink": "Crear enlace",
+      "linkLabel": "Enlace para compartir",
+      "copyLink": "Copiar enlace",
+      "copied": "¡Copiado!",
+      "hint": "Las copias son independientes: tus cambios en esta receta no les llegan, ni los suyos a ti.",
+      "done": "Listo",
+      "stop": "Dejar de compartir",
+      "stopDialogTitle": "¿Dejar de compartir esta receta?",
+      "stopDialogDescription": "El enlace deja de funcionar de inmediato. Las copias que otros ya guardaron siguen siendo suyas. Volver a compartir crea un enlace nuevo."
     },
     "card": {
       "noPhoto": "Sin foto"
@@ -158,6 +173,22 @@
     "hero": {
       "noPhotoYet": "Aún sin foto"
     }
+  },
+  "recipeVersions": {
+    "title": "Historial de versiones",
+    "back": "Volver a la receta",
+    "compareWith": "Comparar con",
+    "selectedVersion": "Versión seleccionada",
+    "currentVersion": "Versión actual",
+    "differences_one": "{{count}} diferencia resaltada",
+    "differences_other": "{{count}} diferencias resaltadas",
+    "noDifferences": "Sin diferencias",
+    "empty": "Aún no hay versiones anteriores: se guarda una versión cada vez que editas esta receta.",
+    "revert": "Restaurar esta versión",
+    "reverting": "Restaurando...",
+    "revertedToast": "Receta restaurada a la versión seleccionada",
+    "servings_one": "{{count}} ración",
+    "servings_other": "{{count}} raciones"
   },
   "recipeForm": {
     "eyebrow": "Receta",
@@ -297,6 +328,19 @@
     "logInToJoin": "Inicia sesión para unirte",
     "joining": "Uniéndose...",
     "joinedToast": "Te has unido a la familia"
+  },
+  "sharedRecipe": {
+    "saveCopy": "¿Te gusta esta receta? Guarda tu propia copia en tus recetas. Puedes cambiarla sin afectar la original.",
+    "import": "Añadir a mis recetas",
+    "importing": "Añadiendo...",
+    "importedToast": "Añadida a tus recetas",
+    "alreadyYours": "Esta receta ya está en tu colección.",
+    "openYours": "Abrir receta",
+    "signUpPrompt": "¿Quieres guardar esta receta? Crea una cuenta gratuita para guardarla en tu propia colección.",
+    "createAccount": "Crear cuenta",
+    "logIn": "Iniciar sesión",
+    "unavailableTitle": "Este enlace ya no está activo",
+    "unavailableDescription": "Puede que el propietario haya dejado de compartir esta receta, o el enlace está incompleto."
   },
   "onboarding": {
     "stepCounter": "Paso {{step}} de {{total}}",

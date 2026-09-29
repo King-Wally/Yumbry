@@ -20,3 +20,12 @@ export const RecipeIdParamSchema = z.object({
 });
 
 export type RecipeIdParam = z.infer<typeof RecipeIdParamSchema>;
+
+/** Same rules as `:id`, for the `:versionId` segment of the version-history routes. */
+export const RecipeVersionIdParamSchema = z.object({
+  versionId: z
+    .string()
+    .regex(/^[1-9]\d{0,9}$/, 'Version id must be a positive integer.')
+    .transform(Number)
+    .refine((id) => id <= MAX_INT4, 'Version id is out of range.'),
+});

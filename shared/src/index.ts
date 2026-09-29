@@ -9,6 +9,7 @@ export * from './ai-provider-error.js';
 export * from './recipe-dto.js';
 export * from './family-dto.js';
 export * from './quantity.js';
+export * from './recipe-snapshot.js';
 export * from './numeric.js';
 export * from './recipe-scaling.js';
 export * from './recipe-form.js';

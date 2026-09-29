@@ -3,12 +3,14 @@ import { useTranslation } from 'react-i18next';
 import RecipeListPage from './pages/RecipeListPage';
 import RecipeDetailPage from './pages/RecipeDetailPage';
 import RecipeFormPage from './pages/RecipeFormPage';
+import RecipeVersionsPage from './pages/RecipeVersionsPage';
 import ImportPage from './pages/ImportPage';
 import UrlImportPage from './pages/UrlImportPage';
 import PhotoImportPage from './pages/PhotoImportPage';
 import AiChatPage from './pages/AiChatPage';
 import SettingsPage from './pages/SettingsPage';
 import JoinFamilyPage from './pages/JoinFamilyPage';
+import SharedRecipePage from './pages/SharedRecipePage';
 import OnboardingPage from './pages/OnboardingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -22,7 +24,16 @@ import { useLocaleSync } from './hooks/useLocaleSync';
 import { useAiStatus } from './hooks/useAiStatus';
 import { version } from '../package.json';
 import * as NavigationMenuPrimitive from '@radix-ui/react-navigation-menu';
-import { UserCircle } from 'lucide-react';
+import {
+  UserCircle,
+  SquarePen,
+  SquareSparkles,
+  Camera,
+  Link as LinkIcon,
+  FileUp,
+  Settings2,
+  LogOut,
+} from 'lucide-react';
 
 export default function App() {
   const { t } = useTranslation();
@@ -39,7 +50,7 @@ export default function App() {
     <div className={`bg-cream flex flex-col ${isOnboarding ? 'h-dvh' : 'min-h-screen'}`}>
       {!isOnboarding && (
         <header className="sticky top-0 z-10 border-b border-stone-200 bg-white/90 backdrop-blur">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
             <Link
               to="/"
               className="hover:text-clay font-serif text-2xl tracking-tight text-stone-900 transition-colors"
@@ -58,33 +69,41 @@ export default function App() {
                         <div className="flex flex-col divide-y divide-stone-200">
                           <Link
                             to="/recipes/new"
-                            className="px-5 py-2 transition hover:bg-stone-100"
+                            className="flex items-center gap-2 px-3 py-2 transition hover:bg-stone-100"
                           >
+                            <SquarePen className="h-4 w-4" />
                             {t('nav.manually')}
                           </Link>
                           {user?.jsonImportExportEnabled && (
-                            <Link to="/import" className="px-5 py-2 transition hover:bg-stone-100">
+                            <Link
+                              to="/import"
+                              className="flex items-center gap-2 px-3 py-2 transition hover:bg-stone-100"
+                            >
+                              <FileUp className="h-4 w-4" />
                               {t('nav.import')}
                             </Link>
                           )}
                           <Link
                             to="/import/url"
-                            className="px-5 py-2 transition hover:bg-stone-100"
+                            className="flex items-center gap-2 px-3 py-2 transition hover:bg-stone-100"
                           >
+                            <LinkIcon className="h-4 w-4" />
                             {t('nav.paste')}
                           </Link>
                           {aiStatus?.configured && (
                             <>
                               <Link
                                 to="/import/photo"
-                                className="px-5 py-2 transition hover:bg-stone-100"
+                                className="flex items-center gap-2 px-3 py-2 transition hover:bg-stone-100"
                               >
+                                <Camera className="h-4 w-4" />
                                 {t('nav.fromPhoto')}
                               </Link>
                               <Link
                                 to="/create-with-ai"
-                                className="px-5 py-2 transition hover:bg-stone-100"
+                                className="flex items-center gap-2 px-3 py-2 transition hover:bg-stone-100"
                               >
+                                <SquareSparkles className="h-4 w-4" />
                                 {t('nav.createWithAi')}
                               </Link>
                             </>
@@ -103,14 +122,19 @@ export default function App() {
                       </NavigationMenuPrimitive.Trigger>
                       <NavigationMenuPrimitive.Content className="absolute top-full right-0 mt-2 rounded-md border border-stone-200 bg-white text-nowrap shadow-lg">
                         <div className="flex flex-col divide-y divide-stone-200">
-                          <Link to="/settings" className="px-5 py-2 transition hover:bg-stone-100">
+                          <Link
+                            to="/settings"
+                            className="flex items-center gap-2 px-3 py-2 transition hover:bg-stone-100"
+                          >
+                            <Settings2 className="h-4 w-4" />
                             {t('nav.settings')}
                           </Link>
                           <button
                             type="button"
                             onClick={() => void authClient.signOut()}
-                            className="px-5 py-2 transition hover:bg-stone-100"
+                            className="flex items-center gap-2 px-3 py-2 transition hover:bg-stone-100"
                           >
+                            <LogOut className="h-4 w-4" />
                             {t('nav.logOut')}
                           </button>
                         </div>
@@ -126,7 +150,7 @@ export default function App() {
 
       <main
         className={
-          isOnboarding ? 'flex flex-1 flex-col' : 'mx-auto w-full max-w-7xl flex-1 px-4 py-6'
+          isOnboarding ? 'flex flex-1 flex-col' : 'mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6'
         }
       >
         <Routes>
@@ -163,6 +187,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <RecipeFormPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/recipes/:id/versions"
+            element={
+              <ProtectedRoute>
+                <RecipeVersionsPage />
               </ProtectedRoute>
             }
           />
@@ -207,6 +239,7 @@ export default function App() {
             }
           />
           <Route path="/join-family/:token" element={<JoinFamilyPage />} />
+          <Route path="/share/:token" element={<SharedRecipePage />} />
           <Route
             path="/onboarding"
             element={

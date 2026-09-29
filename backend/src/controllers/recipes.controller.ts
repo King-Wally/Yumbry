@@ -14,7 +14,11 @@ import {
   updateRecipe,
 } from '../services/recipe.service.js';
 import type { IngredientInput } from '../services/recipe.types.js';
-import { publicUploadPath } from '../middleware/upload.js';
+import { disableShare, enableShare } from '../services/recipe-share.service.js';
+import { getVersion, listVersions, revertToVersion } from '../services/recipe-version.service.js';
+import { RecipeVersionIdParamSchema } from '../schemas/recipe-id.schema.js';
+import { deleteUploadedFile, saveRecipePhoto } from '../middleware/upload.js';
+import { optimizeRecipePhoto, UnreadableImageError } from '../services/image-prep.service.js';
 import { RecipeBodySchema, type RecipeBody } from '../schemas/recipe.schema.js';
 import { UrlImportBodySchema } from '../schemas/url-import.schema.js';
 import { sendUrlImportError, UrlImportError } from '../utils/url-import-error.js';
@@ -202,8 +206,66 @@ export async function removeRecipe(req: Request, res: Response) {
 export async function uploadRecipePhoto(req: Request, res: Response) {
   if (!req.file) return res.status(400).json({ error: 'No image file provided.' });
 
-  const imagePath = publicUploadPath(req.file.path);
+  let optimized: Buffer;
+  try {
+    optimized = await optimizeRecipePhoto(req.file.buffer);
+  } catch (err) {
+    // The upload claimed to be an image and wasn't one anything here can decode — the user's to
+    // fix, so a 400 rather than the generic 500 the catch-all would give.
+    if (err instanceof UnreadableImageError) {
+      return res.status(400).json({ error: err.message, kind: 'unreadable_image' });
+    }
+    throw err;
+  }
+
+  const imagePath = await saveRecipePhoto(req.recipeId as number, optimized);
   const updated = await setRecipePhoto(req.recipeId as number, imagePath, req.familyId as number);
-  if (!updated) return res.status(404).json({ error: 'Recipe not found' });
+  if (!updated) {
+    // The recipe went away between requireRecipeAccess and here; don't leave the file behind.
+    await deleteUploadedFile(imagePath);
+    return res.status(404).json({ error: 'Recipe not found' });
+  }
   res.json({ image_path: imagePath });
+}
+
+export async function postRecipeShare(req: Request, res: Response) {
+  const shareToken = await enableShare(req.recipeId as number, req.familyId as number);
+  if (!shareToken) return res.status(404).json({ error: 'Recipe not found' });
+  res.json({ share_token: shareToken });
+}
+
+export async function deleteRecipeShare(req: Request, res: Response) {
+  const found = await disableShare(req.recipeId as number, req.familyId as number);
+  if (!found) return res.status(404).json({ error: 'Recipe not found' });
+  res.status(204).end();
+}
+
+export async function getRecipeVersions(req: Request, res: Response) {
+  const recipe = await getRecipeById(req.recipeId as number, req.familyId as number);
+  if (!recipe) return res.status(404).json({ error: 'Recipe not found' });
+  res.json(await listVersions(req.recipeId as number, req.familyId as number));
+}
+
+export async function getRecipeVersion(req: Request, res: Response) {
+  try {
+    const { versionId } = RecipeVersionIdParamSchema.parse(req.params);
+    const version = await getVersion(req.recipeId as number, versionId, req.familyId as number);
+    if (!version) return res.status(404).json({ error: 'Version not found' });
+    res.json(version);
+  } catch (err) {
+    if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
+    throw err;
+  }
+}
+
+export async function postRevertRecipeVersion(req: Request, res: Response) {
+  try {
+    const { versionId } = RecipeVersionIdParamSchema.parse(req.params);
+    const recipe = await revertToVersion(req.recipeId as number, versionId, req.familyId as number);
+    if (!recipe) return res.status(404).json({ error: 'Version not found' });
+    res.json(recipe);
+  } catch (err) {
+    if (err instanceof ZodError) return res.status(400).json({ error: err.issues });
+    throw err;
+  }
 }

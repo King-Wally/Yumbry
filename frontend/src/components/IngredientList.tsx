@@ -1,5 +1,7 @@
+import type { ReactNode } from 'react';
+
 interface IngredientListProps {
-  items: { key: string | number; text: string }[];
+  items: { key: string | number; text: ReactNode }[];
 }
 
 export default function IngredientList({ items }: IngredientListProps) {
