@@ -15,6 +15,9 @@ const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads
  * SVG loader — attack surface for no benefit to a recipe photo. */
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
+// Stored photos are always .webp (see saveRecipePhoto); the rest cover legacy uploads.
+const ALLOWED_IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
+
 export function imageFileFilter(
   req: Request,
   file: Express.Multer.File,
@@ -103,7 +106,7 @@ export async function copyRecipeUpload(
   if (!source) return null;
 
   const extension = path.extname(source).toLowerCase();
-  if (!Object.values(ALLOWED_IMAGE_TYPES).includes(extension)) return null;
+  if (!ALLOWED_IMAGE_EXTENSIONS.has(extension)) return null;
 
   const dir = path.join(UPLOADS_DIR, 'recipes', String(targetRecipeId));
   await fsp.mkdir(dir, { recursive: true });
