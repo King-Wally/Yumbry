@@ -103,7 +103,7 @@ export async function copyRecipeUpload(
   if (!source) return null;
 
   const extension = path.extname(source).toLowerCase();
-  if (!Object.values(ALLOWED_IMAGE_EXTENSIONS).includes(extension)) return null;
+  if (!Object.values(ALLOWED_IMAGE_TYPES).includes(extension)) return null;
 
   const dir = path.join(UPLOADS_DIR, 'recipes', String(targetRecipeId));
   await fsp.mkdir(dir, { recursive: true });
