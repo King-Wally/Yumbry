@@ -110,6 +110,28 @@ export function absoluteUploadPath(publicPath: string): string | null {
   return absolute;
 }
 
+/** Copies an already-stored recipe photo into another recipe's upload directory
+ * under a fresh server-chosen name, and returns the new file's public path. Used
+ * when importing a shared recipe, so the copy survives the original's deletion.
+ * Returns null for anything that isn't a local upload with an allowed extension. */
+export async function copyRecipeUpload(
+  publicPath: string,
+  targetRecipeId: number
+): Promise<string | null> {
+  if (!Number.isInteger(targetRecipeId)) return null;
+  const source = absoluteUploadPath(publicPath);
+  if (!source) return null;
+
+  const extension = path.extname(source).toLowerCase();
+  if (!Object.values(ALLOWED_IMAGE_EXTENSIONS).includes(extension)) return null;
+
+  const dir = path.join(UPLOADS_DIR, 'recipes', String(targetRecipeId));
+  await fsp.mkdir(dir, { recursive: true });
+  const target = path.join(dir, `${uuidv4()}${extension}`);
+  await fsp.copyFile(source, target);
+  return publicUploadPath(target);
+}
+
 /** Best-effort: a failed unlink leaves an orphaned file, which beats failing the request. */
 export async function deleteUploadedFile(publicPath: string | null | undefined): Promise<void> {
   if (!publicPath) return;

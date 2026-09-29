@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  deleteRecipeShare,
   exportRecipe,
   getRecipe,
   getRecipes,
@@ -8,6 +9,7 @@ import {
   importRecipe,
   importRecipeFromUrl,
   postRecipe,
+  postRecipeShare,
   postRevertRecipeVersion,
   putRecipe,
   removeRecipe,
@@ -50,3 +52,5 @@ recipesRouter.post(
   uploadPhoto.single('photo'),
   asyncHandler(uploadRecipePhoto)
 );
+recipesRouter.post('/:id/share', validateRecipeIdParam, asyncHandler(postRecipeShare));
+recipesRouter.delete('/:id/share', validateRecipeIdParam, asyncHandler(deleteRecipeShare));

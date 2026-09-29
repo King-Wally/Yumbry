@@ -75,8 +75,8 @@ controller is wrapped in `asyncHandler` at the route so promise rejections reach
 `app.ts` builds the Express app; `index.ts` imports it, listens, and sweeps orphaned families
 once at startup. Middleware order: global `/api` rate limiter → better-auth's `toNodeHandler`
 catch-all → `express.json` → static `/uploads` (behind `requireAuth` + `requirePhotoAccess`) →
-health check → `/api/config` → feature routers, each wrapped with `requireAuth` at mount time →
-SPA static fallback → one generic 4-arg error handler at the very end (logs + generic 500, no
+health check → `/api/config` → feature routers, each wrapped with `requireAuth` at mount time
+(except `/api/shared`, see below) → SPA static fallback → one generic 4-arg error handler at the very end (logs + generic 500, no
 per-kind mapping). There is no `cookieParser` — better-auth reads cookies off the raw headers.
 
 Validation: Zod schemas live under `backend/src/schemas/`, called directly as
@@ -120,6 +120,18 @@ write them — preferences go through `PATCH /api/me`, which validates against t
 required fields against the request payload _before_ `databaseHooks` runs, so a field the client
 is forbidden to send could never satisfy it. The `user.create.before` hook creates the personal
 family and supplies the id.
+
+### Public share links
+
+The one deliberate hole in family scoping. `Recipe.shareToken` (nullable, unique, 32 random bytes
+hex) is minted by `POST /api/recipes/:id/share` (idempotent) and nulled by `DELETE` on the same
+path, which kills the link. `/api/shared/:token` is mounted **without** `requireAuth`:
+`GET /:token` uses `optionalAuth` (never 401s) and returns the recipe minus `id`/`share_token`, plus
+`own_recipe_id` when the viewer's family owns it; `GET /:token/photo` serves the local photo, since
+`/uploads` is family-gated; `POST /:token/import` (route-level `requireAuth`) copies the recipe into
+the caller's family via `createRecipe`, recreating tags/category by name and copying the photo file
+(`copyRecipeUpload`). The frontend page is `/share/:token` (`SharedRecipePage`, not in
+`ProtectedRoute`), and the recipe body is shared with the owner's page through `RecipeDetailView`.
 
 ### AI provider
 

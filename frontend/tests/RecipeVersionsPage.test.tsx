@@ -28,6 +28,7 @@ const recipe: Recipe = {
   updated_at: '2026-09-18T19:05:00.000Z',
   tags: [{ id: 1, name: 'pasta' }],
   category: null,
+  share_token: null,
   ingredients: [
     {
       id: 1,

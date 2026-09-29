@@ -150,7 +150,21 @@
       "fat": "Vet",
       "carbs": "Koolhydraten",
       "protein": "Eiwit",
-      "versionHistory": "Versiegeschiedenis"
+      "versionHistory": "Versiegeschiedenis",
+      "share": "Delen"
+    },
+    "share": {
+      "title": "Recept delen",
+      "description": "Iedereen met de link kan dit recept bekijken, zonder account. Wie een Yumbry-account heeft, kan een eigen kopie bewaren.",
+      "createLink": "Link maken",
+      "linkLabel": "Deellink",
+      "copyLink": "Link kopiëren",
+      "copied": "Gekopieerd!",
+      "hint": "Kopieën staan op zichzelf: wijzigingen aan dit recept komen er niet in terecht, en omgekeerd ook niet.",
+      "done": "Klaar",
+      "stop": "Stoppen met delen",
+      "stopDialogTitle": "Stoppen met het delen van dit recept?",
+      "stopDialogDescription": "De link werkt meteen niet meer. Kopieën die mensen al bewaard hebben, blijven van hen. Opnieuw delen maakt een nieuwe link."
     },
     "card": {
       "noPhoto": "Geen foto"
@@ -309,6 +323,19 @@
     "logInToJoin": "Log in om lid te worden",
     "joining": "Bezig met toevoegen...",
     "joinedToast": "Je bent lid geworden van de familie"
+  },
+  "sharedRecipe": {
+    "saveCopy": "Lekker recept? Bewaar een eigen kopie bij je recepten. Je kunt die aanpassen zonder het origineel te veranderen.",
+    "import": "Toevoegen aan mijn recepten",
+    "importing": "Toevoegen...",
+    "importedToast": "Toegevoegd aan je recepten",
+    "alreadyYours": "Dit recept staat al in je verzameling.",
+    "openYours": "Recept openen",
+    "signUpPrompt": "Wil je dit recept bewaren? Maak een gratis account aan om het in je eigen verzameling op te slaan.",
+    "createAccount": "Account aanmaken",
+    "logIn": "Inloggen",
+    "unavailableTitle": "Deze link is niet meer actief",
+    "unavailableDescription": "De eigenaar deelt dit recept misschien niet meer, of de link is onvolledig."
   },
   "onboarding": {
     "stepCounter": "Stap {{step}} van {{total}}",

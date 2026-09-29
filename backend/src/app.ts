@@ -11,6 +11,7 @@ import { tagsRouter } from './routes/tags.routes.js';
 import { categoriesRouter } from './routes/categories.routes.js';
 import { familyRouter } from './routes/family.routes.js';
 import { aiRouter } from './routes/ai.routes.js';
+import { sharedRouter } from './routes/shared.routes.js';
 import { UPLOADS_DIR } from './middleware/upload.js';
 import { requireAuth } from './middleware/require-auth.js';
 import { requirePhotoAccess } from './middleware/require-photo-access.js';
@@ -77,6 +78,8 @@ app.use('/api/tags', requireAuth, tagsRouter);
 app.use('/api/categories', requireAuth, categoriesRouter);
 app.use('/api/family', requireAuth, familyRouter);
 app.use('/api/ai', requireAuth, aiRouter);
+// Public: the share token is the credential. Import applies requireAuth per route.
+app.use('/api/shared', sharedRouter);
 
 // The shell and the service worker must always be revalidated, otherwise a stale
 // index.html can be served from the HTTP cache before the service worker ever runs.
