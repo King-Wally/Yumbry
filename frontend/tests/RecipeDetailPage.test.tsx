@@ -48,6 +48,7 @@ const recipe: Recipe = {
   updated_at: '2026-01-01T00:00:00.000Z',
   tags: [],
   category: null,
+  share_token: null,
   ingredients: [
     {
       id: 1,
@@ -113,6 +114,7 @@ describe('RecipeDetailPage export button', () => {
     vi.mocked(useSession).mockReturnValue(sessionFor(currentUserWithExport));
     renderDetail();
 
+    fireEvent.click(await screen.findByRole('button', { name: 'Menu' }));
     const link = await screen.findByRole('link', { name: 'Export' });
     expect(link).toHaveAttribute('href', '/api/recipes/1/export');
     expect(link).toHaveAttribute('download');
@@ -139,6 +141,7 @@ describe('RecipeDetailPage export button', () => {
 
     renderDetail();
 
+    fireEvent.click(await screen.findByRole('button', { name: 'Menu' }));
     const button = await screen.findByRole('button', { name: 'Export' });
     await waitFor(() => expect(button).toBeEnabled());
 

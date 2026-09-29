@@ -14,6 +14,7 @@ import {
   updateRecipe,
 } from '../services/recipe.service.js';
 import type { IngredientInput } from '../services/recipe.types.js';
+import { disableShare, enableShare } from '../services/recipe-share.service.js';
 import { getVersion, listVersions, revertToVersion } from '../services/recipe-version.service.js';
 import { RecipeVersionIdParamSchema } from '../schemas/recipe-id.schema.js';
 import { deleteUploadedFile, saveRecipePhoto } from '../middleware/upload.js';
@@ -225,6 +226,18 @@ export async function uploadRecipePhoto(req: Request, res: Response) {
     return res.status(404).json({ error: 'Recipe not found' });
   }
   res.json({ image_path: imagePath });
+}
+
+export async function postRecipeShare(req: Request, res: Response) {
+  const shareToken = await enableShare(req.recipeId as number, req.familyId as number);
+  if (!shareToken) return res.status(404).json({ error: 'Recipe not found' });
+  res.json({ share_token: shareToken });
+}
+
+export async function deleteRecipeShare(req: Request, res: Response) {
+  const found = await disableShare(req.recipeId as number, req.familyId as number);
+  if (!found) return res.status(404).json({ error: 'Recipe not found' });
+  res.status(204).end();
 }
 
 export async function getRecipeVersions(req: Request, res: Response) {
