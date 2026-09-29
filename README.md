@@ -111,7 +111,14 @@ npm run dev                                  # http://localhost:5173, proxies /a
 ```sh
 cd backend && npm test    # unit tests always run; API integration tests need TEST_DATABASE_URL
 cd frontend && npm test
+cd shared && npm test
+npm run e2e:build && npm run e2e   # end-to-end, from the repo root (needs Postgres)
 ```
+
+The end-to-end suite in [`e2e/`](e2e/README.md) drives the production build in a real browser,
+with fakes standing in for OpenRouter, Gemini, Resend and recipe websites. It is written against
+pages and URLs rather than the JSON API, so it keeps passing if the stack underneath changes.
+See [`e2e/README.md`](e2e/README.md).
 
 The backend's integration test suites (`recipes.api.test.ts` and others) talk
 to a real, disposable Postgres database — they drop and recreate the `public`

@@ -150,6 +150,18 @@ describe.skipIf(!TEST_DATABASE_URL)('recipes API', () => {
       expect(res.status).toBe(404);
     });
 
+    it('refuses a non-image photo upload with a 400 the client can show', async () => {
+      const created = await agent.post('/api/recipes').send({ title: 'Photo Target', servings: 2 });
+      const res = await agent
+        .post(`/api/recipes/${created.body.id}/photo`)
+        .attach('photo', Buffer.from('just some text'), {
+          filename: 'notes.txt',
+          contentType: 'text/plain',
+        });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Only image uploads are allowed.');
+    });
+
     it('returns 404, not 500, for an over-long id on the static photo mount', async () => {
       const res = await agent.get('/uploads/recipes/99999999999999/x.jpg');
       expect(res.status).toBe(404);

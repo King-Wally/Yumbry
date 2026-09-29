@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetch, type Response as UndiciResponse } from 'undici';
 import { safeFetchHtml } from '../src/utils/safe-fetch.js';
 
@@ -359,6 +359,50 @@ describe('safeFetchHtml', () => {
 
     await expect(safeFetchHtml('http://example.com', { timeoutMs: 5 })).rejects.toMatchObject({
       kind: 'timeout',
+    });
+  });
+
+  describe('E2E_SAFE_FETCH_ALLOW', () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it('still blocks loopback when unset', async () => {
+      lookup.mockResolvedValue([{ address: '127.0.0.1', family: 4 }]);
+      await expect(safeFetchHtml('http://127.0.0.1:4100/page')).rejects.toMatchObject({
+        kind: 'blocked_url',
+      });
+    });
+
+    it('lets an exact host:port entry through the private-address check', async () => {
+      vi.stubEnv('E2E_SAFE_FETCH_ALLOW', '127.0.0.1:4100');
+      lookup.mockResolvedValue([{ address: '127.0.0.1', family: 4 }]);
+      vi.mocked(fetch).mockResolvedValue(
+        mockResponse({ headers: { 'content-type': 'text/html' }, body: '<html>ok</html>' })
+      );
+
+      const result = await safeFetchHtml('http://127.0.0.1:4100/page');
+      expect(result.html).toBe('<html>ok</html>');
+    });
+
+    it('does not match a different port or host', async () => {
+      vi.stubEnv('E2E_SAFE_FETCH_ALLOW', '127.0.0.1:4100');
+      lookup.mockResolvedValue([{ address: '127.0.0.1', family: 4 }]);
+      await expect(safeFetchHtml('http://127.0.0.1:4101/page')).rejects.toMatchObject({
+        kind: 'blocked_url',
+      });
+      await expect(safeFetchHtml('http://localhost:4100/page')).rejects.toMatchObject({
+        kind: 'blocked_url',
+      });
+    });
+
+    it('matches the default port when the entry names it explicitly', async () => {
+      vi.stubEnv('E2E_SAFE_FETCH_ALLOW', 'fixtures.test:80');
+      lookup.mockResolvedValue([{ address: '10.0.0.2', family: 4 }]);
+      vi.mocked(fetch).mockResolvedValue(
+        mockResponse({ headers: { 'content-type': 'text/html' }, body: '<html>ok</html>' })
+      );
+      await expect(safeFetchHtml('http://fixtures.test/page')).resolves.toBeDefined();
     });
   });
 });

@@ -7,6 +7,7 @@ COPY package.json package-lock.json ./
 COPY backend/package.json ./backend/package.json
 COPY frontend/package.json ./frontend/package.json
 COPY shared/package.json ./shared/package.json
+COPY e2e/package.json ./e2e/package.json
 RUN npm ci
 
 FROM deps AS shared-build
@@ -41,6 +42,7 @@ COPY package.json package-lock.json ./
 COPY backend/package.json ./backend/package.json
 COPY frontend/package.json ./frontend/package.json
 COPY shared/package.json ./shared/package.json
+COPY e2e/package.json ./e2e/package.json
 RUN npm ci --omit=dev --workspace=backend
 COPY --from=shared-build /repo/shared/dist ./shared/dist
 # The root node_modules/yumbry-shared entry is a symlink to ../shared,

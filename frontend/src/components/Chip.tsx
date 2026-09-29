@@ -8,6 +8,7 @@ export default function Chip({ active = false, className = '', ...props }: ChipP
   return (
     <button
       type="button"
+      aria-pressed={active}
       className={`rounded-full px-3 py-1 text-sm capitalize transition ${
         active ? 'bg-clay text-white shadow-sm' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
       } ${className}`}

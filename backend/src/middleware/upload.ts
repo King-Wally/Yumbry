@@ -30,6 +30,8 @@ export function imageFileFilter(
   cb(null, true);
 }
 
+export const PHOTO_LIMIT_MB = 8;
+
 // Memory storage for both photo uploads: the bytes are decoded and shrunk by sharp before anything
 // is kept, so the camera original never touches disk. A recipe photo is then written by
 // saveRecipePhoto; a photo imported into the AI is base64'd into one model call and dropped.

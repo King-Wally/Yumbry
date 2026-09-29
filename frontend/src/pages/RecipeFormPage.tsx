@@ -16,59 +16,23 @@ import Card from '../components/Card';
 import CategoryPicker from '../components/CategoryPicker';
 import ImageUpload from '../components/ImageUpload';
 import IngredientListEditor from '../components/IngredientListEditor';
-import InstructionListEditor, { type InstructionDraft } from '../components/InstructionListEditor';
+import InstructionListEditor from '../components/InstructionListEditor';
 import ServingsStepper from '../components/ServingsStepper';
 import { useAiStatus } from '../hooks/useAiStatus';
 import { useCategories } from '../hooks/useCategories';
 import { useTags } from '../hooks/useTags';
-import { toNullableNumber, toNumber } from '../utils/numeric';
+import {
+  addTag as addTagTo,
+  EMPTY_RECIPE_FORM,
+  formStateFromDraft,
+  formStateFromRecipe,
+  mergeNutritionEstimate,
+  nutritionRequestFromForm,
+  recipeInputFromForm,
+  suggestTags,
+  type RecipeFormState,
+} from 'yumbry-shared';
 import type { RecipeInput } from '../types';
-
-interface FormState {
-  title: string;
-  description: string;
-  prep_time_minutes: string;
-  cook_time_minutes: string;
-  total_time_minutes: string;
-  servings: number;
-  // Held as strings like the time fields, so an empty input stays empty rather than becoming 0.
-  calories: string;
-  fat_content: string;
-  carbohydrate_content: string;
-  protein_content: string;
-  image_path: string | null;
-  ingredients: string[];
-  instructions: InstructionDraft[];
-  tags: string[];
-  category: string | null;
-}
-
-/**
- * The form holds numbers as strings, so an absent value is '' rather than 0 or "null". Routed
- * through toNullableNumber so a Decimal column's "420.00" shows up in the input as 420.
- */
-function numberField(value: string | number | null | undefined): string {
-  const parsed = toNullableNumber(value);
-  return parsed === null ? '' : String(parsed);
-}
-
-const emptyForm: FormState = {
-  title: '',
-  description: '',
-  prep_time_minutes: '',
-  cook_time_minutes: '',
-  total_time_minutes: '',
-  servings: 4,
-  calories: '',
-  fat_content: '',
-  carbohydrate_content: '',
-  protein_content: '',
-  image_path: null,
-  ingredients: [''],
-  instructions: [{ text: '' }],
-  tags: [],
-  category: null,
-};
 
 export default function RecipeFormPage() {
   const { t } = useTranslation();
@@ -79,7 +43,7 @@ export default function RecipeFormPage() {
   const location = useLocation();
   const backTo = isEditing ? `/recipes/${id}` : '/';
 
-  const [form, setForm] = useState<FormState>(emptyForm);
+  const [form, setForm] = useState<RecipeFormState>(EMPTY_RECIPE_FORM);
   const [formForRecipeId, setFormForRecipeId] = useState<number | null>(null);
   const [tagInput, setTagInput] = useState('');
   const [tagInputFocused, setTagInputFocused] = useState(false);
@@ -92,7 +56,7 @@ export default function RecipeFormPage() {
   const aiDraft = draftState?.aiDraft ?? null;
   const draftSource = draftState?.draftSource ?? 'ai';
 
-  const { data: existingRecipe } = useQuery({
+  const { data: existingRecipe, isLoading: existingRecipeLoading } = useQuery({
     queryKey: queryKeys.recipe(id!),
     queryFn: () => getRecipe(id!),
     enabled: isEditing,
@@ -102,65 +66,18 @@ export default function RecipeFormPage() {
   const { data: categories } = useCategories();
   const { data: existingTags } = useTags();
 
-  const tagSuggestions =
-    tagInput.trim().length > 0
-      ? (existingTags ?? []).filter(
-          (t) =>
-            t.name.toLowerCase().includes(tagInput.toLowerCase()) &&
-            !form.tags.some((added) => added.toLowerCase() === t.name.toLowerCase())
-        )
-      : [];
+  const tagSuggestions = suggestTags(existingTags ?? [], tagInput, form.tags);
 
   // Form hydration in render (not useEffect) to avoid stale-value flash
   if (existingRecipe && formForRecipeId !== existingRecipe.id && !aiDraft) {
     setFormForRecipeId(existingRecipe.id);
-    setForm({
-      title: existingRecipe.title ?? '',
-      description: existingRecipe.description ?? '',
-      prep_time_minutes:
-        existingRecipe.prep_time_minutes != null ? String(existingRecipe.prep_time_minutes) : '',
-      cook_time_minutes:
-        existingRecipe.cook_time_minutes != null ? String(existingRecipe.cook_time_minutes) : '',
-      total_time_minutes:
-        existingRecipe.total_time_minutes != null ? String(existingRecipe.total_time_minutes) : '',
-      servings: toNumber(existingRecipe.servings, 1),
-      calories: numberField(existingRecipe.calories),
-      fat_content: numberField(existingRecipe.fat_content),
-      carbohydrate_content: numberField(existingRecipe.carbohydrate_content),
-      protein_content: numberField(existingRecipe.protein_content),
-      image_path: existingRecipe.image_path ?? null,
-      ingredients: existingRecipe.ingredients?.map((i) => i.raw_text) ?? [''],
-      instructions: existingRecipe.instructions?.length
-        ? existingRecipe.instructions.map((i) => ({ id: i.id, text: i.text }))
-        : [{ text: '' }],
-      tags: existingRecipe.tags?.map((tag) => tag.name) ?? [],
-      category: existingRecipe.category?.name ?? null,
-    });
+    setForm(formStateFromRecipe(existingRecipe));
   }
 
   // AI draft takes priority (available synchronously vs async existingRecipe)
   if (aiDraft && !aiDraftApplied) {
     setAiDraftApplied(true);
-    setForm({
-      title: aiDraft.title,
-      description: aiDraft.description ?? '',
-      prep_time_minutes: aiDraft.prep_time_minutes != null ? String(aiDraft.prep_time_minutes) : '',
-      cook_time_minutes: aiDraft.cook_time_minutes != null ? String(aiDraft.cook_time_minutes) : '',
-      total_time_minutes:
-        aiDraft.total_time_minutes != null ? String(aiDraft.total_time_minutes) : '',
-      servings: aiDraft.servings,
-      calories: numberField(aiDraft.calories),
-      fat_content: numberField(aiDraft.fat_content),
-      carbohydrate_content: numberField(aiDraft.carbohydrate_content),
-      protein_content: numberField(aiDraft.protein_content),
-      image_path: aiDraft.image_path ?? null,
-      ingredients: aiDraft.ingredients.length ? aiDraft.ingredients : [''],
-      instructions: aiDraft.instructions.length
-        ? aiDraft.instructions.map((i) => ({ text: i.text }))
-        : [{ text: '' }],
-      tags: aiDraft.tags,
-      category: aiDraft.category,
-    });
+    setForm(formStateFromDraft(aiDraft));
   }
 
   const saveMutation = useMutation({
@@ -175,25 +92,12 @@ export default function RecipeFormPage() {
     },
   });
 
-  const nutritionIngredients = form.ingredients.filter((line) => line.trim() !== '');
-  const canEstimateNutrition = form.title.trim() !== '' && nutritionIngredients.length > 0;
+  const nutritionRequest = nutritionRequestFromForm(form);
+  const canEstimateNutrition = nutritionRequest !== null;
 
   const nutritionMutation = useMutation({
     mutationFn: estimateNutrition,
-    onSuccess: (estimate) =>
-      setForm((f) => ({
-        ...f,
-        // A null stays null: a value the model declined to guess keeps whatever the cook already
-        // had, rather than being overwritten with a fake 0 they would have to notice and clear.
-        calories: estimate.calories != null ? String(estimate.calories) : f.calories,
-        fat_content: estimate.fat_content != null ? String(estimate.fat_content) : f.fat_content,
-        carbohydrate_content:
-          estimate.carbohydrate_content != null
-            ? String(estimate.carbohydrate_content)
-            : f.carbohydrate_content,
-        protein_content:
-          estimate.protein_content != null ? String(estimate.protein_content) : f.protein_content,
-      })),
+    onSuccess: (estimate) => setForm((f) => mergeNutritionEstimate(f, estimate)),
   });
 
   const photoMutation = useMutation({
@@ -204,23 +108,15 @@ export default function RecipeFormPage() {
   // Built from live form state rather than the saved recipe, so it measures what the cook is
   // looking at right now.
   function handleEstimateNutrition() {
-    nutritionMutation.mutate({
-      title: form.title.trim(),
-      description: form.description.trim() || null,
-      servings: Number(form.servings),
-      ingredients: nutritionIngredients,
-      instructions: form.instructions.map((step) => step.text.trim()).filter(Boolean),
-    });
+    if (nutritionRequest) nutritionMutation.mutate(nutritionRequest);
   }
 
-  function updateField<K extends keyof FormState>(field: K, value: FormState[K]) {
+  function updateField<K extends keyof RecipeFormState>(field: K, value: RecipeFormState[K]) {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
-  function addTag(name = tagInput.trim()) {
-    if (name && !form.tags.some((tag) => tag.toLowerCase() === name.toLowerCase())) {
-      setForm((f) => ({ ...f, tags: [...f.tags, name] }));
-    }
+  function addTag(name = tagInput) {
+    setForm((f) => ({ ...f, tags: addTagTo(f.tags, name) }));
     setTagInput('');
   }
 
@@ -230,25 +126,16 @@ export default function RecipeFormPage() {
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    saveMutation.mutate({
-      title: form.title,
-      description: form.description || null,
-      prep_time_minutes: form.prep_time_minutes === '' ? null : Number(form.prep_time_minutes),
-      cook_time_minutes: form.cook_time_minutes === '' ? null : Number(form.cook_time_minutes),
-      total_time_minutes: form.total_time_minutes === '' ? null : Number(form.total_time_minutes),
-      servings: Number(form.servings),
-      calories: toNullableNumber(form.calories),
-      fat_content: toNullableNumber(form.fat_content),
-      carbohydrate_content: toNullableNumber(form.carbohydrate_content),
-      protein_content: toNullableNumber(form.protein_content),
-      image_path: form.image_path,
-      ingredients: form.ingredients.filter((line) => line.trim() !== ''),
-      instructions: form.instructions
-        .filter((step) => step.text.trim() !== '')
-        .map((step, index) => ({ step_number: index + 1, text: step.text })),
-      tags: form.tags,
-      category: form.category,
-    });
+    saveMutation.mutate(recipeInputFromForm(form));
+  }
+
+  // An empty form for a recipe that doesn't exist (or belongs to another family) could only fail
+  // on save, so say so up front, as the detail page does.
+  if (isEditing && existingRecipeLoading) {
+    return <p className="text-stone-500">{t('recipes.detail.loading')}</p>;
+  }
+  if (isEditing && !existingRecipe) {
+    return <p className="text-stone-500">{t('recipes.detail.notFound')}</p>;
   }
 
   return (
@@ -285,10 +172,14 @@ export default function RecipeFormPage() {
           />
           <div className="space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-stone-700">
+              <label
+                htmlFor="recipe-title"
+                className="mb-1 block text-sm font-medium text-stone-700"
+              >
                 {t('recipeForm.titlePlaceholder')}
               </label>
               <input
+                id="recipe-title"
                 type="text"
                 required
                 value={form.title}
@@ -298,10 +189,14 @@ export default function RecipeFormPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-stone-700">
+              <label
+                htmlFor="recipe-description"
+                className="mb-1 block text-sm font-medium text-stone-700"
+              >
                 {t('recipeForm.descriptionPlaceholder')}
               </label>
               <textarea
+                id="recipe-description"
                 value={form.description}
                 onChange={(e) => updateField('description', e.target.value)}
                 placeholder={t('recipeForm.descriptionPlaceholder')}
@@ -319,6 +214,11 @@ export default function RecipeFormPage() {
                   label={t('recipeForm.photoLabel')}
                   onUpload={(file) => photoMutation.mutate(file)}
                 />
+                {photoMutation.isError && (
+                  <p role="alert" className="mt-2 text-sm text-red-600">
+                    {photoMutation.error?.message}
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -547,7 +447,9 @@ export default function RecipeFormPage() {
       </div>
 
       {saveMutation.isError && (
-        <p className="mt-6 text-sm text-red-600">{saveMutation.error?.message}</p>
+        <p role="alert" className="mt-6 text-sm text-red-600">
+          {saveMutation.error?.message}
+        </p>
       )}
 
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-stone-200 bg-white/90 backdrop-blur">

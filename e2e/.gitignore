@@ -1,0 +1,4 @@
+.server/
+playwright-report/
+test-results/
+blob-report/

@@ -100,7 +100,8 @@ export const auth = betterAuth({
   rateLimit: {
     // Off outside production so the test suite can register freely; the
     // express-level apiRateLimiter still covers everything either way.
-    enabled: IS_PROD,
+    // DISABLE_RATE_LIMITS=1 turns it off for the E2E suite, which runs a production build.
+    enabled: IS_PROD && process.env.DISABLE_RATE_LIMITS !== '1',
     window: 60,
     max: 100,
     customRules: {

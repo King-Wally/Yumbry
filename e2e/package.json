@@ -1,0 +1,28 @@
+{
+  "name": "yumbry-e2e",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "node scripts/prepare.ts",
+    "test": "node scripts/prepare.ts && playwright test",
+    "test:ui": "node scripts/prepare.ts && playwright test --ui",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^24.13.3",
+    "@types/pg": "^8.20.0",
+    "eslint": "^10.10.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.12.0",
+    "pg": "^8.12.0",
+    "prettier": "^3.9.5",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.69.0"
+  }
+}

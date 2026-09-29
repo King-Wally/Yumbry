@@ -19,7 +19,7 @@ import {
   type NutritionKey,
   type Segment,
   type TimeKey,
-} from '../utils/recipeDiff';
+} from 'yumbry-shared';
 
 /** The one highlight colour for every difference on the page — bright on purpose. */
 const HIGHLIGHT = 'bg-yellow-300';
@@ -91,7 +91,7 @@ function VersionPane({ label, date, pane, timeKeys, nutritionKeys }: VersionPane
         <div className="flex flex-wrap items-center gap-1">
           {pane.category.name && (
             <span
-              className={`inline-flex rounded-full p-[3px] ${highlightIf(pane.category.changed)}`}
+              className={`inline-flex rounded-full p-0.75 ${highlightIf(pane.category.changed)}`}
             >
               <span className="bg-clay rounded-full px-3 py-1 text-xs font-semibold tracking-wide text-white capitalize">
                 {pane.category.name}
@@ -101,7 +101,7 @@ function VersionPane({ label, date, pane, timeKeys, nutritionKeys }: VersionPane
           {pane.tags.map((tag) => (
             <span
               key={tag.name}
-              className={`inline-flex rounded-full p-[3px] ${highlightIf(tag.changed)}`}
+              className={`inline-flex rounded-full p-0.75 ${highlightIf(tag.changed)}`}
             >
               <span className="border-clay/25 bg-clay/10 text-clay rounded-full border px-3 py-1 text-xs font-medium tracking-wide capitalize">
                 {tag.name}

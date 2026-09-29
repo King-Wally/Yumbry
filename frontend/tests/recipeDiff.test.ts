@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RecipeSnapshot } from 'yumbry-shared';
-import { diffRecipes, listDiff, wordDiff, type Segment } from '../src/utils/recipeDiff';
+import { diffRecipes, listDiff, wordDiff, type Segment } from 'yumbry-shared';
 
 const changedText = (segments: Segment[]) =>
   segments.filter((segment) => segment.changed).map((segment) => segment.text);
