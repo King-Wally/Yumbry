@@ -24,7 +24,16 @@ import { useLocaleSync } from './hooks/useLocaleSync';
 import { useAiStatus } from './hooks/useAiStatus';
 import { version } from '../package.json';
 import * as NavigationMenuPrimitive from '@radix-ui/react-navigation-menu';
-import { UserCircle } from 'lucide-react';
+import {
+  UserCircle,
+  SquarePen,
+  SquareSparkles,
+  Camera,
+  Link as LinkIcon,
+  FileUp,
+  Settings2,
+  LogOut,
+} from 'lucide-react';
 
 export default function App() {
   const { t } = useTranslation();
@@ -60,33 +69,41 @@ export default function App() {
                         <div className="flex flex-col divide-y divide-stone-200">
                           <Link
                             to="/recipes/new"
-                            className="px-5 py-2 transition hover:bg-stone-100"
+                            className="flex items-center gap-2 px-3 py-2 transition hover:bg-stone-100"
                           >
+                            <SquarePen className="h-4 w-4" />
                             {t('nav.manually')}
                           </Link>
                           {user?.jsonImportExportEnabled && (
-                            <Link to="/import" className="px-5 py-2 transition hover:bg-stone-100">
+                            <Link
+                              to="/import"
+                              className="flex items-center gap-2 px-3 py-2 transition hover:bg-stone-100"
+                            >
+                              <FileUp className="h-4 w-4" />
                               {t('nav.import')}
                             </Link>
                           )}
                           <Link
                             to="/import/url"
-                            className="px-5 py-2 transition hover:bg-stone-100"
+                            className="flex items-center gap-2 px-3 py-2 transition hover:bg-stone-100"
                           >
+                            <LinkIcon className="h-4 w-4" />
                             {t('nav.paste')}
                           </Link>
                           {aiStatus?.configured && (
                             <>
                               <Link
                                 to="/import/photo"
-                                className="px-5 py-2 transition hover:bg-stone-100"
+                                className="flex items-center gap-2 px-3 py-2 transition hover:bg-stone-100"
                               >
+                                <Camera className="h-4 w-4" />
                                 {t('nav.fromPhoto')}
                               </Link>
                               <Link
                                 to="/create-with-ai"
-                                className="px-5 py-2 transition hover:bg-stone-100"
+                                className="flex items-center gap-2 px-3 py-2 transition hover:bg-stone-100"
                               >
+                                <SquareSparkles className="h-4 w-4" />
                                 {t('nav.createWithAi')}
                               </Link>
                             </>
@@ -102,14 +119,19 @@ export default function App() {
                       </NavigationMenuPrimitive.Trigger>
                       <NavigationMenuPrimitive.Content className="absolute top-full right-0 mt-2 rounded-md border border-stone-200 bg-white text-nowrap shadow-lg">
                         <div className="flex flex-col divide-y divide-stone-200">
-                          <Link to="/settings" className="px-5 py-2 transition hover:bg-stone-100">
+                          <Link
+                            to="/settings"
+                            className="flex items-center gap-2 px-3 py-2 transition hover:bg-stone-100"
+                          >
+                            <Settings2 className="h-4 w-4" />
                             {t('nav.settings')}
                           </Link>
                           <button
                             type="button"
                             onClick={() => void authClient.signOut()}
-                            className="px-5 py-2 transition hover:bg-stone-100"
+                            className="flex items-center gap-2 px-3 py-2 transition hover:bg-stone-100"
                           >
+                            <LogOut className="h-4 w-4" />
                             {t('nav.logOut')}
                           </button>
                         </div>

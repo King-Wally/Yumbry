@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Pencil, Sparkles, RotateCcwClock, FileDown, Share2, Trash } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { deleteRecipe, getRecipe, getRecipeExportUrl } from '../api/client';
 import { queryKeys } from '../api/queryKeys';
@@ -67,58 +67,68 @@ export default function RecipeDetailPage() {
         >
           <ArrowLeft size={18} />
         </Link>
-        <CollapsibleActions>
+        <CollapsibleActions
+          pinned={
+            <Link
+              to={`/recipes/${id}/edit`}
+              className="inline-flex items-center gap-2 rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
+            >
+              <Pencil className="h-4 w-4" />
+              {t('recipes.detail.edit')}
+            </Link>
+          }
+        >
+          {aiStatus?.configured && (
+            <Link
+              to={`/recipes/${id}/ai-improve`}
+              className="inline-flex items-center gap-2 rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
+            >
+              <Sparkles className="h-4 w-4" />
+              {t('recipes.detail.improveWithAi')}
+            </Link>
+          )}
+          <button
+            type="button"
+            onClick={() => setShareOpen(true)}
+            className="inline-flex items-center gap-2 rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
+          >
+            <Share2 className="h-4 w-4" />
+            {t('recipes.detail.share')}
+          </button>
           {user?.jsonImportExportEnabled &&
             (standalone ? (
               <button
                 type="button"
                 disabled={!exportFile}
                 onClick={() => exportFile && shareOrDownloadFile(exportFile)}
-                className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100 disabled:opacity-50"
               >
+                <FileDown className="h-4 w-4" />
                 {t('recipes.detail.export')}
               </button>
             ) : (
               <a
                 href={getRecipeExportUrl(id!)}
                 download
-                className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
+                className="inline-flex items-center gap-2 rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
               >
+                <FileDown className="h-4 w-4" />
                 {t('recipes.detail.export')}
               </a>
             ))}
-          <button
-            type="button"
-            onClick={() => setShareOpen(true)}
-            className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
-          >
-            {t('recipes.detail.share')}
-          </button>
-          <Link
-            to={`/recipes/${id}/edit`}
-            className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
-          >
-            {t('recipes.detail.edit')}
-          </Link>
           <Link
             to={`/recipes/${id}/versions`}
-            className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
+            className="inline-flex items-center gap-2 rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
           >
+            <RotateCcwClock className="h-4 w-4" />
             {t('recipes.detail.versionHistory')}
           </Link>
-          {aiStatus?.configured && (
-            <Link
-              to={`/recipes/${id}/ai-improve`}
-              className="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
-            >
-              {t('recipes.detail.improveWithAi')}
-            </Link>
-          )}
           <button
             type="button"
             onClick={() => setConfirmDeleteOpen(true)}
-            className="rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-600 transition-colors hover:border-red-300 hover:bg-red-50"
+            className="inline-flex items-center gap-2 rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-600 transition-colors hover:border-red-300 hover:bg-red-50"
           >
+            <Trash className="h-4 w-4" />
             {t('common.delete')}
           </button>
         </CollapsibleActions>
