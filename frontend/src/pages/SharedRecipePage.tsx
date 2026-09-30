@@ -115,8 +115,7 @@ function SaveBanner({ token, recipe }: { token: string; recipe: SharedRecipe }) 
     );
   } else {
     // `from` brings the visitor back to this page after signing up or in —
-    // RegisterPage also skips onboarding when it's set — so the import button
-    // is waiting for them.
+    // (after onboarding, for new signups) so the import button is waiting.
     message = t('sharedRecipe.signUpPrompt');
     actions = (
       <>

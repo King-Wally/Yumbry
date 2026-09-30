@@ -10,6 +10,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [signedUp, setSignedUp] = useState(false);
   const { user } = useCurrentUser();
   const navigate = useNavigate();
   const location = useLocation();
@@ -19,7 +20,9 @@ export default function RegisterPage() {
 
   // Already signed in: visiting /register directly is confusing, so bounce
   // back to wherever they were headed (mirrors ProtectedRoute's own redirect).
-  if (user) return <Navigate to={from} replace />;
+  // Not while signing up though: the new session makes `user` truthy before
+  // our own navigate to /onboarding runs, which would skip onboarding.
+  if (user && !signedUp) return <Navigate to={from} replace />;
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -28,6 +31,7 @@ export default function RegisterPage() {
     // better-auth requires a name; this app has no name field and never shows
     // one, so the email stands in for it rather than adding a field users would
     // have to fill in twice.
+    setSignedUp(true);
     const { error: signUpError } = await authClient.signUp.email({
       email,
       password,
@@ -35,14 +39,13 @@ export default function RegisterPage() {
     });
     setIsSubmitting(false);
     if (signUpError) {
+      setSignedUp(false);
       setError(signUpError.message ?? t('auth.register.error'));
       return;
     }
-    // A plain top-level signup goes through onboarding first; someone who
-    // registered in order to accept an invite/deep link (`from` set to
-    // somewhere other than `/`) must land back there instead, so joining a
-    // family isn't skipped.
-    navigate(from === '/' ? '/onboarding' : from, { replace: true });
+    // Every signup goes through onboarding; someone who registered to accept
+    // an invite/deep link (`from` set) is sent back there once it finishes.
+    navigate('/onboarding', { replace: true, state: { from } });
   }
 
   return (

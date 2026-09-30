@@ -17,11 +17,16 @@ export default function LoginPage() {
   const location = useLocation();
   // Set by ProtectedRoute when it bounced an unauthenticated visitor, so an
   // invite link followed while signed out resumes after signing in.
-  const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? '/';
+  const fromLocation = (location.state as { from?: { pathname: string; state?: unknown } } | null)
+    ?.from;
+  const from = fromLocation?.pathname ?? '/';
+  // Forwarded so the destination keeps its own state (e.g. onboarding's return
+  // page), which a fresh signup can lose to a brief bounce through /login.
+  const fromState = fromLocation?.state;
 
   // Already signed in: visiting /login directly is confusing, so bounce back
   // to wherever they were headed (mirrors ProtectedRoute's own redirect).
-  if (user) return <Navigate to={from} replace />;
+  if (user) return <Navigate to={from} replace state={fromState} />;
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -35,7 +40,7 @@ export default function LoginPage() {
       setError(signInError.message ?? t('auth.login.error'));
       return;
     }
-    navigate(from, { replace: true });
+    navigate(from, { replace: true, state: fromState });
   }
 
   return (

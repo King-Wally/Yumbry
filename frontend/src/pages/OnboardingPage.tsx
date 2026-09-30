@@ -1,7 +1,7 @@
 import { useMemo, useState, type ComponentType } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { SUPPORTED_LOCALES, type SupportedLocale } from 'yumbry-shared';
 import {
   Camera,
@@ -51,6 +51,8 @@ const PWA_STEP_KEYS: Record<InstallPlatform, string> = {
 export default function OnboardingPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  // Set by RegisterPage when the signup started from a shared/invite link.
+  const returnTo = (useLocation().state as { from?: string } | null)?.from ?? '/';
   const { data: aiStatus } = useAiStatus({ enabled: true });
   const { data: family } = useFamily();
   const { user } = useCurrentUser();
@@ -85,7 +87,7 @@ export default function OnboardingPage() {
   function handleNext() {
     if (currentKey === 'language' && !pickedLocale) return;
     if (step === stepKeys.length - 1) {
-      navigate('/', { replace: true });
+      navigate(returnTo, { replace: true });
       return;
     }
     setStep((s) => s + 1);

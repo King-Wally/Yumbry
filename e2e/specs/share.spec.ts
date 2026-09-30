@@ -1,6 +1,7 @@
 import { expect, test } from '../support/fixtures.ts';
 import { logIn, recipeAction } from '../support/app.ts';
 import type { Page } from '@playwright/test';
+import { DEFAULT_PASSWORD, uniqueEmail } from '../support/users.ts';
 
 const RECIPE = {
   title: 'Shared Pancakes',
@@ -120,6 +121,34 @@ test.describe('viewing a shared recipe', () => {
     await logIn(other.page, other.user.email, other.user.password);
     await expect(other.page).toHaveURL(url);
     await expect(other.page.getByRole('button', { name: 'Add to my recipes' })).toBeVisible();
+  });
+
+  test('a visitor who registers from the page does onboarding, then comes back to it', async ({
+    page,
+    browser,
+    user,
+    db,
+  }) => {
+    const id = await db.insertRecipe(user.familyId, user.id, RECIPE);
+    const url = await createShareLink(page, id);
+
+    const visitor = await browser.newContext({ locale: 'en-US' });
+    const visitorPage = await visitor.newPage();
+    await visitorPage.goto(url);
+    await visitorPage.getByRole('link', { name: 'Create account' }).click();
+    await visitorPage.getByLabel('Email').fill(uniqueEmail('share-register'));
+    await visitorPage.getByLabel('Password (min. 8 characters)').fill(DEFAULT_PASSWORD);
+    await visitorPage.getByRole('button', { name: 'Register' }).click();
+
+    await expect(visitorPage).toHaveURL('/onboarding');
+    await visitorPage.getByRole('button', { name: 'English' }).click();
+    const next = visitorPage.getByRole('button', { name: 'Next' });
+    while (await next.isVisible()) await next.click();
+    await visitorPage.getByRole('button', { name: 'Start cooking' }).click();
+
+    await expect(visitorPage).toHaveURL(url);
+    await expect(visitorPage.getByRole('button', { name: 'Add to my recipes' })).toBeVisible();
+    await visitor.close();
   });
 
   test('someone from another family can save their own copy', async ({
