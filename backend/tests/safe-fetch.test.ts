@@ -275,6 +275,21 @@ describe('safeFetchHtml', () => {
     });
   });
 
+  it('rejects an Akamai "Access Denied" edge block served instead of the real page', async () => {
+    lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+    vi.mocked(fetch).mockResolvedValue(
+      mockResponse({
+        status: 403,
+        headers: { 'content-type': 'text/html' },
+        body: '<HTML><HEAD>\n<TITLE>Access Denied</TITLE>\n</HEAD><BODY>\n<H1>Access Denied</H1>\n<P>Reference #0.34c61102.1790774174.38500214</P>\n</BODY></HTML>',
+      })
+    );
+
+    await expect(safeFetchHtml('http://example.com')).rejects.toMatchObject({
+      kind: 'bot_challenge',
+    });
+  });
+
   it('does not misclassify an ordinary 403 page as a bot challenge', async () => {
     lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
     vi.mocked(fetch).mockResolvedValue(
@@ -285,8 +300,25 @@ describe('safeFetchHtml', () => {
       })
     );
 
-    const result = await safeFetchHtml('http://example.com');
-    expect(result.html).toContain('403 Forbidden');
+    await expect(safeFetchHtml('http://example.com')).rejects.toMatchObject({
+      kind: 'network_error',
+      message: expect.stringContaining('403'),
+    });
+  });
+
+  it('rejects a 404 page as a network error rather than returning its HTML', async () => {
+    lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+    vi.mocked(fetch).mockResolvedValue(
+      mockResponse({
+        status: 404,
+        headers: { 'content-type': 'text/html' },
+        body: '<html><body>Not found</body></html>',
+      })
+    );
+
+    await expect(safeFetchHtml('http://example.com')).rejects.toMatchObject({
+      kind: 'network_error',
+    });
   });
 
   it('rejects a response body larger than the configured limit', async () => {

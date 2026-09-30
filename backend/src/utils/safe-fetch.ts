@@ -130,7 +130,7 @@ async function storeCookies(jar: CookieJar, response: Response, url: URL): Promi
 // status and none of the target site's own markup, so it looks to the rest of the pipeline like
 // a page that simply has no JSON-LD. Recognize it up front and fail with an honest message
 // instead of the misleading "no structured data found" one.
-const BOT_CHALLENGE_STATUSES = new Set([403, 503]);
+const BOT_CHALLENGE_STATUSES = new Set([401, 403, 429, 503]);
 const BOT_CHALLENGE_MARKERS = [
   /just a moment/i,
   /challenges\.cloudflare\.com/i,
@@ -140,6 +140,8 @@ const BOT_CHALLENGE_MARKERS = [
   // distinctive title and error-page markup.
   /attention required[^<]*\|\s*cloudflare/i,
   /cf-error-details/i,
+  // Akamai's edge block: a bare "Access Denied" page with a "Reference #..." trace id.
+  /<title>\s*access denied\s*<\/title>/i,
 ];
 
 function looksLikeBotChallenge(status: number, html: string): boolean {
@@ -246,6 +248,15 @@ export async function safeFetchHtml(
         throw new UrlImportError(
           "That site's bot protection blocked automatic import.",
           'bot_challenge'
+        );
+      }
+
+      // Anything else that isn't a success would otherwise reach the JSON-LD check and be
+      // misreported as "no structured data found".
+      if (response.status < 200 || response.status >= 300) {
+        throw new UrlImportError(
+          `The site returned HTTP ${response.status} instead of the page.`,
+          'network_error'
         );
       }
 
