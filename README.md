@@ -57,6 +57,29 @@ like `1 1/2`) for serving-size scaling, and turns `recipeCategory`/`keywords`
 into filterable tags. Ingredient lines that can't be parsed are kept as-is and
 simply won't scale with the servings stepper.
 
+**Import from URL** fetches the page server-side and reads the same JSON-LD. Some
+sites put bot protection in front of their pages (Cloudflare's "Just a moment…"
+check and similar) that a plain fetch can't pass. For those,
+the app uses a browser sidecar, which starts with the rest of the compose stack
+(`docker compose up -d --build`) and is wired up by default. To turn it off, set
+`BROWSER_CDP_URL=` (empty) in `.env`.
+
+When a plain fetch is blocked (or finds no recipe data), the import is retried in
+[CloakBrowser](https://github.com/CloakHQ/CloakBrowser), a Chromium whose bot tells
+are patched out in the binary itself, running headful on a virtual display. The sidecar
+is the official `cloakhq/cloakbrowser` image (amd64 and arm64), used unmodified. Set
+`BROWSER_TIMEZONE` (and optionally `BROWSER_LOCALE`) in `.env` to match where your
+server is. It sits on an internal network: its only way out is an SSRF-checking proxy
+inside the app, so it can't reach your LAN. It can use up to ~1 GB of RAM during an
+import. Sites that block by IP or with a hard WAF rule (Cloudflare "Sorry, you have
+been blocked") still fail, and a few sites known to fail every time (currently ah.nl)
+are refused straight away. For local dev without the full stack, run
+`docker run --rm -p 127.0.0.1:9222:9222 cloakhq/cloakbrowser:0.5.11 cloakserve` and set
+`BROWSER_CDP_URL=http://127.0.0.1:9222`.
+
+The free CloakBrowser binary may be used commercially but not redistributed. Pulling
+the official image is fine; don't bake the binary into an image you publish.
+
 ## Development (without Docker)
 
 Requires Node 24+ and a local Postgres instance.

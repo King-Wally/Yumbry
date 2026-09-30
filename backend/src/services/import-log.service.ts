@@ -1,13 +1,16 @@
 import { prisma } from '../db/prisma.js';
+import type { ImportMethod } from './url-recipe-import.service.js';
 import type { UrlImportErrorKind } from '../utils/url-import-error.js';
 
 const MAX_ERROR_MESSAGE_LENGTH = 500;
 
 type LogImportAttemptInput =
-  | { url: string; success: true }
+  | { url: string; success: true; method?: ImportMethod }
   | {
       url: string;
       success: false;
+      /** Omitted when no fetch was attempted (e.g. a rejected request body). */
+      method?: ImportMethod;
       errorKind: UrlImportErrorKind | 'validation_error' | 'unknown';
       errorMessage: string;
     };
@@ -35,6 +38,7 @@ export async function logImportAttempt(input: LogImportAttemptInput): Promise<vo
         url: input.url,
         hostname: extractHostname(input.url),
         success: input.success,
+        method: input.method ?? null,
         errorKind: input.success ? null : input.errorKind,
         errorMessage: input.success ? null : input.errorMessage.slice(0, MAX_ERROR_MESSAGE_LENGTH),
       },

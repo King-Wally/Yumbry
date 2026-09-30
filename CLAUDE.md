@@ -73,7 +73,10 @@ for the app's behaviour, so specs must stay independent of the implementation:
 - Never call the app's JSON API. Only `/api/auth/*`, `/api/health` and `/uploads/*` may be
   called directly.
 
-The app honours a few test-only env vars for the fakes: `OPENROUTER_BASE_URL`,
+The full e2e app also gets `BROWSER_CDP_URL` pointing at a local CloakBrowser
+(`e2e/scripts/cdp-browser.ts`; the prepare step downloads its binary into `~/.cloakbrowser`),
+and the fakes serve a JS-challenge site under `/sites/challenge/`. The app honours a few
+test-only env vars for the fakes: `OPENROUTER_BASE_URL`,
 `GEMINI_BASE_URL`, `RESEND_BASE_URL`, `E2E_SAFE_FETCH_ALLOW` and `DISABLE_RATE_LIMITS`. See
 `e2e/README.md`.
 
@@ -155,6 +158,29 @@ path, which kills the link. `/api/shared/:token` is mounted **without** `require
 the caller's family via `createRecipe`, recreating tags/category by name and copying the photo file
 (`copyRecipeUpload`). The frontend page is `/share/:token` (`SharedRecipePage`, not in
 `ProtectedRoute`), and the recipe body is shared with the owner's page through `RecipeDetailView`.
+
+### URL import
+
+`scrapeRecipeFromUrl` (`services/url-recipe-import.service.ts`) first fetches with
+`safeFetchHtml` (`utils/safe-fetch.ts`): undici, DNS pinned to addresses checked by
+`assertSafeTarget`, redirects followed by hand and re-checked, and desktop-Chrome headers. If that
+fails with `bot_challenge`, `no_jsonld`, or a 401/402/403/429/503, and `BROWSER_CDP_URL` is set,
+it retries with `headlessFetchHtml` (`utils/headless-fetch.ts`). That connects over CDP
+(`chromium.connectOverCDP`, stock `playwright-core`) to the `browser` compose sidecar: the official
+`cloakhq/cloakbrowser` image running `cloakserve`, always started with the stack. CloakBrowser's
+stealth patches live in the Chromium binary, so the driver needs no special fork or matching
+version. The browser's identity (headful under the image's Xvfb, `BROWSER_TIMEZONE`,
+`BROWSER_LOCALE`) is set by the sidecar's flags, never from the app: context-level UA, viewport,
+locale or timezone overrides are CDP emulation, which is detectable. `cloakserve` keeps one
+long-lived browser, so each fetch opens its own context and closes it; `browser.close()` only
+disconnects. Every browser request goes
+through a per-fetch, authenticated forward proxy in the app (`utils/ssrf-proxy.ts`) that runs
+`assertSafeTarget` on each CONNECT/HTTP hop. `route()` alone would miss redirect targets. The
+browser reaches that proxy at `BROWSER_PROXY_HOST` (compose: `app`). The compose `browser` network is
+`internal`, so that proxy is the sidecar's only way out. If the browser is
+unreachable, the original error is reported. A `UrlImportError` from the browser is reported
+as-is. A page with JSON-LD counts as the real page even if it matches challenge markers
+(`isBlockedPage`): sites like tasteatlas.com embed Turnstile in their own forms.
 
 ### AI provider
 

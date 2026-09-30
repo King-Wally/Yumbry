@@ -3,10 +3,17 @@ import {
   extractRecipeFromHtml,
   scrapeRecipeFromUrl,
 } from '../src/services/url-recipe-import.service.js';
+import { headlessFetchHtml, isHeadlessFetchConfigured } from '../src/utils/headless-fetch.js';
 import { safeFetchHtml } from '../src/utils/safe-fetch.js';
+import { UrlImportError } from '../src/utils/url-import-error.js';
 
 vi.mock('../src/utils/safe-fetch.js', () => ({
   safeFetchHtml: vi.fn(),
+}));
+
+vi.mock('../src/utils/headless-fetch.js', () => ({
+  headlessFetchHtml: vi.fn(),
+  isHeadlessFetchConfigured: vi.fn(() => false),
 }));
 
 const bareRecipe = {
@@ -134,5 +141,91 @@ describe('scrapeRecipeFromUrl', () => {
     expect(draft.title).toBe('Simple Pancakes');
     expect(Array.isArray(draft.ingredients)).toBe(true);
     expect(typeof draft.ingredients[0]).toBe('string');
+  });
+
+  describe('headless fallback', () => {
+    const recipePage = {
+      html: htmlWithScripts(JSON.stringify(bareRecipe)),
+      contentType: 'text/html',
+      finalUrl: 'https://example.com/pancakes',
+    };
+
+    beforeEach(() => {
+      vi.mocked(isHeadlessFetchConfigured).mockReturnValue(true);
+      vi.mocked(headlessFetchHtml).mockResolvedValue(recipePage);
+    });
+
+    it.each([
+      [
+        'bot_challenge',
+        new UrlImportError('blocked', 'bot_challenge', undefined, { httpStatus: 403 }),
+      ],
+      [
+        'a 403 page',
+        new UrlImportError('HTTP 403', 'network_error', undefined, { httpStatus: 403 }),
+      ],
+      [
+        'a 402 page',
+        new UrlImportError('HTTP 402', 'network_error', undefined, { httpStatus: 402 }),
+      ],
+      [
+        'a 503 page',
+        new UrlImportError('HTTP 503', 'network_error', undefined, { httpStatus: 503 }),
+      ],
+    ])('retries in the browser after %s', async (_label, error) => {
+      vi.mocked(safeFetchHtml).mockRejectedValue(error);
+
+      const draft = await scrapeRecipeFromUrl('https://example.com/pancakes', 'nl');
+
+      expect(draft.title).toBe('Simple Pancakes');
+      expect(headlessFetchHtml).toHaveBeenCalledWith('https://example.com/pancakes');
+    });
+
+    it('retries in the browser when the fetched page has no JSON-LD', async () => {
+      vi.mocked(safeFetchHtml).mockResolvedValue({ ...recipePage, html: '<html></html>' });
+
+      const draft = await scrapeRecipeFromUrl('https://example.com/pancakes');
+
+      expect(draft.title).toBe('Simple Pancakes');
+      expect(headlessFetchHtml).toHaveBeenCalledOnce();
+    });
+
+    it.each([
+      new UrlImportError('private', 'blocked_url'),
+      new UrlImportError('slow', 'timeout'),
+      new UrlImportError('HTTP 404', 'network_error', undefined, { httpStatus: 404 }),
+      new UrlImportError('DNS', 'network_error'),
+    ])('does not retry after $kind ($message)', async (error) => {
+      vi.mocked(safeFetchHtml).mockRejectedValue(error);
+
+      await expect(scrapeRecipeFromUrl('https://example.com/pancakes')).rejects.toBe(error);
+      expect(headlessFetchHtml).not.toHaveBeenCalled();
+    });
+
+    it('does not retry when no browser is configured', async () => {
+      vi.mocked(isHeadlessFetchConfigured).mockReturnValue(false);
+      const error = new UrlImportError('blocked', 'bot_challenge');
+      vi.mocked(safeFetchHtml).mockRejectedValue(error);
+
+      await expect(scrapeRecipeFromUrl('https://example.com/pancakes')).rejects.toBe(error);
+      expect(headlessFetchHtml).not.toHaveBeenCalled();
+    });
+
+    it('reports the original error when the browser is unreachable', async () => {
+      const error = new UrlImportError('blocked', 'bot_challenge');
+      vi.mocked(safeFetchHtml).mockRejectedValue(error);
+      vi.mocked(headlessFetchHtml).mockRejectedValue(new Error('ECONNREFUSED'));
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await expect(scrapeRecipeFromUrl('https://example.com/pancakes')).rejects.toBe(error);
+    });
+
+    it("reports the browser's own import error when it has one", async () => {
+      vi.mocked(safeFetchHtml).mockRejectedValue(new UrlImportError('blocked', 'bot_challenge'));
+      const browserError = new UrlImportError('still blocked', 'bot_challenge');
+      vi.mocked(headlessFetchHtml).mockRejectedValue(browserError);
+
+      await expect(scrapeRecipeFromUrl('https://example.com/pancakes')).rejects.toBe(browserError);
+    });
   });
 });

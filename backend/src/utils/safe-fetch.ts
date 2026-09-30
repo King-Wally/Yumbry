@@ -26,9 +26,26 @@ const DEFAULT_ACCEPT_LANGUAGE = 'en-US,en;q=0.9';
 
 // Some sites front their pages with bot-mitigation (e.g. Colruyt runs Dynatrace)
 // that serves a JS-challenge page with no recipe markup to requests that don't
-// look like an ordinary browser. A realistic User-Agent is enough to pass.
-const BROWSER_USER_AGENT =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
+// look like an ordinary browser. Send the header set a real desktop Chrome sends on
+// a top-level navigation; the UA and client hints derive from one version so they
+// never disagree (a mismatch is itself a bot signal).
+const CHROME_MAJOR = 153;
+
+export const BROWSER_USER_AGENT = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${CHROME_MAJOR}.0.0.0 Safari/537.36`;
+
+const BROWSER_NAVIGATION_HEADERS: Record<string, string> = {
+  accept:
+    'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+  'sec-ch-ua': `"Chromium";v="${CHROME_MAJOR}", "Not=A?Brand";v="24", "Google Chrome";v="${CHROME_MAJOR}"`,
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'document',
+  'sec-fetch-mode': 'navigate',
+  'sec-fetch-site': 'none',
+  'sec-fetch-user': '?1',
+  'upgrade-insecure-requests': '1',
+  'user-agent': BROWSER_USER_AGENT,
+};
 
 function parseAllowedUrl(rawUrl: string): URL {
   let url: URL;
@@ -56,12 +73,12 @@ function isAllowlistedForTests(url: URL): boolean {
     .some((entry) => entry === target);
 }
 
-interface ResolvedAddress {
+export interface ResolvedAddress {
   address: string;
   family: number;
 }
 
-async function assertSafeTarget(url: URL): Promise<ResolvedAddress[]> {
+export async function assertSafeTarget(url: URL): Promise<ResolvedAddress[]> {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new UrlImportError('Enter a valid http or https URL.', 'invalid_url');
   }
@@ -131,10 +148,11 @@ async function storeCookies(jar: CookieJar, response: Response, url: URL): Promi
 // a page that simply has no JSON-LD. Recognize it up front and fail with an honest message
 // instead of the misleading "no structured data found" one.
 const BOT_CHALLENGE_STATUSES = new Set([401, 403, 429, 503]);
+// A JS challenge that solves itself in a real browser and then reloads into the page:
+// Cloudflare's "Just a moment…" interstitial.
+const SOLVABLE_CHALLENGE_MARKERS = [/just a moment/i, /challenges\.cloudflare\.com/i, /cf-chl/i];
 const BOT_CHALLENGE_MARKERS = [
-  /just a moment/i,
-  /challenges\.cloudflare\.com/i,
-  /cf-chl/i,
+  ...SOLVABLE_CHALLENGE_MARKERS,
   // Cloudflare's WAF "you have been blocked" page — a different response shape from the JS
   // interstitial above (no challenge to solve, just a hard block), served with its own
   // distinctive title and error-page markup.
@@ -144,9 +162,20 @@ const BOT_CHALLENGE_MARKERS = [
   /<title>\s*access denied\s*<\/title>/i,
 ];
 
-function looksLikeBotChallenge(status: number, html: string): boolean {
-  if (!BOT_CHALLENGE_STATUSES.has(status)) return false;
+/** Marker-only check, for callers (the headless fallback) that can't rely on a status code
+ * because the challenge page reloads itself in place. */
+export function hasBotChallengeMarkers(html: string): boolean {
   return BOT_CHALLENGE_MARKERS.some((marker) => marker.test(html));
+}
+
+/** Whether the page is a challenge worth waiting on, as opposed to a hard block that never
+ * clears no matter how long the browser sits on it. */
+export function hasSolvableChallengeMarkers(html: string): boolean {
+  return SOLVABLE_CHALLENGE_MARKERS.some((marker) => marker.test(html));
+}
+
+function looksLikeBotChallenge(status: number, html: string): boolean {
+  return BOT_CHALLENGE_STATUSES.has(status) && hasBotChallengeMarkers(html);
 }
 
 async function readBodyWithLimit(response: Response, maxBytes: number): Promise<string> {
@@ -201,9 +230,8 @@ export async function safeFetchHtml(
           signal: controller.signal,
           dispatcher: agent,
           headers: {
-            accept: 'text/html,application/xhtml+xml',
+            ...BROWSER_NAVIGATION_HEADERS,
             'accept-language': acceptLanguage,
-            'user-agent': BROWSER_USER_AGENT,
             ...(cookieHeader ? { cookie: cookieHeader } : {}),
           },
         })) as unknown as Response;
@@ -247,7 +275,9 @@ export async function safeFetchHtml(
       if (looksLikeBotChallenge(response.status, html)) {
         throw new UrlImportError(
           "That site's bot protection blocked automatic import.",
-          'bot_challenge'
+          'bot_challenge',
+          undefined,
+          { httpStatus: response.status }
         );
       }
 
@@ -256,7 +286,9 @@ export async function safeFetchHtml(
       if (response.status < 200 || response.status >= 300) {
         throw new UrlImportError(
           `The site returned HTTP ${response.status} instead of the page.`,
-          'network_error'
+          'network_error',
+          undefined,
+          { httpStatus: response.status }
         );
       }
 

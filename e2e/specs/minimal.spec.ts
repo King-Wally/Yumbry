@@ -1,7 +1,9 @@
-// Runs only in the 'minimal' project: the same app with no AI key and no email configured. Every
-// AI and email entry point must disappear rather than offer something that can only fail.
+// Runs only in the 'minimal' project: the same app with no AI key, no email and no headless browser
+// configured. Every AI and email entry point must disappear rather than offer something that can
+// only fail.
 import { type Page } from '@playwright/test';
-import { openAddRecipeMenu } from '../support/app.ts';
+import { chooseAddRecipe, openAddRecipeMenu } from '../support/app.ts';
+import { env } from '../support/env.ts';
 import { expect, test } from '../support/fixtures.ts';
 
 /** Absence checks pass trivially before the page has learned what the server offers; let every
@@ -62,5 +64,21 @@ test.describe('an install without AI or email', () => {
     await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible();
     await settled(page);
     await expect(page.getByRole('link', { name: 'Forgot your password?' })).toHaveCount(0);
+  });
+
+  test('a page behind a bot challenge reports the block instead of a missing recipe', async ({
+    page,
+    user,
+    db,
+  }) => {
+    await page.goto('/');
+    await chooseAddRecipe(page, 'Paste URL');
+    await expect(page.getByRole('heading', { name: 'Import from URL' })).toBeVisible();
+    await page.getByLabel('Recipe URL').fill(`${env.fakesUrl}/sites/challenge/pancakes.html`);
+    await page.getByRole('button', { name: 'Import from URL' }).click();
+
+    await expect(page.getByText(/bot protection/i)).toBeVisible();
+    await expect(page).toHaveURL('/import/url');
+    expect(await db.recipeTitles(user.familyId)).toEqual([]);
   });
 });

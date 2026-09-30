@@ -17,13 +17,18 @@ describe('logImportAttempt', () => {
   it('records a successful attempt with hostname parsed from the url', async () => {
     create.mockResolvedValue(undefined);
 
-    await logImportAttempt({ url: 'https://www.allrecipes.com/recipe/123', success: true });
+    await logImportAttempt({
+      url: 'https://www.allrecipes.com/recipe/123',
+      success: true,
+      method: 'browser',
+    });
 
     expect(create).toHaveBeenCalledWith({
       data: {
         url: 'https://www.allrecipes.com/recipe/123',
         hostname: 'www.allrecipes.com',
         success: true,
+        method: 'browser',
         errorKind: null,
         errorMessage: null,
       },
@@ -36,6 +41,7 @@ describe('logImportAttempt', () => {
     await logImportAttempt({
       url: 'https://example.com/recipe',
       success: false,
+      method: 'server',
       errorKind: 'no_recipe_found',
       errorMessage: 'No schema.org Recipe was found on that page.',
     });
@@ -45,6 +51,7 @@ describe('logImportAttempt', () => {
         url: 'https://example.com/recipe',
         hostname: 'example.com',
         success: false,
+        method: 'server',
         errorKind: 'no_recipe_found',
         errorMessage: 'No schema.org Recipe was found on that page.',
       },

@@ -9,7 +9,16 @@ const CI = Boolean(process.env.CI);
  * to another stack keeps these names. The *_BASE_URL, E2E_SAFE_FETCH_ALLOW and DISABLE_RATE_LIMITS
  * vars exist only for this suite and are unset in production.
  */
-function appEnv(opts: { port: number; baseUrl: string; ai: boolean; email: boolean }) {
+interface AppOptions {
+  port: number;
+  baseUrl: string;
+  ai: boolean;
+  email: boolean;
+  /** Headless-browser fallback for URL import behind bot challenges. */
+  browser: boolean;
+}
+
+function appEnv(opts: AppOptions) {
   return {
     NODE_ENV: 'production',
     PORT: String(opts.port),
@@ -38,11 +47,14 @@ function appEnv(opts: { port: number; baseUrl: string; ai: boolean; email: boole
     RESEND_BASE_URL: `${env.fakesUrl}/resend`,
     EMAIL_FROM: opts.email ? 'Yumbry <no-reply@e2e.test>' : '',
 
+    BROWSER_CDP_URL: opts.browser ? env.browserCdpUrl : '',
+    BROWSER_PROXY_HOST: '127.0.0.1',
+
     E2E_SAFE_FETCH_ALLOW: `127.0.0.1:${env.fakesPort}`,
   };
 }
 
-function appServer(opts: { port: number; baseUrl: string; ai: boolean; email: boolean }) {
+function appServer(opts: AppOptions) {
   return {
     command: env.serverCmd,
     cwd: SERVER_DIR,
@@ -91,7 +103,19 @@ export default defineConfig({
       reuseExistingServer: false,
       stdout: 'pipe',
     },
-    appServer({ port: env.appPort, baseUrl: env.baseUrl, ai: true, email: true }),
-    appServer({ port: env.minimalPort, baseUrl: env.minimalBaseUrl, ai: false, email: false }),
+    {
+      command: 'node scripts/cdp-browser.ts',
+      url: `${env.browserCdpUrl}/json/version`,
+      reuseExistingServer: false,
+      stdout: 'pipe',
+    },
+    appServer({ port: env.appPort, baseUrl: env.baseUrl, ai: true, email: true, browser: true }),
+    appServer({
+      port: env.minimalPort,
+      baseUrl: env.minimalBaseUrl,
+      ai: false,
+      email: false,
+      browser: false,
+    }),
   ],
 });

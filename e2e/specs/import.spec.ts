@@ -138,6 +138,18 @@ test.describe('URL import', () => {
     expect(await db.recipeTitles(user.familyId)).toEqual(['Fluffy Fixture Pancakes']);
   });
 
+  test('a recipe page behind a JavaScript bot challenge still imports', async ({
+    page,
+    user,
+    db,
+  }) => {
+    await importUrl(page, `${env.fakesUrl}/sites/challenge/pancakes.html`);
+
+    await expect(page).toHaveURL('/recipes/new', { timeout: 30_000 });
+    await expect(page.getByLabel('Title')).toHaveValue('Fluffy Fixture Pancakes');
+    expect(await db.recipeTitles(user.familyId)).toEqual([]);
+  });
+
   test('a page without a recipe shows an error and stays put', async ({ page, user, db }) => {
     await importUrl(page, `${env.fakesUrl}/sites/no-recipe.html`);
 

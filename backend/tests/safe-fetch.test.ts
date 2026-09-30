@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetch, type Response as UndiciResponse } from 'undici';
-import { safeFetchHtml } from '../src/utils/safe-fetch.js';
+import {
+  hasBotChallengeMarkers,
+  hasSolvableChallengeMarkers,
+  safeFetchHtml,
+} from '../src/utils/safe-fetch.js';
 
 const {
   lookup,
@@ -306,6 +310,42 @@ describe('safeFetchHtml', () => {
     });
   });
 
+  it('records the HTTP status on a non-success error', async () => {
+    lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+    vi.mocked(fetch).mockResolvedValue(
+      mockResponse({
+        status: 403,
+        headers: { 'content-type': 'text/html' },
+        body: '<html><body>403 Forbidden</body></html>',
+      })
+    );
+
+    await expect(safeFetchHtml('http://example.com')).rejects.toMatchObject({
+      kind: 'network_error',
+      httpStatus: 403,
+    });
+  });
+
+  it('sends a consistent desktop-Chrome navigation header set', async () => {
+    lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+    vi.mocked(fetch).mockResolvedValue(
+      mockResponse({ headers: { 'content-type': 'text/html' }, body: '<html>hi</html>' })
+    );
+
+    await safeFetchHtml('http://example.com', { acceptLanguage: 'nl,en;q=0.8' });
+
+    const headers = vi.mocked(fetch).mock.calls[0][1]?.headers as Record<string, string>;
+    expect(headers).toMatchObject({
+      'accept-language': 'nl,en;q=0.8',
+      'sec-fetch-mode': 'navigate',
+      'sec-fetch-dest': 'document',
+      'upgrade-insecure-requests': '1',
+    });
+    const uaMajor = /Chrome\/(\d+)\./.exec(headers['user-agent'])?.[1];
+    expect(uaMajor).toBeDefined();
+    expect(headers['sec-ch-ua']).toContain(`"Google Chrome";v="${uaMajor}"`);
+  });
+
   it('rejects a 404 page as a network error rather than returning its HTML', async () => {
     lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
     vi.mocked(fetch).mockResolvedValue(
@@ -436,5 +476,20 @@ describe('safeFetchHtml', () => {
       );
       await expect(safeFetchHtml('http://fixtures.test/page')).resolves.toBeDefined();
     });
+  });
+});
+
+describe('challenge markers', () => {
+  it("treats Cloudflare's interstitial as a solvable challenge", () => {
+    expect(hasSolvableChallengeMarkers('<title>Just a moment...</title>')).toBe(true);
+  });
+
+  it('treats hard blocks as challenges, but not solvable ones', () => {
+    const cloudflareBlock = '<title>Attention Required! | Cloudflare</title>';
+    const akamaiBlock = '<title>Access Denied</title>';
+    for (const html of [cloudflareBlock, akamaiBlock]) {
+      expect(hasBotChallengeMarkers(html)).toBe(true);
+      expect(hasSolvableChallengeMarkers(html)).toBe(false);
+    }
   });
 });

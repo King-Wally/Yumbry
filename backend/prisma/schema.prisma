@@ -239,6 +239,10 @@ model RecipeImportAttempt {
   /// without parsing the URL in SQL.
   hostname     String
   success      Boolean
+  /// How the page was fetched: "server" (plain HTTP) or "browser" (headless
+  /// fallback), the last one attempted. Null for rows from before this column
+  /// existed and for requests rejected before any fetch.
+  method       String?
   errorKind    String?  @map("error_kind")
   /// Short raw message for debugging, truncated by the caller before insert.
   errorMessage String?  @map("error_message") @db.Text

@@ -28,14 +28,16 @@ cd e2e && E2E_SKIP_DB_RESET=1 npx playwright test specs/auth.spec.ts
 
 ## What runs
 
-`scripts/prepare.ts` copies the built SPA into `.server/public` and migrates a fresh database.
-Playwright then starts three processes:
+`scripts/prepare.ts` copies the built SPA into `.server/public`, migrates a fresh database and
+downloads the CloakBrowser binary on first run (~200 MB, cached in `~/.cloakbrowser`).
+Playwright then starts four processes:
 
-| Process     | Port | What it is                                                            |
-| ----------- | ---- | --------------------------------------------------------------------- |
-| fakes       | 4100 | `fakes/server.ts`: OpenRouter, Gemini, Resend and recipe websites     |
-| full app    | 3100 | The production build with AI and email pointed at the fakes           |
-| minimal app | 3101 | The same build with no AI keys and no email (`*minimal.spec.ts` only) |
+| Process     | Port | What it is                                                               |
+| ----------- | ---- | ------------------------------------------------------------------------ |
+| fakes       | 4100 | `fakes/server.ts`: OpenRouter, Gemini, Resend and recipe websites        |
+| browser     | 4200 | `scripts/cdp-browser.ts`: CloakBrowser over CDP, the URL-import fallback |
+| full app    | 3100 | The production build with AI and email pointed at the fakes              |
+| minimal app | 3101 | The same build with no AI, email or browser (`*minimal.spec.ts` only)    |
 
 Every test signs up its own users. Data is siloed per family, so tests never see each other's
 data and run in parallel without any cleanup between them.

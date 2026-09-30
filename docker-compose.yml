@@ -22,8 +22,15 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY}
       EMAIL_FROM: ${EMAIL_FROM}
       APP_BASE_URL: ${APP_BASE_URL}
+      # Real-browser fallback for URL import behind bot challenges. Points at the `browser`
+      # sidecar, which always starts with the stack. Set it to an empty string in .env to turn off.
+      BROWSER_CDP_URL: ${BROWSER_CDP_URL-http://browser:9222}
+      BROWSER_PROXY_HOST: app
     volumes:
       - uploads_data:/app/backend/uploads
+    networks:
+      - default
+      - browser
     depends_on:
       db:
         condition: service_healthy
@@ -45,6 +52,40 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
+
+  # CloakBrowser (Chromium with its bot tells patched out in the binary) for the URL-import
+  # fallback, served over CDP by `cloakserve`. The image's entrypoint runs Xvfb, so the browser
+  # is headed, which is harder to detect. Timezone and locale belong to the browser's identity
+  # and should match where the server's IP is. The `browser` network is internal: the sidecar
+  # has no way out except through the app's SSRF-checking proxy, and no route to Postgres.
+  browser:
+    image: cloakhq/cloakbrowser:0.5.11
+    command:
+      - cloakserve
+      - --headless=false
+      - --fingerprint-timezone=${BROWSER_TIMEZONE:-UTC}
+      - --fingerprint-locale=${BROWSER_LOCALE:-en-US}
+      # Stop the browser after 10 idle minutes; the next import relaunches it.
+      - --idle-timeout=600
+    environment:
+      CLOAKBROWSER_AUTO_UPDATE: 'false'
+    init: true
+    shm_size: 512m
+    mem_limit: 1g
+    networks:
+      - browser
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', '--max-time', '5', '-o', '/dev/null', 'http://127.0.0.1:9222/json/version']
+      interval: 30s
+      timeout: 6s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+networks:
+  default:
+  browser:
+    internal: true
 
 volumes:
   db_data:

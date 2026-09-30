@@ -2,6 +2,7 @@
 // Kept out of Playwright's globalSetup because web servers start before it, and dropping the
 // schema under a running server leaves its connection pool holding stale prepared statements.
 import { execSync } from 'node:child_process';
+import { ensureBinary } from 'cloakbrowser';
 import fs from 'node:fs';
 import path from 'node:path';
 import pg from 'pg';
@@ -57,3 +58,6 @@ function preparePublicDir(): void {
 
 preparePublicDir();
 if (process.env.E2E_SKIP_DB_RESET !== '1') await resetDatabase();
+// The browser binary (~200 MB, cached in ~/.cloakbrowser) downloads on first use. Do it here,
+// not inside the browser web server, whose startup has a timeout.
+await ensureBinary();

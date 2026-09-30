@@ -3,7 +3,7 @@ import { ZodError } from 'zod';
 import { isSupportedLocale } from 'yumbry-shared';
 import { parseRecipeFromJsonLd } from '../services/jsonld-import.service.js';
 import { recipeToJsonLd } from '../services/jsonld-export.service.js';
-import { scrapeRecipeFromUrl } from '../services/url-recipe-import.service.js';
+import { scrapeRecipeFromUrl, type ImportMethod } from '../services/url-recipe-import.service.js';
 import { parseIngredientLine } from '../services/ingredient-parser.js';
 import {
   createRecipe,
@@ -77,11 +77,12 @@ export async function importRecipe(req: Request, res: Response) {
 
 export async function importRecipeFromUrl(req: Request, res: Response) {
   let url: string | undefined;
+  const trace: { method?: ImportMethod } = {};
   try {
     ({ url } = UrlImportBodySchema.parse(req.body));
     const locale = isSupportedLocale(req.user?.locale) ? req.user.locale : undefined;
-    const draft = await scrapeRecipeFromUrl(url, locale);
-    await logImportAttempt({ url, success: true });
+    const draft = await scrapeRecipeFromUrl(url, locale, trace);
+    await logImportAttempt({ url, success: true, method: trace.method });
     res.status(200).json(draft);
   } catch (err) {
     if (err instanceof ZodError) {
@@ -102,6 +103,7 @@ export async function importRecipeFromUrl(req: Request, res: Response) {
       await logImportAttempt({
         url: url ?? '(unknown url)',
         success: false,
+        method: trace.method,
         errorKind: err.kind,
         errorMessage: err.message,
       });
@@ -109,6 +111,7 @@ export async function importRecipeFromUrl(req: Request, res: Response) {
       await logImportAttempt({
         url: url ?? '(unknown url)',
         success: false,
+        method: trace.method,
         errorKind: 'unknown',
         errorMessage: String(err).slice(0, 500),
       });

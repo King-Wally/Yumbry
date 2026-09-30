@@ -2,6 +2,7 @@
 //   /openrouter/chat/completions, /gemini/chat/completions  — OpenAI-compatible LLM endpoints
 //   /resend/emails                                           — Resend's send-email endpoint
 //   /sites/<file>                                            — recipe pages for URL import
+//   /sites/challenge/<file>                                  — the same, behind a JS bot challenge
 //   /__control/*                                             — lets specs script and inspect it
 //
 // Specs run in parallel against one instance, so scripted responses are keyed: a queued entry is
@@ -127,6 +128,29 @@ function handleEmail(raw: string, res: http.ServerResponse): void {
   sendJson(res, 200, { id: `fake-email-${emails.length}` });
 }
 
+// Stands in for a Cloudflare-style JS challenge: a 403 "Just a moment..." page whose script sets
+// a clearance cookie and reloads. Only a client that runs JavaScript ever sees the real page.
+const CLEARANCE_COOKIE = 'e2e_clearance=1';
+const CHALLENGE_PAGE = `<!doctype html>
+<html><head><title>Just a moment...</title></head>
+<body><p>Checking your browser before accessing the site.</p>
+<script>
+  setTimeout(() => {
+    document.cookie = '${CLEARANCE_COOKIE}; path=/';
+    location.reload();
+  }, 300);
+</script></body></html>`;
+
+function handleChallengeSite(name: string, req: http.IncomingMessage, res: http.ServerResponse) {
+  const cookies = (req.headers.cookie ?? '').split(';').map((cookie) => cookie.trim());
+  if (!cookies.includes(CLEARANCE_COOKIE)) {
+    res.writeHead(403, { 'content-type': 'text/html; charset=utf-8' });
+    res.end(CHALLENGE_PAGE);
+    return;
+  }
+  handleSite(name, res);
+}
+
 function handleSite(name: string, res: http.ServerResponse): void {
   const file = path.join(FIXTURES, 'sites', path.basename(name));
   if (!fs.existsSync(file)) {
@@ -191,6 +215,9 @@ const server = http.createServer(async (req, res) => {
       return handleCompletion(backend, raw, res);
     }
     if (method === 'POST' && url.pathname === '/resend/emails') return handleEmail(raw, res);
+    if (method === 'GET' && url.pathname.startsWith('/sites/challenge/')) {
+      return handleChallengeSite(url.pathname.slice('/sites/challenge/'.length), req, res);
+    }
     if (method === 'GET' && url.pathname.startsWith('/sites/')) {
       return handleSite(url.pathname.slice('/sites/'.length), res);
     }

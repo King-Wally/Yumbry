@@ -17,6 +17,7 @@
     "@playwright/test": "^1.63.0",
     "@types/node": "^24.13.3",
     "@types/pg": "^8.20.0",
+    "cloakbrowser": "^0.5.11",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.12.0",

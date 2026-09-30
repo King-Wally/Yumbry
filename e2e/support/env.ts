@@ -18,6 +18,7 @@ function intEnv(name: string, fallback: number): number {
 const appPort = intEnv('E2E_APP_PORT', 3100);
 const minimalPort = intEnv('E2E_MINIMAL_APP_PORT', 3101);
 const fakesPort = intEnv('E2E_FAKES_PORT', 4100);
+const browserPort = intEnv('E2E_BROWSER_PORT', 4200);
 
 export const env = {
   /** The fully configured app: AI + email pointed at the fakes server. */
@@ -28,6 +29,9 @@ export const env = {
   minimalPort,
   fakesUrl: `http://127.0.0.1:${fakesPort}`,
   fakesPort,
+  /** CloakBrowser's CDP endpoint, the full app's browser fallback for URL import. */
+  browserCdpUrl: `http://127.0.0.1:${browserPort}`,
+  browserPort,
   databaseUrl: process.env.E2E_DATABASE_URL ?? 'postgres://chef:changeme@localhost:5432/yumbry_e2e',
   /** Starts one app server; PORT and the rest of the config arrive as env vars. */
   serverCmd: process.env.E2E_SERVER_CMD ?? `node ${path.join(REPO_ROOT, 'backend/dist/index.js')}`,
