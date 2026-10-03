@@ -1,0 +1,14 @@
+name = "yumbry-offline"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+# Replace with your hostname and zone.
+routes = [
+  { pattern = "yumbry.com/*", zone_name = "yumbry.com" }
+]
+
+# Import offline.html as a string.
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = false

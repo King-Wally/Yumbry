@@ -418,5 +418,12 @@
     "sharedExceededAt": "The shared AI budget is used up for now. Try again after {{time}}.",
     "userExceeded": "You've used up your AI allowance for today.",
     "userExceededAt": "You've used up your AI allowance for today. Try again after {{time}}."
+  },
+  "serverUnavailable": {
+    "title": "Temporarily offline",
+    "description": "Yumbry is currently unavailable. Please try again in a few minutes.",
+    "hint": "Your recipes are safe. We'll reconnect automatically.",
+    "retry": "Try again",
+    "retrying": "Checking..."
   }
 }

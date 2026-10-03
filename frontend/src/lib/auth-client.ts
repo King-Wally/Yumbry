@@ -1,5 +1,7 @@
 import { createAuthClient } from 'better-auth/react';
 import { inferAdditionalFields } from 'better-auth/client/plugins';
+import { isServerUnavailableResponse } from 'yumbry-shared';
+import { isJsonResponse, reportServerSuspect, reportServerUp } from './server-status';
 import type { SmallVolumeStyle, SupportedLocale, UnitSystem } from 'yumbry-shared';
 
 /** The app's better-auth client. Same origin in dev (vite proxies /api) and in
@@ -10,6 +12,22 @@ import type { SmallVolumeStyle, SupportedLocale, UnitSystem } from 'yumbry-share
  * backend's auth config isn't importable across that boundary. */
 export const authClient = createAuthClient({
   basePath: '/api/auth',
+  fetchOptions: {
+    // Auth calls return `{ error }` instead of throwing, so a dead server would look like a
+    // sign-out. Feed the outage detector from here; a gateway's reply is the non-JSON one.
+    customFetchImpl: async (input, init) => {
+      let res: Response;
+      try {
+        res = await fetch(input, init);
+      } catch (err) {
+        if (err instanceof TypeError) reportServerSuspect();
+        throw err;
+      }
+      if (isServerUnavailableResponse(res.status, isJsonResponse(res))) reportServerSuspect();
+      else reportServerUp();
+      return res;
+    },
+  },
   plugins: [
     inferAdditionalFields({
       user: {

@@ -418,5 +418,12 @@
     "sharedExceededAt": "El presupuesto compartido de IA se ha agotado por ahora. Inténtalo de nuevo después de {{time}}.",
     "userExceeded": "Has agotado tu cuota de IA de hoy.",
     "userExceededAt": "Has agotado tu cuota de IA de hoy. Inténtalo de nuevo después de {{time}}."
+  },
+  "serverUnavailable": {
+    "title": "Temporalmente fuera de línea",
+    "description": "Yumbry no está disponible en este momento. Inténtalo de nuevo en unos minutos.",
+    "hint": "Tus recetas están a salvo. Nos reconectaremos automáticamente.",
+    "retry": "Reintentar",
+    "retrying": "Comprobando..."
   }
 }

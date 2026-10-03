@@ -16,3 +16,4 @@ export * from './recipe-form.js';
 export * from './render-draft.js';
 export * from './ai-budget-display.js';
 export * from './recipeDiff.js';
+export * from './server-availability.js';

@@ -1,4 +1,6 @@
+import fs from 'node:fs';
 import path from 'node:path';
+import { parseEnv } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
 // Everything that ties this suite to a particular stack lives here, as an env var with a default
@@ -9,6 +11,17 @@ export const E2E_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)
 export const REPO_ROOT = path.resolve(E2E_ROOT, '..');
 /** Working directory for the app servers: holds `public/` (the built SPA) and the upload dirs. */
 export const SERVER_DIR = path.join(E2E_ROOT, '.server');
+
+// Pick up E2E_* overrides from the repo's .env. Only those keys: the app's own secrets (AI keys,
+// DATABASE_URL) must not leak into the servers, since the minimal one has to run without them.
+try {
+  const dotenv = parseEnv(fs.readFileSync(path.join(REPO_ROOT, '.env'), 'utf8'));
+  for (const [key, value] of Object.entries(dotenv)) {
+    if (key.startsWith('E2E_') && process.env[key] === undefined) process.env[key] = value;
+  }
+} catch {
+  // No .env: defaults and the shell environment apply.
+}
 
 function intEnv(name: string, fallback: number): number {
   const raw = process.env[name];

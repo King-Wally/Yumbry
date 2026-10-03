@@ -20,6 +20,8 @@ import type {
   SupportedLocale,
   UnitSystem,
 } from 'yumbry-shared';
+import { isServerUnavailableResponse } from 'yumbry-shared';
+import { isJsonResponse, reportServerSuspect, reportServerUp } from '../lib/server-status';
 
 interface ApiErrorBody {
   error?: string;
@@ -42,27 +44,48 @@ export class ApiError extends Error {
   }
 }
 
+const SERVER_UNAVAILABLE_MESSAGE =
+  'The server is temporarily unavailable. Please try again in a moment.';
+
+const TIMEOUT_MESSAGE = 'The request took too long. Please try again.';
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {};
   if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
 
-  const res = await fetch(`/api${path}`, {
-    credentials: 'include',
-    ...options,
-    headers,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`/api${path}`, {
+      credentials: 'include',
+      ...options,
+      headers,
+    });
+  } catch (err) {
+    // fetch rejects with a TypeError when the server can't be reached at all; an
+    // AbortError is the caller cancelling and says nothing about the server.
+    if (err instanceof TypeError) {
+      reportServerSuspect();
+      throw new ApiError(SERVER_UNAVAILABLE_MESSAGE, 'server_unavailable');
+    }
+    throw err;
+  }
 
   if (!res.ok) {
     const body: ApiErrorBody = await res.json().catch(() => ({}));
+    if (isServerUnavailableResponse(res.status, isJsonResponse(res))) {
+      reportServerSuspect();
+      throw new ApiError(SERVER_UNAVAILABLE_MESSAGE, 'server_unavailable');
+    }
+    reportServerUp();
+    // Cloudflare gave up waiting on a slow origin (e.g. an AI call): the server itself is fine.
+    if (res.status === 524 && !isJsonResponse(res)) throw new ApiError(TIMEOUT_MESSAGE, 'timeout');
     const kind = res.status === 401 ? 'unauthenticated' : body.kind;
-    // A gateway/proxy failure (e.g. Cloudflare's own HTML error page instead of our JSON) has no
-    // parsed `error` field — give a human message instead of the raw status code.
-    const message =
-      !body.error && [502, 503, 504].includes(res.status)
-        ? 'The server is temporarily unavailable. Please try again in a moment.'
-        : body.error || `Request failed with status ${res.status}`;
-    throw new ApiError(message, kind, { scope: body.scope, retryAt: body.retryAt });
+    throw new ApiError(body.error || `Request failed with status ${res.status}`, kind, {
+      scope: body.scope,
+      retryAt: body.retryAt,
+    });
   }
+  reportServerUp();
 
   if (res.status === 204) return null as T;
   return res.json();
