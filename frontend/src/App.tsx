@@ -18,6 +18,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import ServerUnavailable from './components/ServerUnavailable';
 import { authClient } from './lib/auth-client';
 import { useCurrentUser } from './hooks/useCurrentUser';
 import { useLocaleSync } from './hooks/useLocaleSync';
@@ -265,6 +266,8 @@ export default function App() {
           v{version}
         </footer>
       )}
+
+      <ServerUnavailable />
     </div>
   );
 }

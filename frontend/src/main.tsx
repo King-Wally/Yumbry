@@ -6,6 +6,7 @@ import App from './App';
 import { ToastProvider } from './context/ToastProvider';
 import { ApiError } from './api/client';
 import { refreshSession } from './lib/auth-client';
+import { onServerRecovered } from './lib/server-status';
 import { registerServiceWorker } from './pwa';
 import './i18n';
 import './index.css';
@@ -23,6 +24,12 @@ const queryClient = new QueryClient({
       }
     },
   }),
+});
+
+// Back after an outage: refetch whatever failed and re-read the session.
+onServerRecovered(() => {
+  void queryClient.invalidateQueries();
+  refreshSession();
 });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

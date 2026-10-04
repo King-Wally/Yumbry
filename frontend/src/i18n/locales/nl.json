@@ -418,5 +418,12 @@
     "sharedExceededAt": "Het gedeelde AI-budget is voorlopig op. Probeer het opnieuw na {{time}}.",
     "userExceeded": "Je AI-tegoed voor vandaag is op.",
     "userExceededAt": "Je AI-tegoed voor vandaag is op. Probeer het opnieuw na {{time}}."
+  },
+  "serverUnavailable": {
+    "title": "Tijdelijk offline",
+    "description": "Yumbry is momenteel niet beschikbaar. Probeer het over een paar minuten opnieuw.",
+    "hint": "Je recepten zijn veilig. Probeer het zo meteen opnieuw.",
+    "retry": "Opnieuw proberen",
+    "retrying": "Bezig met controleren..."
   }
 }

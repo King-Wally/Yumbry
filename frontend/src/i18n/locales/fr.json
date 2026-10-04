@@ -418,5 +418,12 @@
     "sharedExceededAt": "Le budget IA partagé est épuisé pour le moment. Réessayez après {{time}}.",
     "userExceeded": "Vous avez épuisé votre quota IA pour aujourd'hui.",
     "userExceededAt": "Vous avez épuisé votre quota IA pour aujourd'hui. Réessayez après {{time}}."
+  },
+  "serverUnavailable": {
+    "title": "Temporairement hors ligne",
+    "description": "Yumbry est actuellement indisponible. Veuillez réessayer dans quelques minutes.",
+    "hint": "Vos recettes sont en sécurité. Réessayez dans un instant.",
+    "retry": "Réessayer",
+    "retrying": "Vérification..."
   }
 }
