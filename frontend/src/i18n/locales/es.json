@@ -422,7 +422,7 @@
   "serverUnavailable": {
     "title": "Temporalmente fuera de línea",
     "description": "Yumbry no está disponible en este momento. Inténtalo de nuevo en unos minutos.",
-    "hint": "Tus recetas están a salvo. Nos reconectaremos automáticamente.",
+    "hint": "Tus recetas están a salvo. Inténtalo de nuevo en un momento.",
     "retry": "Reintentar",
     "retrying": "Comprobando..."
   }

@@ -4,11 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { Clock } from 'lucide-react';
 import { pingServer, reportServerUp, useServerStatus } from '../lib/server-status';
 
-const RETRY_INTERVAL_MS = 15000;
-
 /** Full-screen cover shown while the backend is unreachable. It overlays the app instead of
- * replacing it, so a half-written recipe survives the outage. Polls /api/health and lifts
- * itself once the server answers. It is portalled to <body> so the app root can go `inert`
+ * replacing it, so a half-written recipe survives the outage. It does not retry on its own:
+ * the user's "Try again" pings /api/health and lifts it once the server answers. It is portalled to <body> so the app root can go `inert`
  * (no tabbing or screen-reader access to what's underneath) while it is showing. */
 export default function ServerUnavailable() {
   const { t } = useTranslation();
@@ -27,11 +25,7 @@ export default function ServerUnavailable() {
   useEffect(() => {
     if (!down) return;
     buttonRef.current?.focus();
-    const id = setInterval(() => {
-      if (document.visibilityState === 'visible') void retry();
-    }, RETRY_INTERVAL_MS);
-    return () => clearInterval(id);
-  }, [down, retry]);
+  }, [down]);
 
   useEffect(() => {
     if (!down) return;

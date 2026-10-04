@@ -422,7 +422,7 @@
   "serverUnavailable": {
     "title": "Tijdelijk offline",
     "description": "Yumbry is momenteel niet beschikbaar. Probeer het over een paar minuten opnieuw.",
-    "hint": "Je recepten zijn veilig. We maken automatisch opnieuw verbinding.",
+    "hint": "Je recepten zijn veilig. Probeer het zo meteen opnieuw.",
     "retry": "Opnieuw proberen",
     "retrying": "Bezig met controleren..."
   }

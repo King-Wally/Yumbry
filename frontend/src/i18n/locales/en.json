@@ -422,7 +422,7 @@
   "serverUnavailable": {
     "title": "Temporarily offline",
     "description": "Yumbry is currently unavailable. Please try again in a few minutes.",
-    "hint": "Your recipes are safe. We'll reconnect automatically.",
+    "hint": "Your recipes are safe. Try again in a moment.",
     "retry": "Try again",
     "retrying": "Checking..."
   }
