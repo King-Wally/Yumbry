@@ -10,7 +10,7 @@ const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
 
 export default defineConfig(
 	includeIgnoreFile(gitignorePath),
-	// Separate package with its own config (wired up by migration step 5).
+	// Separate package with its own config: `bun run --cwd e2e lint`.
 	globalIgnores(['e2e/']),
 	js.configs.recommended,
 	ts.configs.recommended,

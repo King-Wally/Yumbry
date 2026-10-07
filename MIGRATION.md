@@ -28,9 +28,9 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 | Topic               | Decision                                                                                                                                                                                                                                                                                                                                                             |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Runtime and tooling | **Bun** is both package manager and runtime: `bun install`, `bun --bun vite`, and the production server runs on `bun`. Playwright's test runner is the one exception: it stays on Node, the only runtime it officially supports. Step 2 found it does run on Bun 1.4.2, but the e2e harness keeps Node anyway (see "Bun runtime notes").                             |
-| Adapter             | `@sveltejs/adapter-node`, with its output run by `bun build/index.js`. Step 2 found no blocker: every Node API the backend needs (`node:http`, `node:net`, `node:tls`) works under Bun.                                                                                                                                                                              |
+| Adapter             | `@sveltejs/adapter-node`, with its output run by `bun scripts/serve.ts`, a thin wrapper around `build/index.js` that applies `ORIGIN` at runtime (step 5). Step 2 found no blocker: every Node API the backend needs (`node:http`, `node:net`, `node:tls`) works under Bun.                                                                                          |
 | Data layer          | Load functions (`+page.server.ts`) and form actions with `use:enhance`. `+server.ts` only for things that aren't pages: `/api/health`, `/uploads/*`, file downloads and photo streams. The old `/api/*` JSON API is **not** ported, and `api/client.ts`, react-query and `queryKeys.ts` go away. Remote functions are still experimental in Kit 3.0, so they're out. |
-| Base URL env var    | `ORIGIN` everywhere: better-auth's `baseURL`, adapter-node's CSRF origin, and links in emails. `BETTER_AUTH_URL` and `APP_BASE_URL` are dropped. Production must set `ORIGIN` before the cutover (step 27).                                                                                                                                                          |
+| Base URL env var    | `ORIGIN` everywhere, read at runtime: better-auth's `baseURL`, the request origin SvelteKit's CSRF check and cookies see (adapter-node 6 dropped `ORIGIN`, so `scripts/serve.ts` feeds it in), and links in emails. `BETTER_AUTH_URL` and `APP_BASE_URL` are dropped. Production must set `ORIGIN` before the cutover (step 27).                                     |
 | UI primitives       | `bits-ui` for dialog, switch, dropdown and menus. `@lucide/svelte` for icons. Native pointer events or `svelte-dnd-action` for reorderable lists. Toasts are a small module of our own.                                                                                                                                                                              |
 | i18n                | Paraglide (already set up), with the messages converted from `main`'s i18next JSON. No locale segment in URLs, as today: the strategy is the signed-in user's preference, then cookie, then `Accept-Language`, then `en`.                                                                                                                                            |
 | `shared/`           | Folded into `src/lib/shared/`. It stays framework-free and keeps its unit tests, but there is no separate package or build step any more.                                                                                                                                                                                                                            |
@@ -70,7 +70,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 - [x] 2. Check that the Bun runtime can run the low-level code
 - [x] 3. Database: prove the baseline is lossless; migrate on start
 - [x] 4. Fold `shared/` into the app
-- [ ] 5. Point the e2e harness at the SvelteKit build
+- [x] 5. Point the e2e harness at the SvelteKit build
 - [ ] 6. CI on Bun
 - [ ] 7. Docker image and compose on Bun
 
@@ -106,6 +106,11 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 ## Open issues
 
 Found during a step but owned by a later one. Remove an entry once the owning step fixes it.
+
+- **better-auth's rate limiter can't see the client IP** (found in step 5, fixed in step 8). With
+  rate limits on, it warns that it falls back to one shared bucket per path. It needs
+  `advanced.ipAddress` set to match the address config step 7 gives adapter-node behind the
+  tunnel.
 
 - **The build needs runtime secrets** (found in step 1, fixed in step 8). SvelteKit 3 validates
   the variables declared in `src/env.ts` while it analyses routes at build time. So
@@ -342,6 +347,28 @@ Verify `bun run e2e` is green and `bun run e2e:all` runs to completion. Tick Ste
 "test(e2e): run the suite against the SvelteKit build".
 ```
 
+**Outcome.** `bun run e2e` runs the 9 tests in `e2e/ported-specs.txt`: the better-auth endpoint
+tests except sign-out, the health check, and two negative tests (`/uploads` path traversal,
+another family's version history). Those two pass now only because the routes 404, and they guard
+steps 12 and 14. `e2e:all` runs to completion with 9 passed and 115 failed. Three findings changed
+more than the harness:
+
+- **adapter-node 6 dropped the `ORIGIN` env var.** Kit 3 wants a build-time `kit.paths.origin`;
+  without one, the origin is the `Host` header plus `https`, unless `PROTOCOL_HEADER` names a
+  header that is present. On plain HTTP, every `event.url` said `https://…`, so better-auth's
+  `svelteKitHandler` didn't match its own paths and `/api/auth/*` returned 404. One build has to
+  serve two e2e ports and production, so the origin stays a runtime setting.
+  `scripts/serve.ts` points `PROTOCOL_HEADER`/`HOST_HEADER` at private headers. It fills them from
+  `ORIGIN` in a `request` listener that runs before adapter-node's own, overwriting anything a
+  client sent. Adapter-node's shutdown, timeouts and socket activation are unchanged.
+  `bun run start` and `E2E_SERVER_CMD` use it.
+- **The e2e reset now recreates the database.** `prepare.ts` used to drop only the `public`
+  schema. Drizzle keeps its history in the `drizzle` schema, so the migrator saw "up to date" and
+  left an empty database. Dropping and recreating the database works for any stack.
+- **The e2e package keeps its own Prettier config** (`e2e/prettier.config.js`, `main`'s style).
+  Without it, Prettier picked up the root config with tabs and flagged every file. The package's
+  `lint` now runs Prettier and ESLint, like the root one.
+
 ### 6. CI on Bun
 
 **Goal:** CI checks every step from here on. The old workflow builds npm workspaces that no longer
@@ -405,9 +432,11 @@ main:backend/docker-entrypoint.sh, main:docker-compose.yml). This branch has no 
 docker-compose.yml lost its `app` service. Design it fresh for Bun and SvelteKit, not as a port:
 - Multi-stage Dockerfile on the official oven/bun image. It must be multi-arch (production is
   arm64), with a libc that sharp's prebuilt binaries support. Stages: install, build with
-  `bun run build`, then a slim runtime with production dependencies, build/, drizzle/ and
-  scripts/migrate.ts. Run as a non-root user. HEALTHCHECK hits /api/health with bun.
-- Start command: `bun scripts/migrate.ts && exec bun build/index.js` (no npx, no drizzle-kit).
+  `bun run build`, then a slim runtime with production dependencies, build/, drizzle/,
+  scripts/migrate.ts and scripts/serve.ts. Run as a non-root user. HEALTHCHECK hits /api/health
+  with bun.
+- Start command: `bun scripts/migrate.ts && exec bun scripts/serve.ts` (no npx, no drizzle-kit).
+  serve.ts takes the protocol and host from ORIGIN, so don't set PROTOCOL_HEADER or HOST_HEADER.
 - Image env defaults: NODE_ENV=production, PORT=3000, BODY_SIZE_LIMIT for 25 MB uploads,
   UPLOADS_DIR, and adapter-node's client-address config so rate limits see the real client IP
   behind the Cloudflare Tunnel (main used `trust proxy 1`; match that).

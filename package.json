@@ -10,7 +10,7 @@
 		"dev": "bun --bun vite dev",
 		"build": "bun --bun vite build",
 		"preview": "bun --bun vite preview",
-		"start": "bun build/index.js",
+		"start": "bun scripts/serve.ts",
 		"prepare": "svelte-kit sync && paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations --silent",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
@@ -22,7 +22,11 @@
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "bun scripts/migrate.ts",
 		"db:rehearse": "bun scripts/rehearse-migrate.ts",
-		"db:studio": "drizzle-kit studio"
+		"db:studio": "drizzle-kit studio",
+		"e2e:build": "bun run build",
+		"e2e": "bun run --cwd e2e test:ported",
+		"e2e:all": "bun run --cwd e2e test",
+		"e2e:ui": "bun run --cwd e2e test:ui"
 	},
 	"dependencies": {
 		"better-auth": "^1.7.7",

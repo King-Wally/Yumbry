@@ -4,12 +4,12 @@ import { parseEnv } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
 // Everything that ties this suite to a particular stack lives here, as an env var with a default
-// for today's Express build. Running the suite against a different build should mean changing
+// for today's SvelteKit build. Running the suite against a different build should mean changing
 // these values, never the specs.
 
 export const E2E_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const REPO_ROOT = path.resolve(E2E_ROOT, '..');
-/** Working directory for the app servers: holds `public/` (the built SPA) and the upload dirs. */
+/** Working directory for the app servers: holds the upload dirs (and `public/`, if a build needs one). */
 export const SERVER_DIR = path.join(E2E_ROOT, '.server');
 
 // Pick up E2E_* overrides from the repo's .env. Only those keys: the app's own secrets (AI keys,
@@ -47,11 +47,12 @@ export const env = {
   browserPort,
   databaseUrl: process.env.E2E_DATABASE_URL ?? 'postgres://chef:changeme@localhost:5432/yumbry_e2e',
   /** Starts one app server; PORT and the rest of the config arrive as env vars. */
-  serverCmd: process.env.E2E_SERVER_CMD ?? `node ${path.join(REPO_ROOT, 'backend/dist/index.js')}`,
+  serverCmd: process.env.E2E_SERVER_CMD ?? `bun ${path.join(REPO_ROOT, 'scripts/serve.ts')}`,
   /** Brings an empty database up to the current schema; DATABASE_URL is set for it. */
-  migrateCmd: process.env.E2E_MIGRATE_CMD ?? 'npm run db:migrate --workspace=backend',
-  /** Built SPA assets the server serves from `<cwd>/public`. Empty string skips the copy. */
-  publicDir: process.env.E2E_PUBLIC_DIR ?? path.join(REPO_ROOT, 'frontend/dist'),
+  migrateCmd: process.env.E2E_MIGRATE_CMD ?? 'bun run db:migrate',
+  /** Built SPA assets the server serves from `<cwd>/public`. Empty string skips the copy: the
+   * SvelteKit build serves its own assets. */
+  publicDir: process.env.E2E_PUBLIC_DIR ?? '',
   /** Polled until it answers 2xx before tests start. */
   readyPath: process.env.E2E_READY_PATH ?? '/api/health',
 };
