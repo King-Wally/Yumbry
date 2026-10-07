@@ -69,7 +69,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 - [x] 1. Tidy the scaffold; Bun runtime and adapter-node
 - [x] 2. Check that the Bun runtime can run the low-level code
 - [x] 3. Database: prove the baseline is lossless; migrate on start
-- [ ] 4. Fold `shared/` into the app
+- [x] 4. Fold `shared/` into the app
 - [ ] 5. Point the e2e harness at the SvelteKit build
 - [ ] 6. CI on Bun
 - [ ] 7. Docker image and compose on Bun
@@ -294,6 +294,13 @@ workspace for the old backend/frontend split, and is now consumed only by this a
 Don't change behaviour: every moved test must pass unchanged apart from import paths. Tick
 Step 4 and commit as "refactor: move shared logic into src/lib/shared".
 ```
+
+**Outcome.** All 15 test files (380 tests) moved unchanged apart from import paths and Prettier
+whitespace. Both barrels are gone: `index.ts` (the `yumbry-shared` entry) and `units/index.ts`, whose
+two users now import the unit modules directly. Imports use `#lib/shared/<path>.ts`, like the rest
+of `src/lib`. One test was renamed to sit next to its module: `worked-example.test.ts` →
+`ai-worked-example.spec.ts`. No type errors surfaced under the app's TS config, so
+nothing needed fixing.
 
 ### 5. Point the e2e harness at the SvelteKit build
 

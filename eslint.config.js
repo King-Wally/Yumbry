@@ -10,8 +10,8 @@ const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
 
 export default defineConfig(
 	includeIgnoreFile(gitignorePath),
-	// Separate packages with their own configs (shared/ is folded in by step 4, e2e/ wired up by step 5).
-	globalIgnores(['shared/', 'e2e/']),
+	// Separate package with its own config (wired up by migration step 5).
+	globalIgnores(['e2e/']),
 	js.configs.recommended,
 	ts.configs.recommended,
 	svelte.configs.recommended,

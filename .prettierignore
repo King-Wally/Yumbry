@@ -1,5 +1,4 @@
-# Separate packages with their own formatting (folded in / wired up by later migration steps)
-shared/
+# Separate package with its own formatting (wired up by migration step 5)
 e2e/
 # Tool-managed or generated
 .agents/
