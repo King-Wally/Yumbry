@@ -71,7 +71,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 - [x] 3. Database: prove the baseline is lossless; migrate on start
 - [x] 4. Fold `shared/` into the app
 - [x] 5. Point the e2e harness at the SvelteKit build
-- [ ] 6. CI on Bun
+- [x] 6. CI on Bun
 - [ ] 7. Docker image and compose on Bun
 
 **Phase B: Platform**
