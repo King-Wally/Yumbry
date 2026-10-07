@@ -1,127 +1,127 @@
 <!doctype html>
 <html lang="{{lang}}">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex" />
-    <meta name="theme-color" content="#b5603f" />
-    <title>{{title}}</title>
-    <link
-      rel="icon"
-      type="image/png"
-      href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAAQHRFWHRTb2Z0d2FyZQBSZWFsRmF2aWNvbkdlbmVyYXRvciAoaHR0cHM6Ly9yZWFsZmF2aWNvbmdlbmVyYXRvci5uZXQpmZlW4QAABUdJREFUeJztndtrFFccx7fagg/6z1jwoaCjUrHgQ0trwPpgYry1iCgWsZVSwVYfVBAE8cU+CMF7VTSbi2uyS0CNjZe0xuzGBJON9ZLETd2dzbr64MgJZJmdzJw9Z87lN5P5PXxBmMnsOZ/P73fmzLowMcuyYn7S0rCsMd5gWBjDitcbW/xy5Dq5tWHpYgROL7rrG5YukS4gWWcsRPB83X618YtFUgQgeLFlVkgAwpdzj/MlAOHL3WDEYrFPmAUgfDW7OyYBCF/t1poqAOHrea5xFXBv6+efoQA9ApL1xoJZAhA+TBfggxZUF9QZCysCsPphJKCAIAhI7jc+hR5IVEPYh2r5SV88br0rjnpmaiIDPkbeBF5AcSJDhU5L6pf14OMPrQC/0N2STZ0Hn09oBIz92yEVvj3Qcwu8ABaIk0Pd1X9jZrkklM0R8HkGUgANmvnqsbC4oHZDIASIgLp/Yl+olyRwATxw0pfo29AwSgAVkBu8zQRF1U2Z5PbBbdEVAA0/CF2gTADZrdAmWgtEX9NhLfBJyma28rktm1ZqlSRVAE+l0Y55QdDVBTo7RooA3kmKAlARcj/i+fxSbjAYAlgnOPV6gKn6IeCzFIiqbvAt4Oaub7gG2n/+WE0BLY0rQidAVIIvAa1bVnEPMv9fL3Vy3Yd3gMInGU40+e5CrQJEKgwasqoxlmxLrFIB0ICCnGL6ploBt/7YCj7JSAuAnmAYBPBKYBaQ2Pk1+AQjLQB6cmESwCMBBaAA+MoNfAf0njowN4FlOpQJ6Nz9rTwBxfH0nIQvU0C5MFwl4E1vXJ4AlSDIr9l0gi88e1CBL1OAHT7PMgQugFz/2a3LWuDbwXft+17q3JQKKBdGlAqYXuYkV2RVzGwV/FddZ6QWlxv8/D8t8gS86Ikr7wK7BFkiSOHYrzkT1fBJ7h3dEZ7ngKobvgPW+P1m7uuZBIILeDt8GXPKPbjuKYCVayAE1JLgDAH8/8NmK/+orea5XvAJJJHxFvraPeGHUoBTwpNzR7jg0uLck1dtF4fuSFt2lAro+nWDVgGs3cBT9SSvu/9yBTbR2y4FvLIv43QvQ85km08yQ0+f/p16LVaQfqNMQNsPq0Hgq0gQ4HML8OqC53evTR9L/byeG3z7j1/N+oz3b19UIgKZ/MqiONBZifN4Yvsa34DdbsK5nivqBXhJYDnH7aeAVcA2rayC7wxzddugO+OnI8z+BNP5Wn8XJHsZoYF3hgaYJW8etQmNVRZ8IQG0KueazFiaC749pclBKuhS7on1Nj/sefxlqkkYvAh8YQEkI51nuUS0bv7Seld67hu6SGiyMk2HuMEPUP5GmwBaN9iPQwB3S/5xgmmZmhl38qe10qteiYCZkP+YkCkg3rCMmlrneotoZxKQ2lOnBLwyAV4RrVxWsDPHp3KDQkuSLi6hETBLwsblnueUzVGm6431XEMBMrvg4Z8Hqd3B0wXYAT4k8MJHAT6WofH+LlcB5N/meAYFqLwHeHUBea7wU/3YARIl+L0O3gNQQHi2odgBKCDaD2LYASgAO4Dny7laKQykcBcke2mSsQXFryJQQPBvwiqrHzsAGH6kBZRyQ1bH7u+kfnZy7zpr8unfzPAjI+DG9jXaJuqVvlO/zYI/cefi3BOAQQGBLALsAGgBzfXGB+hBRDWEPb7EB1AAvsQHuANQQFAEXKiLzYceTNRCmOOrDIGrH9+mCgwfBQRNAL5XUi98fKU5YOVTBWAn6IFPFYAS1MOvKQAlqIXPJABFqAHPLYBkfyw2T/eNK6xPuEoEOINfZRvTXymLMPwIcLo8OfPse2UAAAAASUVORK5CYII="
-    />
-    <style>
-      *,
-      *::before,
-      *::after {
-        box-sizing: border-box;
-      }
-      body {
-        margin: 0;
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        background: #fdfaf6;
-        color: #292524;
-        font-family: ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
-        -webkit-font-smoothing: antialiased;
-      }
-      ::selection {
-        background: rgba(181, 96, 63, 0.2);
-      }
-      header {
-        border-bottom: 1px solid #e7e5e4;
-        background: rgba(255, 255, 255, 0.9);
-      }
-      .bar {
-        max-width: 80rem;
-        margin: 0 auto;
-        padding: 1rem;
-      }
-      .logo {
-        font-family: Georgia, Cambria, 'Times New Roman', serif;
-        font-size: 1.5rem;
-        line-height: 2rem;
-        letter-spacing: -0.025em;
-        color: #1c1917;
-      }
-      main {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 1.5rem 1rem;
-      }
-      .card {
-        width: 100%;
-        max-width: 28rem;
-        padding: 2rem 1.5rem;
-        text-align: center;
-        background: #fff;
-        border: 1px solid #e7e5e4;
-        border-radius: 0.75rem;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-      }
-      .icon {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 3rem;
-        height: 3rem;
-        margin: 0 auto 1.25rem;
-        border-radius: 9999px;
-        background: rgba(181, 96, 63, 0.1);
-        color: #b5603f;
-      }
-      h1 {
-        margin: 0 0 0.75rem;
-        font-family: Georgia, Cambria, 'Times New Roman', serif;
-        font-size: 1.5rem;
-        line-height: 2rem;
-        font-weight: 400;
-        color: #1c1917;
-      }
-      p {
-        margin: 0;
-        font-size: 0.9375rem;
-        line-height: 1.6;
-        color: #57534e;
-      }
-      .hint {
-        margin-top: 1.25rem;
-        padding-top: 1.25rem;
-        border-top: 1px solid #f5f5f4;
-        font-size: 0.8125rem;
-        color: #78716c;
-      }
-    </style>
-  </head>
-  <body>
-    <header>
-      <div class="bar"><span class="logo">Yumbry</span></div>
-    </header>
-    <main>
-      <div class="card">
-        <div class="icon" aria-hidden="true">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-        </div>
-        <h1>{{heading}}</h1>
-        <p>{{body}}</p>
-        <p class="hint">{{hint}}</p>
-      </div>
-    </main>
-  </body>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="noindex" />
+		<meta name="theme-color" content="#b5603f" />
+		<title>{{title}}</title>
+		<link
+			rel="icon"
+			type="image/png"
+			href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAAQHRFWHRTb2Z0d2FyZQBSZWFsRmF2aWNvbkdlbmVyYXRvciAoaHR0cHM6Ly9yZWFsZmF2aWNvbmdlbmVyYXRvci5uZXQpmZlW4QAABUdJREFUeJztndtrFFccx7fagg/6z1jwoaCjUrHgQ0trwPpgYry1iCgWsZVSwVYfVBAE8cU+CMF7VTSbi2uyS0CNjZe0xuzGBJON9ZLETd2dzbr64MgJZJmdzJw9Z87lN5P5PXxBmMnsOZ/P73fmzLowMcuyYn7S0rCsMd5gWBjDitcbW/xy5Dq5tWHpYgROL7rrG5YukS4gWWcsRPB83X618YtFUgQgeLFlVkgAwpdzj/MlAOHL3WDEYrFPmAUgfDW7OyYBCF/t1poqAOHrea5xFXBv6+efoQA9ApL1xoJZAhA+TBfggxZUF9QZCysCsPphJKCAIAhI7jc+hR5IVEPYh2r5SV88br0rjnpmaiIDPkbeBF5AcSJDhU5L6pf14OMPrQC/0N2STZ0Hn09oBIz92yEVvj3Qcwu8ABaIk0Pd1X9jZrkklM0R8HkGUgANmvnqsbC4oHZDIASIgLp/Yl+olyRwATxw0pfo29AwSgAVkBu8zQRF1U2Z5PbBbdEVAA0/CF2gTADZrdAmWgtEX9NhLfBJyma28rktm1ZqlSRVAE+l0Y55QdDVBTo7RooA3kmKAlARcj/i+fxSbjAYAlgnOPV6gKn6IeCzFIiqbvAt4Oaub7gG2n/+WE0BLY0rQidAVIIvAa1bVnEPMv9fL3Vy3Yd3gMInGU40+e5CrQJEKgwasqoxlmxLrFIB0ICCnGL6ploBt/7YCj7JSAuAnmAYBPBKYBaQ2Pk1+AQjLQB6cmESwCMBBaAA+MoNfAf0njowN4FlOpQJ6Nz9rTwBxfH0nIQvU0C5MFwl4E1vXJ4AlSDIr9l0gi88e1CBL1OAHT7PMgQugFz/2a3LWuDbwXft+17q3JQKKBdGlAqYXuYkV2RVzGwV/FddZ6QWlxv8/D8t8gS86Ikr7wK7BFkiSOHYrzkT1fBJ7h3dEZ7ngKobvgPW+P1m7uuZBIILeDt8GXPKPbjuKYCVayAE1JLgDAH8/8NmK/+orea5XvAJJJHxFvraPeGHUoBTwpNzR7jg0uLck1dtF4fuSFt2lAro+nWDVgGs3cBT9SSvu/9yBTbR2y4FvLIv43QvQ85km08yQ0+f/p16LVaQfqNMQNsPq0Hgq0gQ4HML8OqC53evTR9L/byeG3z7j1/N+oz3b19UIgKZ/MqiONBZifN4Yvsa34DdbsK5nivqBXhJYDnH7aeAVcA2rayC7wxzddugO+OnI8z+BNP5Wn8XJHsZoYF3hgaYJW8etQmNVRZ8IQG0KueazFiaC749pclBKuhS7on1Nj/sefxlqkkYvAh8YQEkI51nuUS0bv7Seld67hu6SGiyMk2HuMEPUP5GmwBaN9iPQwB3S/5xgmmZmhl38qe10qteiYCZkP+YkCkg3rCMmlrneotoZxKQ2lOnBLwyAV4RrVxWsDPHp3KDQkuSLi6hETBLwsblnueUzVGm6431XEMBMrvg4Z8Hqd3B0wXYAT4k8MJHAT6WofH+LlcB5N/meAYFqLwHeHUBea7wU/3YARIl+L0O3gNQQHi2odgBKCDaD2LYASgAO4Dny7laKQykcBcke2mSsQXFryJQQPBvwiqrHzsAGH6kBZRyQ1bH7u+kfnZy7zpr8unfzPAjI+DG9jXaJuqVvlO/zYI/cefi3BOAQQGBLALsAGgBzfXGB+hBRDWEPb7EB1AAvsQHuANQQFAEXKiLzYceTNRCmOOrDIGrH9+mCgwfBQRNAL5XUi98fKU5YOVTBWAn6IFPFYAS1MOvKQAlqIXPJABFqAHPLYBkfyw2T/eNK6xPuEoEOINfZRvTXymLMPwIcLo8OfPse2UAAAAASUVORK5CYII="
+		/>
+		<style>
+			*,
+			*::before,
+			*::after {
+				box-sizing: border-box;
+			}
+			body {
+				margin: 0;
+				min-height: 100vh;
+				display: flex;
+				flex-direction: column;
+				background: #fdfaf6;
+				color: #292524;
+				font-family: ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+				-webkit-font-smoothing: antialiased;
+			}
+			::selection {
+				background: rgba(181, 96, 63, 0.2);
+			}
+			header {
+				border-bottom: 1px solid #e7e5e4;
+				background: rgba(255, 255, 255, 0.9);
+			}
+			.bar {
+				max-width: 80rem;
+				margin: 0 auto;
+				padding: 1rem;
+			}
+			.logo {
+				font-family: Georgia, Cambria, 'Times New Roman', serif;
+				font-size: 1.5rem;
+				line-height: 2rem;
+				letter-spacing: -0.025em;
+				color: #1c1917;
+			}
+			main {
+				flex: 1;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				padding: 1.5rem 1rem;
+			}
+			.card {
+				width: 100%;
+				max-width: 28rem;
+				padding: 2rem 1.5rem;
+				text-align: center;
+				background: #fff;
+				border: 1px solid #e7e5e4;
+				border-radius: 0.75rem;
+				box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+			}
+			.icon {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				width: 3rem;
+				height: 3rem;
+				margin: 0 auto 1.25rem;
+				border-radius: 9999px;
+				background: rgba(181, 96, 63, 0.1);
+				color: #b5603f;
+			}
+			h1 {
+				margin: 0 0 0.75rem;
+				font-family: Georgia, Cambria, 'Times New Roman', serif;
+				font-size: 1.5rem;
+				line-height: 2rem;
+				font-weight: 400;
+				color: #1c1917;
+			}
+			p {
+				margin: 0;
+				font-size: 0.9375rem;
+				line-height: 1.6;
+				color: #57534e;
+			}
+			.hint {
+				margin-top: 1.25rem;
+				padding-top: 1.25rem;
+				border-top: 1px solid #f5f5f4;
+				font-size: 0.8125rem;
+				color: #78716c;
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<div class="bar"><span class="logo">Yumbry</span></div>
+		</header>
+		<main>
+			<div class="card">
+				<div class="icon" aria-hidden="true">
+					<svg
+						width="24"
+						height="24"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<circle cx="12" cy="12" r="10" />
+						<polyline points="12 6 12 12 16 14" />
+					</svg>
+				</div>
+				<h1>{{heading}}</h1>
+				<p>{{body}}</p>
+				<p class="hint">{{hint}}</p>
+			</div>
+		</main>
+	</body>
 </html>

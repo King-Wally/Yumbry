@@ -66,7 +66,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 
 **Phase A: Foundation**
 
-- [ ] 1. Tidy the scaffold; Bun runtime and adapter-node
+- [x] 1. Tidy the scaffold; Bun runtime and adapter-node
 - [ ] 2. Check that the Bun runtime can run the low-level code
 - [ ] 3. Database: prove the baseline is lossless; migrate on start
 - [ ] 4. Fold `shared/` into the app
@@ -102,6 +102,17 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 - [ ] 25. Full parity pass
 - [ ] 26. Docs and release tooling
 - [ ] 27. Production cutover
+
+## Open issues
+
+Found during a step but owned by a later one. Remove an entry once the owning step fixes it.
+
+- **The build needs runtime secrets** (found in step 1, fixed in step 8). SvelteKit 3 validates
+  the variables declared in `src/env.ts` while it analyses routes at build time. So
+  `bun run build` fails with `env_invalid` unless `DATABASE_URL`, `ORIGIN` and
+  `BETTER_AUTH_SECRET` are set. Locally `.env` supplies them; CI and `docker build` have none.
+  Until step 8, steps 6 and 7 pass placeholders at build time only. Step 8 makes the build need
+  no environment at all and removes those placeholders.
 
 ---
 
@@ -332,6 +343,9 @@ single-package SvelteKit app on Bun:
   typecheck and lint.
 - Leave the docker job out; step 7 adds it back.
 - Drop everything about shared/, backend/, frontend/, prisma generate and package-lock.json.
+- The build still needs DATABASE_URL, ORIGIN and BETTER_AUTH_SECRET (see "Open issues"). Give
+  every step that builds obviously fake placeholder values, marked with a comment saying step 8
+  removes them. They must never be real secrets.
 Show me the workflow, then ask me before pushing the branch. Once I agree, push and watch the
 run with `gh run watch` until it's green. Fix what fails. Tick Step 6 and commit as
 "ci: Bun-based CI for the SvelteKit app".
@@ -374,6 +388,9 @@ docker-compose.yml lost its `app` service. Design it fresh for Bun and SvelteKit
   exactly, and check that files written by main's image (uid 1000, under
   /app/backend/uploads) are readable and writable by the new user at the new mount path.
 - .dockerignore for node_modules, .svelte-kit, build, e2e artefacts, backups, .env.
+- The build still needs DATABASE_URL, ORIGIN and BETTER_AUTH_SECRET (see "Open issues"). Set
+  placeholders on the `bun run build` line of the build stage only (inline env or ARG, never
+  ENV), so they don't reach the runtime image. Add a comment saying step 8 removes them.
 - Add a CI job "docker" (needs app + e2e) that builds amd64 always, and arm64 via buildx/QEMU
   on main and tags.
 - Update .env.example: ORIGIN replaces BETTER_AUTH_URL and APP_BASE_URL, Docker-relevant notes.
@@ -412,6 +429,11 @@ order no longer applies. Build the SvelteKit-native equivalents:
   OPENROUTER_BASE_URL, GEMINI_BASE_URL). Optional ones stay optional, so the app boots without
   AI or email. BETTER_AUTH_SECRET is required in production, with a fixed dev placeholder
   otherwise (as on main).
+- Fix the "build needs runtime secrets" open issue: `bun run build` must succeed with no
+  environment at all, and missing required variables must fail when the server starts instead.
+  Prove it with `env -i PATH="$PATH" HOME="$HOME" bun run build` from a clean clone (no .env).
+  Then remove the build-time placeholders from ci.yml and the Dockerfile, and the entry under
+  "Open issues".
 - hooks.server.ts: an `init` hook that sweeps orphaned families at startup; security headers
   equivalent to main's helmet setup (prefer kit.csp in svelte.config/vite config, with img-src
   'self' data: blob: https:, and other headers in handle); handleError that logs and returns a

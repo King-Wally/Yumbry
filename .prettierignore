@@ -1,0 +1,9 @@
+# Separate packages with their own formatting (folded in / wired up by later migration steps)
+shared/
+e2e/
+# Tool-managed or generated
+.agents/
+.claude/
+drizzle/
+project.inlang/
+bun.lock
