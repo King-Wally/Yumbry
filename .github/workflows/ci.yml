@@ -24,8 +24,13 @@ jobs:
       - run: bun run check
       - run: bunx eslint .
       - run: bunx prettier --check .
-      # The vitest "client" project runs .svelte tests in a real Chromium.
-      - run: bunx playwright install --with-deps chromium
+      # The vitest "client" project runs .svelte tests in a real Chromium. No --with-deps: the
+      # runner image already has Chrome's system libraries, and apt mirrors can stall for minutes.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+      - run: bunx playwright install chromium
       - run: bun run test
 
   e2e:
