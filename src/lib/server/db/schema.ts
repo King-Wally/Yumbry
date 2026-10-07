@@ -49,7 +49,9 @@ export const recipes = pgTable(
 		prepTimeMinutes: integer('prep_time_minutes'),
 		cookTimeMinutes: integer('cook_time_minutes'),
 		totalTimeMinutes: integer('total_time_minutes'),
-		servings: numeric('servings', { precision: 65, scale: 30 }).notNull().default('1'),
+		servings: numeric('servings', { precision: 65, scale: 30 })
+			.notNull()
+			.default(sql`1`),
 		categoryId: integer('category_id'),
 		familyId: integer('family_id').notNull(),
 		// Provenance only — access is decided by familyId, and the recipe outlives its author.
@@ -237,7 +239,9 @@ export const aiUsage = pgTable(
 		model: text('model').notNull(),
 		promptTokens: integer('prompt_tokens'),
 		completionTokens: integer('completion_tokens'),
-		costUsd: numeric('cost_usd', { precision: 12, scale: 8 }).notNull().default('0'),
+		costUsd: numeric('cost_usd', { precision: 12, scale: 8 })
+			.notNull()
+			.default(sql`0`),
 		requestCount: integer('request_count').notNull().default(1),
 		createdAt: createdAt()
 	},

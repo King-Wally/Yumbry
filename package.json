@@ -20,8 +20,8 @@
 		"test": "bun run test:unit --run",
 		"db:start": "docker compose up",
 		"db:generate": "drizzle-kit generate",
-		"db:migrate": "drizzle-kit migrate",
-		"db:baseline": "bun scripts/db-baseline.ts",
+		"db:migrate": "bun scripts/migrate.ts",
+		"db:rehearse": "bun scripts/rehearse-migrate.ts",
 		"db:studio": "drizzle-kit studio"
 	},
 	"dependencies": {

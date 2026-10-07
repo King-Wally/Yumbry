@@ -1,19 +1,3 @@
-CREATE TABLE "accounts" (
-	"id" text PRIMARY KEY NOT NULL,
-	"user_id" text NOT NULL,
-	"account_id" text NOT NULL,
-	"provider_id" text NOT NULL,
-	"access_token" text,
-	"refresh_token" text,
-	"access_token_expires_at" timestamp with time zone,
-	"refresh_token_expires_at" timestamp with time zone,
-	"scope" text,
-	"id_token" text,
-	"password" text,
-	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE "ai_usage" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_id" text,
@@ -22,7 +6,7 @@ CREATE TABLE "ai_usage" (
 	"model" text NOT NULL,
 	"prompt_tokens" integer,
 	"completion_tokens" integer,
-	"cost_usd" numeric(12, 8) DEFAULT '0' NOT NULL,
+	"cost_usd" numeric(12, 8) DEFAULT 0 NOT NULL,
 	"request_count" integer DEFAULT 1 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -90,7 +74,7 @@ CREATE TABLE "recipes" (
 	"prep_time_minutes" integer,
 	"cook_time_minutes" integer,
 	"total_time_minutes" integer,
-	"servings" numeric(65, 30) DEFAULT '1' NOT NULL,
+	"servings" numeric(65, 30) DEFAULT 1 NOT NULL,
 	"category_id" integer,
 	"family_id" integer NOT NULL,
 	"author_id" text,
@@ -103,6 +87,28 @@ CREATE TABLE "recipes" (
 	"share_token" text
 );
 --> statement-breakpoint
+CREATE TABLE "tags" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"family_id" integer NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "accounts" (
+	"id" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"account_id" text NOT NULL,
+	"provider_id" text NOT NULL,
+	"access_token" text,
+	"refresh_token" text,
+	"access_token_expires_at" timestamp with time zone,
+	"refresh_token_expires_at" timestamp with time zone,
+	"scope" text,
+	"id_token" text,
+	"password" text,
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"updated_at" timestamp with time zone NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "sessions" (
 	"id" text PRIMARY KEY NOT NULL,
 	"user_id" text NOT NULL,
@@ -112,12 +118,6 @@ CREATE TABLE "sessions" (
 	"user_agent" text,
 	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	"updated_at" timestamp with time zone NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "tags" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"name" text NOT NULL,
-	"family_id" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "users" (
@@ -144,7 +144,6 @@ CREATE TABLE "verifications" (
 	"updated_at" timestamp with time zone NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "accounts" ADD CONSTRAINT "accounts_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "ai_usage" ADD CONSTRAINT "ai_usage_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "categories" ADD CONSTRAINT "categories_family_id_fkey" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "ingredients" ADD CONSTRAINT "ingredients_recipe_id_fkey" FOREIGN KEY ("recipe_id") REFERENCES "public"."recipes"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
@@ -155,10 +154,10 @@ ALTER TABLE "recipe_versions" ADD CONSTRAINT "recipe_versions_recipe_id_fkey" FO
 ALTER TABLE "recipes" ADD CONSTRAINT "recipes_author_id_fkey" FOREIGN KEY ("author_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "recipes" ADD CONSTRAINT "recipes_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE set null ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "recipes" ADD CONSTRAINT "recipes_family_id_fkey" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
-ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "tags" ADD CONSTRAINT "tags_family_id_fkey" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "accounts" ADD CONSTRAINT "accounts_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "users" ADD CONSTRAINT "users_family_id_fkey" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE restrict ON UPDATE cascade;--> statement-breakpoint
-CREATE INDEX "idx_accounts_user_id" ON "accounts" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "idx_ai_usage_backend_created_at" ON "ai_usage" USING btree ("backend","created_at");--> statement-breakpoint
 CREATE INDEX "idx_ai_usage_user_created_at" ON "ai_usage" USING btree ("user_id","created_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "categories_family_id_name_key" ON "categories" USING btree ("family_id","name");--> statement-breakpoint
@@ -176,10 +175,11 @@ CREATE INDEX "idx_recipes_author_id" ON "recipes" USING btree ("author_id");--> 
 CREATE INDEX "idx_recipes_category_id" ON "recipes" USING btree ("category_id");--> statement-breakpoint
 CREATE INDEX "idx_recipes_family_id" ON "recipes" USING btree ("family_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "recipes_share_token_key" ON "recipes" USING btree ("share_token");--> statement-breakpoint
-CREATE UNIQUE INDEX "sessions_token_key" ON "sessions" USING btree ("token");--> statement-breakpoint
-CREATE INDEX "idx_sessions_user_id" ON "sessions" USING btree ("user_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "tags_family_id_name_key" ON "tags" USING btree ("family_id","name");--> statement-breakpoint
 CREATE INDEX "idx_tags_family_id" ON "tags" USING btree ("family_id");--> statement-breakpoint
+CREATE INDEX "idx_accounts_user_id" ON "accounts" USING btree ("user_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "sessions_token_key" ON "sessions" USING btree ("token");--> statement-breakpoint
+CREATE INDEX "idx_sessions_user_id" ON "sessions" USING btree ("user_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "users_email_key" ON "users" USING btree ("email");--> statement-breakpoint
 CREATE INDEX "idx_users_family_id" ON "users" USING btree ("family_id");--> statement-breakpoint
 CREATE INDEX "idx_verifications_identifier" ON "verifications" USING btree ("identifier");

@@ -68,7 +68,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 
 - [x] 1. Tidy the scaffold; Bun runtime and adapter-node
 - [x] 2. Check that the Bun runtime can run the low-level code
-- [ ] 3. Database: prove the baseline is lossless; migrate on start
+- [x] 3. Database: prove the baseline is lossless; migrate on start
 - [ ] 4. Fold `shared/` into the app
 - [ ] 5. Point the e2e harness at the SvelteKit build
 - [ ] 6. CI on Bun
@@ -241,6 +241,28 @@ command) so step 27 can run it again on a fresh production backup. Document db:*
 package.json. Tick Step 3 and commit as
 "feat(db): verified Drizzle baseline and idempotent migrate script".
 ```
+
+**Outcome.** The first diff found one real difference. Prisma wrote `DEFAULT 1` and `DEFAULT 0` for
+`recipes.servings` and `ai_usage.cost_usd`, but the baseline had `'1'` and `'0'` (pg_dump prints
+these as `'1'::numeric`). `schema.ts` now uses ``sql`1` `` and ``sql`0` ``, and the baseline was
+regenerated (new hash `7cc71a32…`). That reset the history of databases adopted with the old
+baseline: `delete from drizzle.__drizzle_migrations`, then `bun run db:migrate`. After the fix, the
+only differences are `_prisma_migrations`, the `drizzle` schema, and the comment on the `public`
+schema itself. Production's `public` schema was recreated without template1's "standard public
+schema" comment, and that comment is not part of the app's schema. On `pre-svelte.dump`, all 15
+tables kept their row counts through two runs.
+
+**Database scripts.**
+
+| Script                | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bun run db:migrate`  | `scripts/migrate.ts`, run on every start (step 7). If the database is Prisma-era (`users` exists, no Drizzle history), it records the baseline as applied, but only if `_prisma_migrations` ends at v1.3.1's last migration. It aborts if the recorded history has a hash that `drizzle/` doesn't, which means an edited or regenerated migration. It then applies pending migrations in one transaction. An advisory lock serialises concurrent starts. It needs no drizzle-kit. |
+| `bun run db:rehearse` | `scripts/rehearse-migrate.ts`. Runs on `rehearse_*` scratch databases next to `DATABASE_URL`, which it drops afterwards (`--keep` keeps them). It migrates an empty database twice. It compares the v1.3.1 Prisma migrations (`--prisma-ref`) with the baseline. It restores `--dump` (default `backups/pre-svelte.dump`), migrates twice and compares row counts. It checks the restored schema for drift. pg tools run in the compose `db` service, or set `PG_TOOLS=host`.     |
+| `bun run db:generate` | `drizzle-kit generate`: a new migration from `schema.ts` changes (dev only). It must report "No schema changes" while `schema.ts` is untouched.                                                                                                                                                                                                                                                                                                                                   |
+| `bun run db:studio`   | `drizzle-kit studio` (dev only).                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+
+Step 27 runs the same rehearsal on a fresh production backup:
+`bun run db:rehearse --dump path/to/prod.dump`.
 
 ### 4. Fold `shared/` into the app
 
