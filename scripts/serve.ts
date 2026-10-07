@@ -15,6 +15,7 @@ const HOST_HEADER = 'x-yumbry-origin-host';
 if (!process.env.ORIGIN) throw new Error('ORIGIN must be set, e.g. https://yumbry.example.com');
 const origin = new URL(process.env.ORIGIN);
 const protocol = origin.protocol.slice(0, -1);
+const forwardedFor = process.env.ADDRESS_HEADER?.toLowerCase() === 'x-forwarded-for';
 
 // adapter-node reads these once, when its handler module loads.
 process.env.PROTOCOL_HEADER = PROTOCOL_HEADER;
@@ -28,4 +29,9 @@ const build: { server: Server } = await import(new URL('../build/index.js', impo
 build.server.prependListener('request', (req) => {
 	req.headers[PROTOCOL_HEADER] = protocol;
 	req.headers[HOST_HEADER] = origin.host;
+	// adapter-node throws on a missing ADDRESS_HEADER; fall back to the peer, as Express's
+	// `trust proxy` did, so the image also works without a proxy in front (LAN, healthcheck).
+	if (forwardedFor && !req.headers['x-forwarded-for'] && req.socket.remoteAddress) {
+		req.headers['x-forwarded-for'] = req.socket.remoteAddress;
+	}
 });

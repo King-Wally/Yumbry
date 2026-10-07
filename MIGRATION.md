@@ -72,7 +72,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 - [x] 4. Fold `shared/` into the app
 - [x] 5. Point the e2e harness at the SvelteKit build
 - [x] 6. CI on Bun
-- [ ] 7. Docker image and compose on Bun
+- [x] 7. Docker image and compose on Bun
 
 **Phase B: Platform**
 
@@ -110,14 +110,22 @@ Found during a step but owned by a later one. Remove an entry once the owning st
 - **better-auth's rate limiter can't see the client IP** (found in step 5, fixed in step 8). With
   rate limits on, it warns that it falls back to one shared bucket per path. It needs
   `advanced.ipAddress` set to match the address config step 7 gives adapter-node behind the
-  tunnel.
+  tunnel: `ADDRESS_HEADER=x-forwarded-for`, `XFF_DEPTH=1` (the rightmost hop, like main's
+  `trust proxy 1`). `scripts/serve.ts` fills a missing `X-Forwarded-For` with the peer address.
 
 - **The build needs runtime secrets** (found in step 1, fixed in step 8). SvelteKit 3 validates
   the variables declared in `src/env.ts` while it analyses routes at build time. So
   `bun run build` fails with `env_invalid` unless `DATABASE_URL`, `ORIGIN` and
   `BETTER_AUTH_SECRET` are set. Locally `.env` supplies them; CI and `docker build` have none.
-  Until step 8, steps 6 and 7 pass placeholders at build time only. Step 8 makes the build need
-  no environment at all and removes those placeholders.
+  Until step 8, steps 6 and 7 pass placeholders at build time only: the `e2e:build` step in
+  `ci.yml` and the `bun run build` line of the Dockerfile's `build` stage. Step 8 makes the build
+  need no environment at all and removes those placeholders.
+
+- **Production's `POSTGRES_PASSWORD` must be URL-safe** (found in step 7, checked in step 27).
+  docker-compose now builds the app's `DATABASE_URL` from `POSTGRES_USER`, `POSTGRES_PASSWORD` and
+  `POSTGRES_DB` and points it at `db`, so `.env`'s `DATABASE_URL` can stay on `localhost` for
+  `vite dev`. A password with `@`, `/`, `:` or `%` would break that URL. Coolify's own
+  `DATABASE_URL` setting becomes unused.
 
 ---
 
@@ -456,6 +464,40 @@ Verify locally with docker compose (with a restored copy of backups/pre-svelte.d
 convenient), curl /api/health, check `docker inspect` health. Tick Step 7 and commit as
 "build: Bun Docker image and compose app service".
 ```
+
+**Outcome.** Every stage is `oven/bun:1.4.2-slim`: Debian trixie (glibc 2.41), published for
+amd64 and arm64. sharp loads its `linux-<arch>` prebuild there, which was checked on both. Its `bun`
+user is uid/gid 1000, the same as v1.3.1's `node` user. The uploads volume now mounts at
+`/app/uploads` (it was `/app/backend/uploads`), keeping the name `uploads_data`. A copy of the
+local volume written by v1.3.1 (1000:1000, `0644`/`0755`) was readable and writable by the new
+user. A fresh volume starts out owned by `bun`. Only `/app/uploads` is writable; the code is
+root-owned. The image is 104 MB of content. Other findings:
+
+- **`bun install --production` still installs better-auth's optional peers** (vite, drizzle-kit,
+  typescript, …), with both the hoisted and the isolated linker. `--omit peer` halves
+  `node_modules` to 132 MB. A sign-up and session round-trip against the container showed nothing
+  required went missing.
+- **The process didn't exit on SIGTERM** once a request had opened the postgres pool. adapter-node
+  closed the server, but idle connections kept the process alive for about 20 s, so
+  `docker stop` always hit its 10 s kill. `src/lib/server/db/index.ts` now ends the client on
+  adapter-node's `sveltekit:shutdown` event, and a stop takes under a second. Bun runs as PID 1
+  (`exec`), so no init process is needed.
+- **adapter-node throws when `ADDRESS_HEADER` is missing** from a request. Express fell back to the
+  socket address. `scripts/serve.ts` sets a missing `X-Forwarded-For` to the peer, so the image also
+  works with no proxy in front. Nothing calls `getClientAddress()` until step 8, so this isn't
+  exercised end to end yet.
+- **The healthcheck uses `--start-interval=2s`**, so the container reports healthy within seconds
+  of starting instead of after the first 30 s interval.
+- The CI `docker` job builds amd64 on every run and smoke-tests it against a Postgres service: it
+  migrates an empty database and waits for `healthy`. On `main` and `v*` tags it also builds arm64
+  under QEMU. Tags were added to the push trigger.
+
+Verified locally on an isolated `yumbry-step7` compose project with `pre-svelte.dump` restored:
+
+- The app adopted the Prisma-era database, and row counts were unchanged.
+- A restart logged "Database is up to date".
+- `/api/health` answered and the container reported healthy.
+- The amd64 image was also healthy under emulation.
 
 ## Phase B: Platform
 

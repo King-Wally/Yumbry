@@ -1,4 +1,43 @@
 services:
+  app:
+    build: .
+    ports:
+      - '${APP_PORT:-3000}:3000'
+    environment:
+      # Built from the db service's own credentials, so .env's DATABASE_URL can keep pointing at
+      # localhost for `vite dev`. POSTGRES_PASSWORD must therefore be URL-safe.
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      # The URL users open (better-auth's base URL, CSRF checks, email links). PORT, NODE_ENV,
+      # UPLOADS_DIR and the proxy settings come from the image.
+      ORIGIN: ${ORIGIN:?set ORIGIN to the URL users open, e.g. https://recipes.example.com}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      COOKIE_SECURE: ${COOKIE_SECURE:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      AI_MODEL_BIG: ${AI_MODEL_BIG:-}
+      AI_MODEL_MEDIUM: ${AI_MODEL_MEDIUM:-}
+      AI_MODEL_SMALL: ${AI_MODEL_SMALL:-}
+      AI_MODEL_IMAGE: ${AI_MODEL_IMAGE:-}
+      AI_MONTHLY_BUDGET_USD: ${AI_MONTHLY_BUDGET_USD:-}
+      AI_USER_DAILY_BUDGET_USD: ${AI_USER_DAILY_BUDGET_USD:-}
+      GEMINI_DAILY_REQUEST_LIMIT: ${GEMINI_DAILY_REQUEST_LIMIT:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      # Real-browser fallback for URL import behind bot challenges. Points at the `browser`
+      # sidecar, which always starts with the stack. Set it to an empty string in .env to turn off.
+      BROWSER_CDP_URL: ${BROWSER_CDP_URL-http://browser:9222}
+      BROWSER_PROXY_HOST: app
+    volumes:
+      # Same volume as v1.3.1, which mounted it at /app/backend/uploads.
+      - uploads_data:/app/uploads
+    networks:
+      - default
+      - browser
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
   db:
     image: postgres:16-alpine
     ports:

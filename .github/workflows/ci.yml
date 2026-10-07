@@ -4,6 +4,7 @@ on:
   push:
     # svelte: only while the SvelteKit migration runs (MIGRATION.md). Drop it at the cutover.
     branches: [main, dev, svelte]
+    tags: ['v*']
   pull_request:
     branches: [main, dev]
 
@@ -95,3 +96,61 @@ jobs:
             e2e/playwright-report/
             e2e/test-results/
           retention-days: 7
+
+  docker:
+    needs: [app, e2e]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: chef
+          POSTGRES_PASSWORD: changeme
+          POSTGRES_DB: yumbry_docker
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U chef -d yumbry_docker"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: yumbry:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      # The image must migrate an empty database on start and report healthy.
+      - name: Smoke test
+        run: |
+          # Fake values, never real secrets.
+          docker run -d --name yumbry --network host \
+            -e DATABASE_URL=postgres://chef:changeme@localhost:5432/yumbry_docker \
+            -e ORIGIN=http://localhost:3000 \
+            -e BETTER_AUTH_SECRET=ci-smoke-test-placeholder-not-a-secret \
+            yumbry:ci
+          for _ in $(seq 45); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' yumbry)
+            [ "$status" = healthy ] && break
+            [ "$(docker inspect -f '{{.State.Running}}' yumbry)" = true ] || break
+            sleep 2
+          done
+          docker logs yumbry
+          [ "$status" = healthy ]
+          curl -fsS http://localhost:3000/api/health
+      # Production is arm64. Emulated, so only on main and release tags.
+      - if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+        uses: docker/setup-qemu-action@v3
+      - if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
