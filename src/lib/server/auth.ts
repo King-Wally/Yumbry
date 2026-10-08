@@ -6,6 +6,7 @@ import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { getRequestEvent } from '$app/server';
 import { db } from '#lib/server/db/index.ts';
 import { accounts, sessions, users, verifications } from '#lib/server/db/schema.ts';
+import { cleanUpFamilyAfterDelete } from '#lib/server/services/account-deletion.ts';
 import { createFamily } from '#lib/server/services/family.ts';
 import { CLIENT_ADDRESS_HEADER } from '#lib/server/client-address.ts';
 
@@ -58,8 +59,10 @@ export const auth = betterAuth({
 				input: false
 			}
 		},
-		changeEmail: { enabled: false }
-		// deleteUser (and its family clean-up hooks) returns with the settings page.
+		changeEmail: { enabled: false },
+		// The settings page calls this with the user's password, which skips the session freshness
+		// check. The family clean-up runs once the user row is gone.
+		deleteUser: { enabled: true, afterDelete: cleanUpFamilyAfterDelete }
 	},
 
 	session: {

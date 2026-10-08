@@ -1,7 +1,8 @@
 import { randomBytes } from 'node:crypto';
-import { notExists, eq } from 'drizzle-orm';
-import { db } from '#lib/server/db/index.ts';
-import { families, users } from '#lib/server/db/schema.ts';
+import { asc, count, eq, inArray, notExists } from 'drizzle-orm';
+import { db, type DbExecutor } from '#lib/server/db/index.ts';
+import { families, recipes, users } from '#lib/server/db/schema.ts';
+import { deleteRecipeUploadsDir } from '#lib/server/uploads.ts';
 
 const TOKEN_ATTEMPTS = 3;
 
@@ -44,4 +45,42 @@ export async function sweepOrphanedFamilies(): Promise<number> {
 		)
 		.returning({ id: families.id });
 	return deleted.length;
+}
+
+/** Locks the families' rows for the rest of the transaction, always in id order so two
+ * transactions locking the same pair can't deadlock. Membership changes (leaving, joining, deleting
+ * an account) take this first, so each sees the other's committed result. */
+export async function lockFamilies(tx: DbExecutor, ids: number[]): Promise<void> {
+	const ordered = [...new Set(ids)].sort((a, b) => a - b);
+	if (ordered.length === 0) return;
+	await tx
+		.select({ id: families.id })
+		.from(families)
+		.where(inArray(families.id, ordered))
+		.orderBy(asc(families.id))
+		.for('update');
+}
+
+/** Deletes the family once nobody belongs to it (its recipes, tags and categories cascade) and
+ * returns the ids of the recipes that went with it, so their uploads can be removed after commit.
+ * A family that still has members is left alone. */
+export async function deleteFamilyIfEmpty(tx: DbExecutor, familyId: number): Promise<number[]> {
+	const [{ remaining }] = await tx
+		.select({ remaining: count() })
+		.from(users)
+		.where(eq(users.familyId, familyId));
+	if (remaining > 0) return [];
+
+	// Captured before the cascade destroys the rows.
+	const orphaned = await tx
+		.select({ id: recipes.id })
+		.from(recipes)
+		.where(eq(recipes.familyId, familyId));
+	await tx.delete(families).where(eq(families.id, familyId));
+	return orphaned.map((recipe) => recipe.id);
+}
+
+/** Best-effort upload clean-up, always after the transaction that deleted the recipes committed. */
+export async function removeRecipeUploads(recipeIds: number[]): Promise<void> {
+	for (const id of recipeIds) await deleteRecipeUploadsDir(id);
 }

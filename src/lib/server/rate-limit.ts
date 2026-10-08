@@ -112,3 +112,17 @@ export const signUpLimiter = createRateLimiter({
 	limit: 10,
 	message: 'Too many attempts. Try again later.'
 });
+
+// Settings' change-password and delete-account actions, likewise carrying over better-auth's
+// /change-password and /delete-user rules.
+export const changePasswordLimiter = createRateLimiter({
+	windowMs: FIFTEEN_MINUTES,
+	limit: 10,
+	message: 'Too many attempts. Try again later.'
+});
+
+export const deleteAccountLimiter = createRateLimiter({
+	windowMs: FIFTEEN_MINUTES,
+	limit: 10,
+	message: 'Too many attempts. Try again later.'
+});

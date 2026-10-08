@@ -86,7 +86,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 - [x] 12. Recipe list and detail (read side, photo serving)
 - [x] 13. Create, edit and delete recipes; photo upload
 - [x] 14. Version history
-- [ ] 15. Settings
+- [x] 15. Settings
 - [ ] 16. Onboarding
 - [ ] 17. Password reset email
 - [ ] 18. Families
@@ -1008,6 +1008,42 @@ services/account-deletion.service.ts, the deleteUser hooks in main:backend/src/a
 Add the green tests to e2e/ported-specs.txt. Tick Step 15 and commit as
 "feat(settings): preferences, password change and account deletion".
 ```
+
+**Outcome.** `/settings` is four cards (Language, Password, JSON import/export, Danger zone) over
+three form actions. Every form works before hydration and without JS. Seams later steps build on:
+
+- **`?/preferences`** takes any subset of `locale`, `unitSystem`, `smallVolumes` and
+  `jsonImportExportEnabled` (`'true'`/`'false'`). `parsePreferences` (`#lib/server/preferences.ts`)
+  validates it against the shared enums, and `updatePreferences`
+  (`#lib/server/services/user-preferences.ts`) saves it, the language through `saveLocaleChoice`.
+  As on `main`, Settings shows no unit pickers: **step 23**'s chat page posts its unit selects to
+  `/settings?/preferences`.
+- **Switching language without a reload:** the root layout load returns `locale`, and
+  `+layout.svelte` wraps the header and main in `{#key data.locale}`. An enhanced form calls
+  `applyLocale(locale)` (`#lib/locale-client.ts`, which moves `<html lang>`) before `update()`.
+  **Step 16**'s onboarding picker does the same. A plain form POST can't do this, because the
+  response's language was settled before the action ran. So a non-enhanced language change
+  redirects back to `/settings`.
+- **Early picks:** a language picked before hydration is caught up by an attachment. It waits a
+  `tick()` first, so `use:enhance` is attached and the submit doesn't become a full-page POST. The
+  JSON switch is the form's submit button and isn't optimistic: it shows what is saved, as on
+  `main`.
+- **Password and delete** call `auth.api.changePassword` (`revokeOtherSessions: true`) and
+  `auth.api.deleteUser({ password })`. Errors are better-auth's own text ("Invalid password"),
+  through `authRefusal` (`#lib/server/auth-forms.ts`). `changePasswordLimiter` and
+  `deleteAccountLimiter` carry better-auth's `/change-password` and `/delete-user` limits over to
+  the actions.
+- **Account deletion:** `deleteUser.afterDelete` is `cleanUpFamilyAfterDelete`
+  (`#lib/server/services/account-deletion.ts`). better-auth passes the session user, `familyId`
+  included, to both hooks, so `main`'s `beforeDelete` and its in-memory map are gone.
+  `lockFamilies`, `deleteFamilyIfEmpty` and `removeRecipeUploads` are in `services/family.ts` for
+  **step 18**.
+- **Seams:** the page has marked spots for Family (**step 18**) and AI usage (**step 22**), and
+  its load has a comment where `family` and the AI budget go.
+- **Zod in tests:** `import { z } from 'zod'` comes back undefined under `bun --bun vitest`.
+  `import * as z from 'zod'` works. No earlier spec had loaded Zod at runtime.
+- **e2e:** allowlisted all of `settings.spec.ts`, `i18n.spec.ts:116` and `:146` (all four
+  locales), and `minimal.spec.ts:53`.
 
 ### 16. Onboarding
 

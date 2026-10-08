@@ -54,3 +54,9 @@ specs/minimal.spec.ts:44
 
 # version history, compare and revert (step 14)
 specs/versions.spec.ts
+
+# settings: preferences, password change and account deletion (step 15)
+specs/settings.spec.ts
+specs/i18n.spec.ts:116
+specs/i18n.spec.ts:146
+specs/minimal.spec.ts:53

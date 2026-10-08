@@ -29,13 +29,19 @@ export async function readCredentials(
 	return { email, password };
 }
 
-/** better-auth's refusal (wrong password, email taken, password too short) as a form failure with
- * its own message, as main showed it. Anything else is unexpected and rethrown. */
+/** better-auth's refusal (wrong password, email taken, password too short) with its own message,
+ * as main showed it. Anything else is unexpected and rethrown. */
+export function authRefusal(err: unknown, fallback: string): { status: number; message: string } {
+	if (!isAPIError(err) || err.statusCode >= 500) throw err;
+	return { status: err.statusCode, message: err.body?.message || fallback };
+}
+
+/** {@link authRefusal} as a login/register form failure. */
 export function authFailure(
 	err: unknown,
 	email: string,
 	fallback: string
 ): ActionFailure<CredentialsFailure> {
-	if (!isAPIError(err) || err.statusCode >= 500) throw err;
-	return fail(err.statusCode, { email, message: err.body?.message || fallback });
+	const { status, message } = authRefusal(err, fallback);
+	return fail(status, { email, message });
 }
