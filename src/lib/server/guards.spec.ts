@@ -8,8 +8,13 @@ const { getUser, requireRecipe, requireUser } = await import('#lib/server/guards
 
 const belongs = vi.mocked(recipeBelongsToFamily);
 
-function event(path: string, user?: Record<string, unknown>): RequestEvent {
-	return { url: new URL(path, 'http://app.test'), locals: { user } } as unknown as RequestEvent;
+function event(path: string, user?: Record<string, unknown>, method = 'GET'): RequestEvent {
+	return {
+		url: new URL(path, 'http://app.test'),
+		request: { method },
+		cookies: { set: vi.fn() },
+		locals: { user }
+	} as unknown as RequestEvent;
 }
 
 const alice = { id: 'u1', email: 'alice@example.com', familyId: 7 };
@@ -40,16 +45,28 @@ describe('getUser', () => {
 });
 
 describe('requireUser', () => {
-	it('redirects to the login page, coming back to the path and query', () => {
+	it('redirects to a bare /login, remembering the path and query', () => {
+		const e = event('/recipes?tag=soup&q=a b');
 		try {
-			requireUser(event('/recipes?tag=soup&q=a b'));
+			requireUser(e);
 			expect.unreachable();
 		} catch (err) {
 			expect(isRedirect(err)).toBe(true);
 			const { status, location } = err as { status: number; location: string };
 			expect(status).toBe(303);
-			expect(location).toBe(`/login?redirectTo=${encodeURIComponent('/recipes?tag=soup&q=a%20b')}`);
+			expect(location).toBe('/login');
+			expect(e.cookies.set).toHaveBeenCalledWith(
+				'yumbry-return-to',
+				'/recipes?tag=soup&q=a%20b',
+				expect.anything()
+			);
 		}
+	});
+
+	it('remembers nothing for a form action', () => {
+		const e = event('/settings', undefined, 'POST');
+		expect(() => requireUser(e)).toThrow();
+		expect(e.cookies.set).not.toHaveBeenCalled();
 	});
 
 	it('returns the signed-in user', () => {

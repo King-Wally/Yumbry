@@ -97,3 +97,18 @@ export const familyJoinLimiter = createRateLimiter({
 	limit: 10,
 	message: 'Too many attempts. Try again later.'
 });
+
+// The login and register form actions call auth.api.* directly, and better-auth only rate-limits
+// requests through its HTTP router (/api/auth/*). These carry its /sign-in/email and
+// /sign-up/email rules over to the forms.
+export const signInLimiter = createRateLimiter({
+	windowMs: FIFTEEN_MINUTES,
+	limit: 10,
+	message: 'Too many attempts. Try again later.'
+});
+
+export const signUpLimiter = createRateLimiter({
+	windowMs: FIFTEEN_MINUTES,
+	limit: 10,
+	message: 'Too many attempts. Try again later.'
+});

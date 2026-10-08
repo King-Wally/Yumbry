@@ -8,11 +8,12 @@
 # app regressed. Never edit the specs to make an entry pass. Line numbers are stable because the
 # specs don't change during the migration.
 
-# better-auth endpoints (sign-out needs /settings, so it waits for step 11)
+# better-auth endpoints
 specs/http-contract.spec.ts:48
 specs/http-contract.spec.ts:68
 specs/http-contract.spec.ts:72
 specs/http-contract.spec.ts:85
+specs/http-contract.spec.ts:94
 specs/http-contract.spec.ts:105
 specs/http-contract.spec.ts:111
 
@@ -24,5 +25,15 @@ specs/http-contract.spec.ts:121
 specs/http-contract.spec.ts:155
 specs/versions.spec.ts:110
 
-# not-found page (the signed-in variant at :158 also needs / and sign-in, steps 11-12)
+# not-found page, signed in and signed out
+specs/i18n.spec.ts:158
 specs/i18n.spec.ts:166
+
+# login, register, logout and protected routes (step 11). The deep-link test (auth.spec.ts:31)
+# needs the recipe detail page, step 12.
+specs/auth.spec.ts:18
+specs/auth.spec.ts:43
+specs/auth.spec.ts:52
+specs/auth.spec.ts:61
+specs/isolation.spec.ts:95
+specs/i18n.spec.ts:79

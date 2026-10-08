@@ -1,6 +1,7 @@
 import { error, redirect, type RequestEvent } from '@sveltejs/kit';
 import type { Session } from '#lib/server/auth.ts';
 import { parseRecipeId } from '#lib/server/recipe-id.ts';
+import { rememberReturnTo } from '#lib/server/return-to.ts';
 import { recipeBelongsToFamily } from '#lib/server/services/recipes.ts';
 
 export interface SignedIn {
@@ -24,12 +25,13 @@ export function getUser(event: RequestEvent): SignedIn | null {
 	return { user, familyId: user.familyId };
 }
 
-/** The signed-in user, or a redirect to the login page that comes back here afterwards. */
+/** The signed-in user, or a redirect to /login, which comes back here afterwards (the page is
+ * remembered in a cookie, see #lib/server/return-to.ts). */
 export function requireUser(event: RequestEvent): SignedIn {
 	const signedIn = getUser(event);
 	if (signedIn) return signedIn;
-	const back = event.url.pathname + event.url.search;
-	redirect(303, `/login?redirectTo=${encodeURIComponent(back)}`);
+	rememberReturnTo(event);
+	redirect(303, '/login');
 }
 
 /** The signed-in user plus a recipe id their family owns. A malformed id, a missing recipe and

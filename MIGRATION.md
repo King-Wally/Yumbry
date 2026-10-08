@@ -79,7 +79,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 - [x] 8. Server platform: env, hooks, security headers, rate limits, auth helpers
 - [x] 9. i18n with Paraglide
 - [x] 10. App shell and design system
-- [ ] 11. Auth pages and route protection
+- [x] 11. Auth pages and route protection
 
 **Phase C: Features**
 
@@ -711,6 +711,43 @@ Add every newly green test to e2e/ported-specs.txt. Tick Step 11 and commit as
 "feat(auth): login, register, logout and protected routes".
 ```
 
+**Outcome.** Login, register and logout are form actions over `auth.api.*`, and there is no
+better-auth client in the browser. Main's error messages come through as better-auth's own text,
+for example "Invalid email or password" and "User already exists. Use another email.". Later steps
+build on these seams:
+
+- **The return path goes in a cookie, not `?redirectTo=`.** The specs expect a bare `/login` after a
+  protected redirect, and Playwright's string `toHaveURL` is an exact match. On a GET,
+  `requireUser` stores path and query in `yumbry-return-to` (httpOnly, lax, 10 minutes;
+  `#lib/server/return-to.ts`) and redirects to `/login`. Logging in, or a signed-in visit to
+  `/login` or `/register`, takes it, after a same-origin check. Registering leaves it for
+  **step 16**'s onboarding to send the user on to, as `main` passed `from` along.
+- **The `(app)` route group** holds every protected page. Its `+layout.server.ts` calls
+  `requireUser`, but that only covers navigation: page loads run in parallel with it, and actions
+  never run it. Every page load and action must still call `requireUser` or `requireRecipe`
+  itself.
+- **Placeholders**, each to be replaced by its step:
+  - `/` (step 12)
+  - `/recipes/[id]` (step 12), which runs `requireRecipe`, so other families' recipes already 404
+  - `/recipes/new` (step 13)
+  - `/recipes/[id]/edit` (step 13), which also runs `requireRecipe`
+  - `/settings` (step 15), with its translated heading
+  - `/onboarding` (step 16)
+- **Rate limits on the forms.** better-auth limits only requests through its own router, so
+  server-side `auth.api.*` calls skip it. `signInLimiter` and `signUpLimiter` (10 per 15 minutes,
+  `#lib/server/rate-limit.ts`) carry its sign-in and sign-up rules over to the form actions.
+- **Cookies** are unchanged from `main`: `yumbry.session_token` with `Max-Age=2592000; Path=/;
+HttpOnly; SameSite=Lax`, the same from the form as from `/api/auth/sign-in/email`. That is pinned
+  by `src/lib/server/auth.spec.ts`.
+- **e2e:** these were allowlisted, along with the signed-in not-found test (`i18n.spec.ts:158`):
+  - `auth.spec.ts:18`, `:43`, `:52` and `:61`
+  - `isolation.spec.ts:95`
+  - `i18n.spec.ts:79`
+  - `http-contract.spec.ts:94`
+
+  `i18n.spec.ts:146` (the Settings heading) passes in English only. The other locales need the
+  Language picker, so it waits for **step 15**.
+
 ## Phase C: Features
 
 ### 12. Recipe list and detail (read side, photo serving)
@@ -724,6 +761,8 @@ Add every newly green test to e2e/ported-specs.txt. Tick Step 11 and commit as
 - `recipe-detail.spec.ts`
 - `isolation.spec.ts`, except the edit-page and photo tests
 - `http-contract.spec.ts › path traversal…`
+- `auth.spec.ts › a protected deep link returns there after logging in` (`:31`, moved here from
+  step 11: it needs the detail page)
 
 The services' unit tests pass.
 
