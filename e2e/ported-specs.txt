@@ -36,11 +36,9 @@ specs/recipe-list.spec.ts
 specs/recipe-detail.spec.ts
 specs/auth.spec.ts:31
 specs/http-contract.spec.ts:155
-specs/export.spec.ts:73
 specs/minimal.spec.ts:28
 
 # Shell and login visibility rules from steps 10 and 11, first run in step 12
-specs/import.spec.ts:39
 specs/minimal.spec.ts:16
 specs/minimal.spec.ts:61
 
@@ -74,3 +72,8 @@ specs/family.spec.ts
 
 # public share links: the share dialog, the public page, its photo and saving a copy (step 19)
 specs/share.spec.ts
+
+# JSON-LD import and export (step 20). Covers export.spec.ts:73 and import.spec.ts:39, listed with
+# step 12.
+specs/import.spec.ts:38
+specs/export.spec.ts

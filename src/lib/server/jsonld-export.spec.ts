@@ -1,0 +1,173 @@
+import { describe, expect, it } from 'vitest';
+import { recipeToJsonLd } from '#lib/server/jsonld-export.ts';
+import { parseRecipeFromJsonLd } from '#lib/server/jsonld-import.ts';
+import type { RecipeDetail } from '#lib/shared/recipe-dto.ts';
+
+const fullRecipe: RecipeDetail = {
+	id: 1,
+	title: 'Simple Pancakes',
+	description: 'Fluffy weekend pancakes.',
+	image_path: 'https://example.com/pancakes.jpg',
+	prep_time_minutes: 10,
+	cook_time_minutes: 15,
+	total_time_minutes: 25,
+	servings: '4',
+	calories: '420',
+	fat_content: '14.5',
+	carbohydrate_content: '58',
+	protein_content: '16',
+	category_id: 1,
+	share_token: null,
+	created_at: new Date('2024-01-01'),
+	updated_at: new Date('2024-01-01'),
+	ingredients: [
+		{
+			id: 1,
+			recipe_id: 1,
+			raw_text: '1 1/2 cups flour',
+			amount: '1.5',
+			unit: 'cups',
+			name: 'flour',
+			is_scalable: true,
+			sort_order: 0
+		},
+		{
+			id: 2,
+			recipe_id: 1,
+			raw_text: 'salt to taste',
+			amount: null,
+			unit: null,
+			name: 'salt to taste',
+			is_scalable: false,
+			sort_order: 1
+		}
+	],
+	instructions: [
+		{ id: 1, recipe_id: 1, step_number: 1, text: 'Mix dry ingredients.' },
+		{ id: 2, recipe_id: 1, step_number: 2, text: 'Cook on a griddle.' }
+	],
+	tags: [
+		{ id: 1, name: 'breakfast' },
+		{ id: 2, name: 'easy' }
+	],
+	category: { id: 1, name: 'Breakfast' }
+};
+
+describe('recipeToJsonLd', () => {
+	it('serializes a full recipe as schema.org Recipe JSON-LD', () => {
+		const jsonLd = recipeToJsonLd(fullRecipe);
+
+		expect(jsonLd).toMatchObject({
+			'@context': 'https://schema.org',
+			'@type': 'Recipe',
+			name: 'Simple Pancakes',
+			description: 'Fluffy weekend pancakes.',
+			image: 'https://example.com/pancakes.jpg',
+			recipeYield: '4',
+			prepTime: 'PT10M',
+			cookTime: 'PT15M',
+			totalTime: 'PT25M',
+			recipeIngredient: ['1 1/2 cups flour', 'salt to taste'],
+			recipeCategory: 'Breakfast',
+			keywords: 'breakfast, easy'
+		});
+		expect(jsonLd.recipeInstructions).toEqual([
+			{ '@type': 'HowToStep', text: 'Mix dry ingredients.' },
+			{ '@type': 'HowToStep', text: 'Cook on a griddle.' }
+		]);
+	});
+
+	it('omits null/empty fields rather than emitting nulls', () => {
+		const sparseRecipe: RecipeDetail = {
+			...fullRecipe,
+			description: null,
+			image_path: null,
+			prep_time_minutes: null,
+			cook_time_minutes: null,
+			total_time_minutes: null,
+			calories: null,
+			fat_content: null,
+			carbohydrate_content: null,
+			protein_content: null,
+			tags: [],
+			category: null
+		};
+
+		const jsonLd = recipeToJsonLd(sparseRecipe);
+
+		expect(jsonLd).not.toHaveProperty('description');
+		expect(jsonLd).not.toHaveProperty('image');
+		expect(jsonLd).not.toHaveProperty('prepTime');
+		expect(jsonLd).not.toHaveProperty('cookTime');
+		expect(jsonLd).not.toHaveProperty('totalTime');
+		expect(jsonLd).not.toHaveProperty('keywords');
+		expect(jsonLd).not.toHaveProperty('recipeCategory');
+		expect(jsonLd).not.toHaveProperty('nutrition');
+	});
+
+	describe('nutrition', () => {
+		it('emits a per-serving NutritionInformation block with units', () => {
+			expect(recipeToJsonLd(fullRecipe).nutrition).toEqual({
+				'@type': 'NutritionInformation',
+				calories: '420 kcal',
+				fatContent: '14.5 g',
+				carbohydrateContent: '58 g',
+				proteinContent: '16 g'
+			});
+		});
+
+		it('emits only the values that are set', () => {
+			const jsonLd = recipeToJsonLd({
+				...fullRecipe,
+				fat_content: null,
+				carbohydrate_content: null,
+				protein_content: null
+			});
+
+			expect(jsonLd.nutrition).toEqual({
+				'@type': 'NutritionInformation',
+				calories: '420 kcal'
+			});
+		});
+
+		// A zero is a real measurement, not an absent one.
+		it('keeps a zero value', () => {
+			const jsonLd = recipeToJsonLd({ ...fullRecipe, fat_content: '0' });
+			expect(jsonLd.nutrition).toMatchObject({ fatContent: '0 g' });
+		});
+	});
+
+	it('preserves ingredient and instruction ordering', () => {
+		const jsonLd = recipeToJsonLd(fullRecipe);
+		expect(jsonLd.recipeIngredient).toEqual(['1 1/2 cups flour', 'salt to taste']);
+		expect((jsonLd.recipeInstructions as { text: string }[]).map((i) => i.text)).toEqual([
+			'Mix dry ingredients.',
+			'Cook on a griddle.'
+		]);
+	});
+
+	it('imports back as the same recipe', () => {
+		const imported = parseRecipeFromJsonLd(JSON.stringify(recipeToJsonLd(fullRecipe)));
+
+		expect(imported).toEqual({
+			title: 'Simple Pancakes',
+			description: 'Fluffy weekend pancakes.',
+			image_path: 'https://example.com/pancakes.jpg',
+			prep_time_minutes: 10,
+			cook_time_minutes: 15,
+			total_time_minutes: 25,
+			servings: 4,
+			calories: 420,
+			fat_content: 14.5,
+			carbohydrate_content: 58,
+			protein_content: 16,
+			ingredients: ['1 1/2 cups flour', 'salt to taste'],
+			instructions: [
+				{ step_number: 1, text: 'Mix dry ingredients.' },
+				{ step_number: 2, text: 'Cook on a griddle.' }
+			],
+			tags: ['breakfast', 'easy'],
+			category: 'Breakfast'
+		});
+	});
+});

@@ -12,6 +12,8 @@
 	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
 	import RecipeDetailView from '#lib/components/RecipeDetailView.svelte';
 	import ShareRecipeDialog from '#lib/components/ShareRecipeDialog.svelte';
+	import { fetchExportFile, shareOrDownloadFile, type ExportFile } from '#lib/export-share.ts';
+	import { isStandalonePwa } from '#lib/install-platform.ts';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
 
@@ -21,6 +23,35 @@
 	let shareOpen = $state(false);
 
 	const id = $derived(data.recipe.id);
+
+	// In an installed iOS PWA a plain `<a download>` opens the OS Quick Look screen, which has no way
+	// back into the app. There the export is fetched ahead and handed to the share sheet (or a Blob
+	// download) on click instead. The fetch can't happen in the click handler: share() needs the
+	// click's user activation, which an await would lose. Everywhere else the link stays as is.
+	let exportFile = $state<ExportFile | null>(null);
+
+	$effect(() => {
+		const recipeId = data.recipe.id;
+		void data.recipe.updated_at; // refetch after an edit
+		exportFile = null;
+		if (!data.user?.jsonImportExportEnabled || !isStandalonePwa()) return;
+		let stale = false;
+		fetchExportFile(`/recipes/${recipeId}/export`, 'recipe.json').then(
+			(file) => {
+				if (!stale) exportFile = file;
+			},
+			() => {}
+		);
+		return () => {
+			stale = true;
+		};
+	});
+
+	function shareExport(event: MouseEvent) {
+		if (!exportFile) return;
+		event.preventDefault();
+		void shareOrDownloadFile(exportFile);
+	}
 </script>
 
 <article class="space-y-4">
@@ -63,6 +94,7 @@
 				<a
 					href="/recipes/{id}/export"
 					download
+					onclick={shareExport}
 					class="inline-flex items-center gap-2 rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
 				>
 					<FileDown class="h-4 w-4" />

@@ -91,7 +91,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 - [x] 17. Password reset email
 - [x] 18. Families
 - [x] 19. Public share links
-- [ ] 20. JSON-LD import and export
+- [x] 20. JSON-LD import and export
 - [ ] 21. URL import
 - [ ] 22. AI provider, budget, nutrition estimates
 - [ ] 23. AI chat (create/improve) and photo import
@@ -1289,6 +1289,37 @@ main:frontend/src/pages/ImportPage.tsx, lib/export-share.ts.
 Add the green tests to e2e/ported-specs.txt. Tick Step 20 and commit as
 "feat(import): JSON-LD import and export".
 ```
+
+**Outcome.** `/import` is one default action that takes pasted text or a `.json` file (a file wins,
+2 MB cap), saves it straight away and redirects to the new recipe. `/recipes/[id]/export` is a
+`+server.ts` download named `<slug>.json`, as on main. Both 404 while the JSON import/export
+preference is off, so they exist only when the menu entry and the Export button show. Seams later
+steps build on:
+
+- **Parsing and serializing** live in `#lib/server/jsonld-import.ts` (`parseRecipeFromJsonLd`,
+  `findRecipeNode`), `#lib/server/jsonld-export.ts` (`recipeToJsonLd`) and
+  `#lib/server/strip-html.ts`. These are main's code. One change: the parser returns a `RecipeBody`
+  with ingredients as plain lines, since `createRecipe` parses every line on save. **Step 21**
+  turns that body into its draft.
+- **Errors:** main's English messages are returned as `fail(400, { message })`:
+  - malformed JSON shows the parser's own `SyntaxError` text (Bun's "JSON Parse error: …");
+  - a document that isn't an object or array has its own message;
+  - so does a document with no Recipe in it.
+- **The upload form** submits as soon as a file is picked. A `<noscript>` button covers no-JS use.
+  A failed upload clears the input, so the same file can be picked again.
+- **Export in an installed PWA:** the plain `<a download>` traps a standalone iOS PWA in Quick Look.
+  So only under `isStandalonePwa()` does the recipe page prefetch the file and hand it to Web Share
+  or a Blob download on click (`#lib/export-share.ts`, main's code). Browser tabs keep the plain
+  link.
+- **Import analytics for step 21:** `logImportAttempt` (`#lib/server/services/import-log.ts`) and
+  `ImportMethod` (next to `UrlImportError`) are ported but not called yet. Step 21 calls them.
+- **Tests:**
+  - `jsonld-import.spec.ts`, `jsonld-export.spec.ts` (with an export → import round trip) and
+    `strip-html.spec.ts` are main's tests;
+  - `import-log.db.spec.ts` runs against `TEST_DATABASE_URL` instead of a mocked Prisma.
+- **e2e:** allowlisted `import.spec.ts:38` (the JSON-LD describe) and all of `export.spec.ts`. They
+  replace the step 12 entries `import.spec.ts:39` and `export.spec.ts:73`. They passed 70 of 70 runs
+  with `--repeat-each=10`.
 
 ### 21. URL import
 

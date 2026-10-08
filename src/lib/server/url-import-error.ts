@@ -27,3 +27,6 @@ export class UrlImportError extends Error {
 		this.httpStatus = options?.httpStatus;
 	}
 }
+
+/** How a URL import fetched the page: plain HTTP, or the headless-browser fallback. */
+export type ImportMethod = 'server' | 'browser';
