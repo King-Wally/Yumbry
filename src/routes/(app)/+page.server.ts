@@ -1,0 +1,28 @@
+import { requireUser } from '#lib/server/guards.ts';
+import { listRecipes } from '#lib/server/services/recipes.ts';
+import { listCategories, listTags } from '#lib/server/services/tags-categories.ts';
+import type { PageServerLoad } from './$types';
+
+// The filters live in the URL (?search=&category=&tag=), so the page navigates client-side to
+// filter and a filtered list can be linked to or reloaded.
+export const load: PageServerLoad = async (event) => {
+	const { familyId } = requireUser(event);
+	const params = event.url.searchParams;
+	const filters = {
+		search: params.get('search') ?? '',
+		category: params.get('category'),
+		tag: params.get('tag')
+	};
+
+	const [recipes, categories, tags] = await Promise.all([
+		listRecipes(familyId, {
+			search: filters.search,
+			category: filters.category ?? undefined,
+			tag: filters.tag ?? undefined
+		}),
+		listCategories(familyId),
+		listTags(familyId)
+	]);
+
+	return { recipes, categories, tags, filters };
+};

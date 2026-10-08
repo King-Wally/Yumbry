@@ -66,7 +66,19 @@ export default defineConfig({
 					name: 'server',
 					environment: 'node',
 					include: ['src/**/*.{test,spec}.{js,ts}'],
-					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
+					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}', 'src/**/*.db.spec.ts']
+				}
+			},
+
+			{
+				// Service tests against a real Postgres (TEST_DATABASE_URL, skipped when unset). The files
+				// share and reset one database, so they must not run in parallel.
+				extends: './vite.config.ts',
+				test: {
+					name: 'server-db',
+					environment: 'node',
+					include: ['src/**/*.db.spec.ts'],
+					fileParallelism: false
 				}
 			}
 		]

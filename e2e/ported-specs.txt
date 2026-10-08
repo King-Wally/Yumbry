@@ -20,20 +20,34 @@ specs/http-contract.spec.ts:111
 # health check
 specs/http-contract.spec.ts:121
 
-# Negative tests that pass now only because the routes don't exist yet. Kept so they guard the
-# real implementation from the moment it lands (steps 12 and 14).
-specs/http-contract.spec.ts:155
+# Negative test that passes now only because the route doesn't exist yet. Kept so it guards the
+# real implementation from the moment it lands (step 14).
 specs/versions.spec.ts:110
 
 # not-found page, signed in and signed out
 specs/i18n.spec.ts:158
 specs/i18n.spec.ts:166
 
-# login, register, logout and protected routes (step 11). The deep-link test (auth.spec.ts:31)
-# needs the recipe detail page, step 12.
+# login, register, logout and protected routes (step 11)
 specs/auth.spec.ts:18
 specs/auth.spec.ts:43
 specs/auth.spec.ts:52
 specs/auth.spec.ts:61
 specs/isolation.spec.ts:95
 specs/i18n.spec.ts:79
+
+# recipe list, detail page and photo serving (step 12). isolation.spec.ts:50 needs the recipe form,
+# and the photo tests (isolation.spec.ts:105, http-contract.spec.ts:127) need upload: step 13.
+specs/recipe-list.spec.ts
+specs/recipe-detail.spec.ts
+specs/isolation.spec.ts:17
+specs/isolation.spec.ts:31
+specs/auth.spec.ts:31
+specs/http-contract.spec.ts:155
+specs/export.spec.ts:73
+specs/minimal.spec.ts:28
+
+# Shell and login visibility rules from steps 10 and 11, first run in step 12
+specs/import.spec.ts:39
+specs/minimal.spec.ts:16
+specs/minimal.spec.ts:61

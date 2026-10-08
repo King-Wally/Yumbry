@@ -2,7 +2,7 @@ node_modules/
 dist/
 dev-dist/
 .env
-uploads/
+/uploads/
 *.log
 .DS_Store
 coverage/

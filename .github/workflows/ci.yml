@@ -11,6 +11,21 @@ on:
 jobs:
   app:
     runs-on: ubuntu-latest
+    # For the database-backed service tests (*.db.spec.ts), which reset this database.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: chef
+          POSTGRES_PASSWORD: changeme
+          POSTGRES_DB: yumbry_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U chef -d yumbry_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
@@ -33,6 +48,8 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
       - run: bunx playwright install chromium
       - run: bun run test
+        env:
+          TEST_DATABASE_URL: postgres://chef:changeme@localhost:5432/yumbry_test
 
   e2e:
     runs-on: ubuntu-latest

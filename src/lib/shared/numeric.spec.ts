@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toNullableNumber, toNumber } from '#lib/shared/numeric.ts';
+import { decimalString, toNullableNumber, toNumber } from '#lib/shared/numeric.ts';
 
 describe('toNumber', () => {
 	it('parses Decimal strings', () => {
@@ -30,5 +30,18 @@ describe('toNullableNumber', () => {
 
 	it('keeps a real zero', () => {
 		expect(toNullableNumber('0')).toBe(0);
+	});
+});
+
+describe('decimalString', () => {
+	it('drops the column padding', () => {
+		expect(decimalString('4.000000000000000000000000000000')).toBe('4');
+		expect(decimalString('14.50')).toBe('14.5');
+		expect(decimalString('0.00')).toBe('0');
+	});
+
+	it('leaves integers and null alone', () => {
+		expect(decimalString('100')).toBe('100');
+		expect(decimalString(null)).toBeNull();
 	});
 });

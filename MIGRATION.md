@@ -83,7 +83,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 
 **Phase C: Features**
 
-- [ ] 12. Recipe list and detail (read side, photo serving)
+- [x] 12. Recipe list and detail (read side, photo serving)
 - [ ] 13. Create, edit and delete recipes; photo upload
 - [ ] 14. Version history
 - [ ] 15. Settings
@@ -759,7 +759,8 @@ HttpOnly; SameSite=Lax`, the same from the form as from `/api/auth/sign-in/email
 
 - `recipe-list.spec.ts`
 - `recipe-detail.spec.ts`
-- `isolation.spec.ts`, except the edit-page and photo tests
+- `isolation.spec.ts`, except the edit-page and photo tests, and `:50`, which also checks the
+  recipe form's chips and tag suggestions (step 13)
 - `http-contract.spec.ts › path traversal…`
 - `auth.spec.ts › a protected deep link returns there after logging in` (`:31`, moved here from
   step 11: it needs the detail page)
@@ -786,7 +787,7 @@ ServingsStepper, NutritionStats, TimeStat, RecipeTagBadges, hooks/useScaledIngre
   reloads.
 - /recipes/[id]: load returns the recipe or 404 "Recipe not found." for other families. Build
   RecipeDetailView as a shared component (the share page reuses it in step 19). Scaling uses
-  src/lib/shared/recipe-scaling and the user's unit preferences.
+  src/lib/shared/recipe-scaling with the reader's locale. It never converts units, as on main.
 - src/routes/uploads/[...path]/+server.ts: requireUser + family check on the recipe that owns
   the path, path-traversal-proof resolution against UPLOADS_DIR, Content-Disposition: inline,
   X-Content-Type-Options: nosniff, the right Content-Type, efficient streaming (Bun.file).
@@ -796,6 +797,40 @@ ServingsStepper, NutritionStats, TimeStat, RecipeTagBadges, hooks/useScaledIngre
 Add the green tests to e2e/ported-specs.txt. Tick Step 12 and commit as
 "feat(recipes): recipe list, detail page and photo serving".
 ```
+
+**Outcome.** The list filters through URL params (`?search=&category=&tag=`), with
+`goto(url, { replace: true, reset: false })`. Kit 3 renamed `replaceState`/`keepFocus`/`noScroll` to
+`replace` and `reset`. Scaling never converts units, as on `main`: unit preferences stay AI-chat
+only. Seams later steps build on:
+
+- **DTOs:** `RecipeSummary` and `RecipeDetail` in `#lib/shared/recipe-dto.ts`, in `main`'s
+  snake_case. Decimal columns go through `decimalString`, so `numeric(65,30)` reads `"4"` rather than
+  `"4.000…"`, as Prisma printed it (main's version snapshots hold those strings).
+- **Read services:** `listRecipes`, `getRecipe` (`#lib/server/services/recipes.ts`), and `listTags`,
+  `listCategories` (`tags-categories.ts`). Search escapes LIKE wildcards. `/api/tags` leaked
+  `familyId`; these return `{ id, name }` only.
+- **DB-backed tests:** `*.db.spec.ts` run in their own vitest project, `server-db`, with
+  `fileParallelism: false`, against `TEST_DATABASE_URL` (skipped when unset; Bun reads it from
+  `.env`). `#lib/server/testing/db.ts` resets the schema, migrates and seeds. A spec mocks
+  `#lib/server/db/index.ts` with a getter (see that file). CI's `app` job now has a Postgres service.
+- **Photos:** `#lib/server/uploads.ts` has `uploadsRoot()` and `resolveUploadPath()`. Only
+  `recipes/<id>/<plain file name>` with a webp/jpg/jpeg/png/gif extension resolves. Step 13 writes
+  through the same module. `/uploads/*` answers **401** when signed out (not the login redirect),
+  404 for everything else that isn't the family's file, and sends `Cache-Control: private`.
+- **`.gitignore`** had `uploads/`, which also hid `src/routes/uploads/`. It is now `/uploads/`.
+- **Not-found:** `(app)/recipes/[id]/+error.svelte` shows "Recipe not found." inline for any 404
+  under `/recipes/[id]`, the edit page included (so `isolation.spec.ts:31` is green already).
+- **Actions row:**
+  - Edit, Improve with AI, Export, Version history and Delete are in place.
+  - Export links to `/recipes/[id]/export` with `download`, which **step 20** must serve.
+  - Delete posts `?/delete` through `ConfirmDialog`, and **step 13** must add that action.
+  - Share is left out for **step 19**.
+  - The PWA-standalone export variant is for **step 24**.
+- **e2e:** allowlisted the following.
+  - All of `recipe-list.spec.ts` and `recipe-detail.spec.ts`.
+  - `isolation.spec.ts:17` and `:31`, `auth.spec.ts:31`, `export.spec.ts:73` and `minimal.spec.ts:28`.
+  - The earlier shell and login tests that the run of the full suite found green: `import.spec.ts:39`
+    and `minimal.spec.ts:16` and `:61`.
 
 ### 13. Create, edit and delete recipes; photo upload
 
