@@ -77,3 +77,8 @@ specs/share.spec.ts
 # step 12.
 specs/import.spec.ts:38
 specs/export.spec.ts
+
+# URL import: review on the recipe form, the browser fallback for a JS challenge, a page without a
+# recipe, and the block reported when there is no browser (step 21)
+specs/import.spec.ts:99
+specs/minimal.spec.ts:69

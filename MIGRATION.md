@@ -92,7 +92,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 - [x] 18. Families
 - [x] 19. Public share links
 - [x] 20. JSON-LD import and export
-- [ ] 21. URL import
+- [x] 21. URL import
 - [ ] 22. AI provider, budget, nutrition estimates
 - [ ] 23. AI chat (create/improve) and photo import
 - [ ] 24. Server-unavailable screen and PWA
@@ -1356,6 +1356,51 @@ headless-fetch.test.ts, url-recipe-import.service.test.ts; main:frontend/src/pag
 Add the green tests to e2e/ported-specs.txt. Tick Step 21 and commit as
 "feat(import): URL import with SSRF-safe fetch and browser fallback".
 ```
+
+**Outcome.** `/import/url` is one rate-limited default action. It fetches the page, logs the
+attempt with `logImportAttempt`, then hands the recipe to `/recipes/new` as a draft and redirects
+there. Nothing is saved until the cook presses Save. Errors are main's English messages, returned
+through `failKinded`. The network stack is in `src/lib/server/`. Seams later steps build on:
+
+- **Pinned fetch** (`safe-fetch.ts`): the Bun recipe from step 2, with no undici.
+  - `assertSafeTarget` resolves the host. An IPv6 literal is looked up without its brackets. The
+    check uses ipaddr.js `unicast`, and `E2E_SAFE_FETCH_ALLOW` is an exact `host:port` match.
+  - `pinnedFetch` dials `addresses[0]` by IP. The hostname goes only in `Host`, plus
+    `tls.serverName` for https.
+  - Each redirect hop is parsed, checked and dialled again. Cookies carry over in a tough-cookie
+    jar.
+  - A timeout that fires while the body is streaming is still reported as `timeout`.
+- **Proxy** (`ssrf-proxy.ts`): main's `node:http` proxy. Both hops dial the checked IP: plain HTTP
+  uses `http.request({ host: address })` and keeps the client's `Host`, CONNECT uses `net.connect`.
+  There are no `lookup` callbacks.
+- **Browser fallback** (`headless-fetch.ts`): main's code. It reads `BROWSER_CDP_URL` and
+  `BROWSER_PROXY_HOST` from `$app/env/private`, opens one context per fetch, and does no
+  emulation. The fallback triggers are the same as main's (`services/url-recipe-import.ts`).
+- **JSON-LD extraction** uses Bun's built-in `HTMLRewriter` instead of cheerio. Its
+  `transform(string)` is synchronous and returns script text raw. Each block goes through step
+  20's `parseRecipeFromJsonLd`.
+- **Draft hand-off** (`draft-handoff.ts`), for **steps 22 and 23**: `stashDraft(cookies, userId,
+draft, source)` and `takeDraft(cookies, userId)`.
+  - The cookie (`yumbry-draft`, path `/recipes/new`) carries only a random id. The draft waits in
+    an in-memory map for 10 minutes, since a draft can outgrow a cookie.
+  - It is bound to the user and taken once, so opening a blank form later never revives an
+    abandoned draft. A reload of the review page loses it.
+  - `/recipes/new` turns it into the form's `initial`. `RecipeForm`'s new `notice` prop shows
+    `recipe_form_reviewing_{url,photo,ai}_draft`.
+- **Dependencies:** `ipaddr.js` and `tough-cookie` are pure JS, so they are bundled and sit in
+  devDependencies.
+- **Tests:** these are main's tests, ported:
+  - `safe-fetch.spec.ts` spies on the global `fetch` and asserts the dialled IP, `Host` and SNI;
+  - `safe-fetch.socket.spec.ts` uses real Bun `fetch` and fetches a `pinned.invalid` host, which
+    proves the hostname was never looked up;
+  - `ssrf-proxy.spec.ts` also checks that `Host` is kept and the proxy credentials are dropped;
+  - `headless-fetch.spec.ts`;
+  - `services/url-recipe-import.spec.ts`.
+
+  `draft-handoff.spec.ts` is new.
+
+- **e2e:** allowlisted `import.spec.ts:99` (the URL import describe) and `minimal.spec.ts:69`. They
+  passed 40 of 40 runs with `--repeat-each=10`.
 
 ### 22. AI provider, budget, nutrition estimates
 

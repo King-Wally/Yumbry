@@ -24,9 +24,11 @@
 		backHref: string;
 		/** The photo control, shown in the details card. It may hold its own <form>. */
 		photo?: Snippet;
+		/** A note shown under the heading, e.g. that a draft is being reviewed. */
+		notice?: string;
 	}
 
-	let { mode, initial, tags, categories, errors, backHref, photo }: Props = $props();
+	let { mode, initial, tags, categories, errors, backHref, photo, notice }: Props = $props();
 
 	type NumberField =
 		| 'prep_time_minutes'
@@ -110,6 +112,12 @@
 			{mode === 'edit' ? m.recipe_form_edit_title() : m.recipe_form_add_title()}
 		</h1>
 	</div>
+
+	{#if notice}
+		<p class="mb-4 rounded-md border border-clay/25 bg-clay/10 px-3 py-2 text-sm text-clay">
+			{notice}
+		</p>
+	{/if}
 
 	<div class="flex flex-col gap-6">
 		<!-- Outside the <form> element, because the photo control is a form of its own; the title
