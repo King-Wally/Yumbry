@@ -29,3 +29,11 @@ export const LANGUAGE_NAMES: Record<SupportedLocale, string> = {
 export function decimalSeparator(locale: SupportedLocale): '.' | ',' {
 	return locale === 'en' ? '.' : ',';
 }
+
+/** Each language's name in that language, for the language pickers. */
+export const LOCALE_LABELS: Record<SupportedLocale, string> = {
+	en: 'English',
+	nl: 'Nederlands',
+	fr: 'Français',
+	es: 'Español'
+};

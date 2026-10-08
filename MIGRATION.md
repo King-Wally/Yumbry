@@ -77,7 +77,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 **Phase B: Platform**
 
 - [x] 8. Server platform: env, hooks, security headers, rate limits, auth helpers
-- [ ] 9. i18n with Paraglide
+- [x] 9. i18n with Paraglide
 - [ ] 10. App shell and design system
 - [ ] 11. Auth pages and route protection
 
@@ -578,6 +578,41 @@ main:frontend/src/hooks/useLocaleSync.ts, SUPPORTED_LOCALES in src/lib/shared.
 Don't build pages. Tick Step 9 and commit as
 "feat(i18n): Paraglide messages converted from main's locales".
 ```
+
+**Outcome.** `messages/{en,nl,fr,es}.json` hold 311 messages each. `main` has 308 strings per
+locale (not ~429), and English is byte-identical apart from `{{var}}` → `{var}`. The conversion
+script was a one-off and is gone. Later steps translate `main`'s keys with these rules:
+
+- **Key names:** the path is joined with `_` and camelCase becomes snake_case, so
+  `t('aiChat.units.label')` is `m.ai_chat_units_label()`.
+- **Plurals:** `x_one`/`x_other` became one message with plural variants, called as
+  `m.recipe_versions_differences({ count })`.
+- **Lists:** Paraglide has no list messages. The five `onboarding.pwa.steps.*` arrays
+  (`returnObjects: true` on `main`) became numbered messages, `onboarding_pwa_steps_ios_safari_1`
+  to `_3` and so on. Step 16 lists them per platform.
+
+Locale resolution has no URL strategy and no `reroute`:
+
+- **Shared config:** `paraglide.config.ts` holds the compiler options for both the Vite plugin and
+  `prepare` (`scripts/paraglide-compile.ts`, because the CLI can't set `cookieName`). Paraglide's
+  own `project.inlang/paraglide.config.ts` would be ignored by the `.gitignore` that inlang
+  manages in that folder.
+- **Order:** the strategy is `custom-session` → `cookie` (`yumbry-locale`) → `preferredLanguage` →
+  `baseLocale`.
+- **Server:** `custom-session` reads the signed-in user's `users.locale`, which `hooks.server.ts`
+  hands over through a `WeakMap` keyed by the request (`#lib/server/locale.ts`). That makes
+  better-auth run before Paraglide in `sequence`. When a signed-in user's cookie differs from
+  their saved language, the response rewrites the cookie, so pages they see after signing out
+  stay in that language, as `main`'s localStorage mirror did.
+- **Client:** on the client, `custom-session` reads `<html lang>`, the server's answer, so
+  hydration always agrees with the SSR output.
+- **Seam for steps 15 and 16:** `saveLocaleChoice(event, locale)` sets the cookie and, when signed
+  in, `users.locale`. Every language switch goes through it. A client-only `setLocale()` would be
+  overruled by the saved preference on the next request.
+- **Legacy carry-over:** `hooks.client.ts` `init` moves `localStorage['yumbry.locale']` into the
+  cookie if there is none yet, reloading once if the language changes, and always removes the
+  key. A re-seeded key (as `i18n.spec.ts` does) can't loop.
+- **e2e:** no specs turn green yet. The i18n specs need the pages from steps 10 and 11.
 
 ### 10. App shell and design system
 

@@ -7,9 +7,10 @@ import {
 	type ServerInit,
 	sequence
 } from '@sveltejs/kit/hooks';
-import { getTextDirection } from '#lib/paraglide/runtime.js';
+import { cookieName, getTextDirection } from '#lib/paraglide/runtime.js';
 import { paraglideMiddleware } from '#lib/paraglide/server.js';
 import { CLIENT_ADDRESS_HEADER } from '#lib/server/client-address.ts';
+import { rememberSessionLocale, setLocaleCookie } from '#lib/server/locale.ts';
 import { handleSecurityHeaders } from '#lib/server/security-headers.ts';
 import { sweepOrphanedFamilies } from '#lib/server/services/family.ts';
 
@@ -29,8 +30,27 @@ const handleClientAddress: Handle = ({ event, resolve }) => {
 	return resolve(event);
 };
 
+const handleBetterAuth: Handle = async ({ event, resolve }) => {
+	const session = await auth.api.getSession({ headers: event.request.headers });
+
+	if (session) {
+		event.locals.session = session.session;
+		event.locals.user = session.user;
+		rememberSessionLocale(event.request, session.user.locale);
+	}
+
+	return svelteKitHandler({ event, resolve, auth, building });
+};
+
+// Runs after handleBetterAuth, so the signed-in user's saved language is known (see
+// #lib/server/locale.ts). The resolved locale goes into <html lang> in the SSR output.
 const handleParaglide: Handle = ({ event, resolve }) =>
 	paraglideMiddleware(event.request, ({ request, locale }) => {
+		// Keep the cookie in step with a signed-in user's preference, so pages they see after
+		// signing out stay in their language.
+		if (event.locals.user && event.cookies.get(cookieName) !== locale) {
+			setLocaleCookie(event.cookies, locale);
+		}
 		return resolve(
 			{ ...event, request },
 			{
@@ -42,22 +62,11 @@ const handleParaglide: Handle = ({ event, resolve }) =>
 		);
 	});
 
-const handleBetterAuth: Handle = async ({ event, resolve }) => {
-	const session = await auth.api.getSession({ headers: event.request.headers });
-
-	if (session) {
-		event.locals.session = session.session;
-		event.locals.user = session.user;
-	}
-
-	return svelteKitHandler({ event, resolve, auth, building });
-};
-
 export const handle: Handle = sequence(
 	handleSecurityHeaders,
 	handleClientAddress,
-	handleParaglide,
-	handleBetterAuth
+	handleBetterAuth,
+	handleParaglide
 );
 
 // Runs for every error except redirects. error() bodies, 404s and validation errors keep Kit's
