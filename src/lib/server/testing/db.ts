@@ -13,6 +13,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 import * as schema from '#lib/server/db/schema.ts';
+import { users } from '#lib/server/db/auth.schema.ts';
 
 export const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 
@@ -51,6 +52,15 @@ export async function insertFamily(): Promise<number> {
 		.values({ inviteToken: crypto.randomUUID() })
 		.returning({ id: schema.families.id });
 	return row.id;
+}
+
+/** A member of the family, for author ids. Returns the user id. */
+export async function insertUser(familyId: number): Promise<string> {
+	const id = crypto.randomUUID();
+	await testDb()
+		.insert(users)
+		.values({ id, name: 'Test Cook', email: `${id}@example.test`, familyId });
+	return id;
 }
 
 export interface SeedRecipe {

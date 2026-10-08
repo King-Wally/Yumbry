@@ -33,15 +33,11 @@ specs/auth.spec.ts:18
 specs/auth.spec.ts:43
 specs/auth.spec.ts:52
 specs/auth.spec.ts:61
-specs/isolation.spec.ts:95
 specs/i18n.spec.ts:79
 
-# recipe list, detail page and photo serving (step 12). isolation.spec.ts:50 needs the recipe form,
-# and the photo tests (isolation.spec.ts:105, http-contract.spec.ts:127) need upload: step 13.
+# recipe list, detail page and photo serving (step 12)
 specs/recipe-list.spec.ts
 specs/recipe-detail.spec.ts
-specs/isolation.spec.ts:17
-specs/isolation.spec.ts:31
 specs/auth.spec.ts:31
 specs/http-contract.spec.ts:155
 specs/export.spec.ts:73
@@ -51,3 +47,11 @@ specs/minimal.spec.ts:28
 specs/import.spec.ts:39
 specs/minimal.spec.ts:16
 specs/minimal.spec.ts:61
+
+# create, edit, delete and photo upload (step 13). isolation.spec.ts now runs whole, including the
+# entries steps 11 and 12 listed by line.
+specs/recipes-crud.spec.ts
+specs/photos.spec.ts
+specs/isolation.spec.ts
+specs/http-contract.spec.ts:126
+specs/minimal.spec.ts:44

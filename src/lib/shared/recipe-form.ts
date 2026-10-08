@@ -123,6 +123,40 @@ export function formStateFromDraft(draft: RecipeInput): RecipeFormState {
 	};
 }
 
+/**
+ * The form state a submitted recipe form carries, read back from its field names: the scalar
+ * fields by their own names, and the lists as repeated `ingredient`, `instruction` and `tag`
+ * fields in order. Reading is lenient (a missing field is empty); validation happens after
+ * `recipeInputFromForm`.
+ */
+export function formStateFromFormData(data: FormData): RecipeFormState {
+	const text = (name: keyof RecipeFormState) => {
+		const value = data.get(name);
+		return typeof value === 'string' ? value : '';
+	};
+	const list = (name: string) =>
+		data.getAll(name).filter((value): value is string => typeof value === 'string');
+	const servings = text('servings').trim();
+
+	return {
+		title: text('title'),
+		description: text('description'),
+		prep_time_minutes: text('prep_time_minutes').trim(),
+		cook_time_minutes: text('cook_time_minutes').trim(),
+		total_time_minutes: text('total_time_minutes').trim(),
+		servings: servings === '' ? Number.NaN : Number(servings),
+		calories: text('calories').trim(),
+		fat_content: text('fat_content').trim(),
+		carbohydrate_content: text('carbohydrate_content').trim(),
+		protein_content: text('protein_content').trim(),
+		image_path: text('image_path') || null,
+		ingredients: list('ingredient'),
+		instructions: list('instruction').map((step) => ({ text: step })),
+		tags: list('tag'),
+		category: text('category').trim() || null
+	};
+}
+
 function nullableMinutes(value: string): number | null {
 	return value === '' ? null : Number(value);
 }

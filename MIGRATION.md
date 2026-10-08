@@ -84,7 +84,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 **Phase C: Features**
 
 - [x] 12. Recipe list and detail (read side, photo serving)
-- [ ] 13. Create, edit and delete recipes; photo upload
+- [x] 13. Create, edit and delete recipes; photo upload
 - [ ] 14. Version history
 - [ ] 15. Settings
 - [ ] 16. Onboarding
@@ -112,6 +112,13 @@ Found during a step but owned by a later one. Remove an entry once the owning st
   `POSTGRES_DB` and points it at `db`, so `.env`'s `DATABASE_URL` can stay on `localhost` for
   `vite dev`. A password with `@`, `/`, `:` or `%` would break that URL. Coolify's own
   `DATABASE_URL` setting becomes unused.
+- **Clicks that land before hydration are lost on JS-only controls** (found in step 13, owned by step
+  25). Main's SPA rendered nothing until its JS ran; SSR renders working-looking buttons first. Forms
+  and links now work without JS (step 13 fixed the two ways they didn't), but the profile menu
+  (`auth.spec.ts:52`) and the list's filter chips (`recipe-list.spec.ts:116`) still need JS, and
+  under local load (7 workers) a run occasionally clicks them too early. CI's 2 workers didn't show
+  it in five runs. Fix in the app, not the specs: e.g. chips as `?category=` links, the menu as a
+  `<details>` or a link to a page.
 
 ---
 
@@ -874,6 +881,46 @@ Port the related unit tests (ingredient-parser, iso-duration, image-prep, upload
 Add the green tests to e2e/ported-specs.txt. Tick Step 13 and commit as
 "feat(recipes): create, edit, delete and photo upload".
 ```
+
+**Outcome.** The form is one `RecipeForm` component posting `?/save` on both pages (Kit forbids
+mixing a `default` action with the edit page's `?/photo`). Seams later steps build on:
+
+- **Write services** (`#lib/server/services/recipes.ts`): `createRecipe(input, { familyId, authorId })`
+  returns the id; `updateRecipe(id, input, familyId)` and `deleteRecipe(id, familyId)` return false
+  for another family's recipe; `setRecipePhoto(id, path, familyId)`. `getRecipe` takes an optional
+  transaction. `updateRecipe` writes the `recipe_versions` snapshot in the same transaction, before
+  the update (`savedAt` = the replaced `updated_at`), on every save, as on main; **step 14's revert
+  calls it** with the snapshot turned back into a `RecipeBody`. Tags and categories are upserted
+  lowercased and pruned when orphaned (`tags-categories.ts`). `DbExecutor` (`db/index.ts`) types
+  "the client or a transaction".
+- **Validation:** `RecipeBodySchema` (`#lib/server/recipe-schema.ts`, Zod 4, main's rules and
+  Zod's messages, plus `.int()` on the integer time columns). The form posts named fields read by
+  `formStateFromFormData` (`#lib/shared/recipe-form.ts`), then `recipeInputFromForm`, then the
+  schema, in `parseRecipeForm` (`#lib/server/recipe-form-action.ts`), which returns
+  `fail(400, { values, errors })` so a no-JS failure re-renders what was typed.
+- **Shared helpers:** `parseIngredientLine` (`#lib/shared/ingredient-parser.ts`, for steps 14, 20
+  and 21), `isoDurationToMinutes`/`minutesToIsoDuration` (`iso-duration.ts`, step 20),
+  `prepareImageForModel` (`#lib/server/image-prep.ts`, step 23) next to `optimizeRecipePhoto`.
+- **Photos:** `uploads.ts` now writes too: `checkPhotoFile` (type allowlist, 25 MB),
+  `saveRecipePhoto`, `deleteUploadedFile`, `deleteRecipeUploadsDir`, `absoluteUploadPath`. The
+  `?/photo` action answers `fail(400, { photoError })` with a `PhotoError` kind; Kit 3 sends that
+  status on enhanced requests too, which `photos.spec.ts` relies on. `PhotoUpload` shows the
+  translated reason inline and checks the size before uploading. `BODY_SIZE_LIMIT=30M` was already
+  set in the Dockerfile and the e2e config. **Step 19's share import** adds main's
+  `copyRecipeUpload` here.
+- **Drafts (steps 21 and 23):** `RecipeForm` takes `initial: RecipeFormState`; a new recipe posts
+  `image_path` as a hidden field, and `createRecipe` keeps it only as an external http(s) URL. The
+  nutrition card has a marked spot for **step 22's** "Estimate with AI" button.
+- **Reordering** is native pointer events plus dnd-kit's keyboard scheme on the handle (Space/Enter,
+  arrows, Escape), with translated `aria-live` announcements (`reorder_*` messages). No e2e spec
+  covers it, so `ReorderableListEditor.svelte.spec.ts` does.
+- **Fixed on the way** (both broke forms submitted before hydration or without JS):
+  - `Referrer-Policy` is `same-origin`, not helmet's `no-referrer`: under that, Chrome sends
+    `Origin: null` on a native form POST and Kit's CSRF check refused it.
+  - A plain `value={...}` on an input wipes what was typed before hydration (`bind:value` keeps
+    it). The login and register email fields now use `defaultValue`; the form binds everything.
+- **e2e:** allowlisted `recipes-crud.spec.ts`, `photos.spec.ts`, all of `isolation.spec.ts`,
+  `http-contract.spec.ts:126` and `minimal.spec.ts:44`.
 
 ### 14. Version history
 

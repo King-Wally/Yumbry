@@ -26,7 +26,7 @@
 			name="email"
 			required
 			autocomplete="email"
-			value={form?.email ?? ''}
+			defaultValue={form?.email ?? ''}
 			aria-label={m.auth_email_placeholder()}
 			placeholder={m.auth_email_placeholder()}
 			class="w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-clay focus:outline-none"

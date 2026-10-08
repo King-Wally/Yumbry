@@ -10,3 +10,6 @@ const client = postgres(DATABASE_URL);
 process.once('sveltekit:shutdown', () => void client.end({ timeout: 5 }));
 
 export const db = drizzle(client, { schema });
+
+/** The client or an open transaction: services that run inside a caller's transaction take this. */
+export type DbExecutor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];

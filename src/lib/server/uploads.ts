@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { rm } from 'node:fs/promises';
 import { UPLOADS_DIR } from '$app/env/private';
 import { parseRecipeId } from '#lib/server/recipe-id.ts';
 
@@ -44,4 +45,73 @@ export function resolveUploadPath(root: string, relativePath: string): UploadFil
 	if (!absolutePath.startsWith(path.resolve(root) + path.sep)) return null;
 
 	return { recipeId, absolutePath, contentType };
+}
+
+// --- Writing photos ---------------------------------------------------------------------------
+
+/** What an upload may declare itself as. SVG is left out on purpose: it is a scriptable document,
+ * and it would be served from the app's own origin. */
+export const ALLOWED_PHOTO_TYPES: ReadonlySet<string> = new Set([
+	'image/jpeg',
+	'image/png',
+	'image/webp',
+	'image/gif'
+]);
+
+/** Ceiling for an original as the camera wrote it; what is stored is re-encoded far smaller.
+ * `BODY_SIZE_LIMIT` (30M in the Dockerfile and the e2e config) leaves room for multipart overhead. */
+export const PHOTO_LIMIT_MB = 25;
+
+export type PhotoRefusal = 'missing' | 'unsupported_type' | 'too_large';
+
+/** Why the photo action refused an upload: the checks here, or bytes sharp can't decode. */
+export type PhotoError = PhotoRefusal | 'unreadable_image';
+
+/** Why a form value can't be taken as a recipe photo, or null if it can. Only the declared type is
+ * checked here; `optimizeRecipePhoto` is what looks at the bytes. */
+export function checkPhotoFile(value: FormDataEntryValue | null): PhotoRefusal | null {
+	if (!(value instanceof File) || value.size === 0) return 'missing';
+	if (!ALLOWED_PHOTO_TYPES.has(value.type)) return 'unsupported_type';
+	if (value.size > PHOTO_LIMIT_MB * 1024 * 1024) return 'too_large';
+	return null;
+}
+
+const PUBLIC_PREFIX = '/uploads/';
+
+/** Writes an already re-encoded photo under a fresh name and returns its stored path,
+ * `/uploads/recipes/<id>/<uuid>.webp`. */
+export async function saveRecipePhoto(recipeId: number, webp: Uint8Array): Promise<string> {
+	const relative = `recipes/${recipeId}/${crypto.randomUUID()}.webp`;
+	const file = resolveUploadPath(uploadsRoot(), relative);
+	if (!file) throw new Error(`Invalid recipe id: ${recipeId}`);
+	// Bun.write creates the missing directories.
+	await Bun.write(file.absolutePath, webp);
+	return PUBLIC_PREFIX + relative;
+}
+
+/** The file behind a stored `/uploads/...` path, or null for anything else (a remote URL from an
+ * import, or a path that doesn't resolve safely). */
+export function absoluteUploadPath(storedPath: string): string | null {
+	if (!storedPath.startsWith(PUBLIC_PREFIX)) return null;
+	return (
+		resolveUploadPath(uploadsRoot(), storedPath.slice(PUBLIC_PREFIX.length))?.absolutePath ?? null
+	);
+}
+
+/** Best-effort removal of a stored photo. A failure only leaves an orphaned file behind. */
+export async function deleteUploadedFile(storedPath: string): Promise<void> {
+	const absolute = absoluteUploadPath(storedPath);
+	if (!absolute) return;
+	await rm(absolute, { force: true }).catch((err) => {
+		console.error(`Failed to delete uploaded file ${absolute}:`, err);
+	});
+}
+
+/** Best-effort removal of everything stored for a recipe, once the recipe itself is gone. */
+export async function deleteRecipeUploadsDir(recipeId: number): Promise<void> {
+	if (parseRecipeId(String(recipeId)) === null) return;
+	const dir = path.join(uploadsRoot(), 'recipes', String(recipeId));
+	await rm(dir, { recursive: true, force: true }).catch((err) => {
+		console.error(`Failed to delete uploads directory ${dir}:`, err);
+	});
 }

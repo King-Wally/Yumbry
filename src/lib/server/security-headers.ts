@@ -1,12 +1,16 @@
 import type { Handle } from '@sveltejs/kit/hooks';
 
-/** helmet 8's defaults, which main sent on every response. The Content-Security-Policy is
- * SvelteKit's (`csp` in vite.config.ts), so it can carry nonces for Kit's inline scripts. */
+/** helmet 8's defaults, which main sent on every response, except the Referrer-Policy (below). The
+ * Content-Security-Policy is SvelteKit's (`csp` in vite.config.ts), so it can carry nonces for
+ * Kit's inline scripts. */
 export const SECURITY_HEADERS: Readonly<Record<string, string>> = {
 	'cross-origin-opener-policy': 'same-origin',
 	'cross-origin-resource-policy': 'same-origin',
 	'origin-agent-cluster': '?1',
-	'referrer-policy': 'no-referrer',
+	// Not helmet's `no-referrer`: under that, Chrome sends `Origin: null` on a native form POST, and
+	// SvelteKit's CSRF check refuses it, so every form failed without JavaScript (or before
+	// hydration). `same-origin` still sends nothing to other sites.
+	'referrer-policy': 'same-origin',
 	'strict-transport-security': 'max-age=31536000; includeSubDomains',
 	'x-content-type-options': 'nosniff',
 	'x-dns-prefetch-control': 'off',

@@ -4,6 +4,7 @@ import {
 	draftFromRecipe,
 	EMPTY_RECIPE_FORM,
 	formStateFromDraft,
+	formStateFromFormData,
 	formStateFromRecipe,
 	mergeNutritionEstimate,
 	numberField,
@@ -263,5 +264,87 @@ describe('draftFromRecipe', () => {
 			tags: ['soup', 'vegan'],
 			category: 'Soup'
 		});
+	});
+});
+
+describe('formStateFromFormData', () => {
+	function formData(entries: [string, string][]): FormData {
+		const data = new FormData();
+		for (const [name, value] of entries) data.append(name, value);
+		return data;
+	}
+
+	it('reads the scalar fields and the repeated list fields in order', () => {
+		const state = formStateFromFormData(
+			formData([
+				['title', 'Pancakes'],
+				['description', 'Fluffy.'],
+				['prep_time_minutes', '10'],
+				['cook_time_minutes', ' 20 '],
+				['total_time_minutes', ''],
+				['servings', '6'],
+				['calories', '420'],
+				['ingredient', '200 g flour'],
+				['ingredient', ''],
+				['ingredient', 'salt'],
+				['instruction', 'Whisk.'],
+				['instruction', 'Fry.'],
+				['tag', 'sweet'],
+				['tag', 'brunch'],
+				['category', ' Breakfast ']
+			])
+		);
+
+		expect(state).toEqual({
+			...EMPTY_RECIPE_FORM,
+			title: 'Pancakes',
+			description: 'Fluffy.',
+			prep_time_minutes: '10',
+			cook_time_minutes: '20',
+			servings: 6,
+			calories: '420',
+			ingredients: ['200 g flour', '', 'salt'],
+			instructions: [{ text: 'Whisk.' }, { text: 'Fry.' }],
+			tags: ['sweet', 'brunch'],
+			category: 'Breakfast'
+		});
+	});
+
+	it('treats missing fields as empty, and a missing servings as invalid', () => {
+		const state = formStateFromFormData(new FormData());
+
+		expect(state.title).toBe('');
+		expect(state.ingredients).toEqual([]);
+		expect(state.instructions).toEqual([]);
+		expect(state.category).toBeNull();
+		expect(state.image_path).toBeNull();
+		expect(state.servings).toBeNaN();
+	});
+
+	it('ignores files posted under a text field’s name', () => {
+		const data = formData([['title', 'Soup']]);
+		data.append('ingredient', new File(['x'], 'x.txt'));
+
+		expect(formStateFromFormData(data).ingredients).toEqual([]);
+	});
+
+	it('round-trips through recipeInputFromForm with blank lines dropped', () => {
+		const input = recipeInputFromForm(
+			formStateFromFormData(
+				formData([
+					['title', 'Soup'],
+					['servings', '2'],
+					['ingredient', ' '],
+					['ingredient', '1 onion'],
+					['instruction', ''],
+					['instruction', 'Simmer.']
+				])
+			)
+		);
+
+		expect(input.ingredients).toEqual(['1 onion']);
+		expect(input.instructions).toEqual([{ step_number: 1, text: 'Simmer.' }]);
+		expect(input.prep_time_minutes).toBeNull();
+		expect(input.calories).toBeNull();
 	});
 });

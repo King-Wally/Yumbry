@@ -1,7 +1,24 @@
 import { and, eq, exists, ilike, inArray, or, type SQL } from 'drizzle-orm';
-import { db } from '#lib/server/db/index.ts';
-import { categories, recipes, recipeTags, tags } from '#lib/server/db/schema.ts';
+import { db, type DbExecutor } from '#lib/server/db/index.ts';
+import {
+	categories,
+	ingredients,
+	instructions,
+	recipes,
+	recipeTags,
+	recipeVersions,
+	tags
+} from '#lib/server/db/schema.ts';
+import type { RecipeBody } from '#lib/server/recipe-schema.ts';
+import {
+	deleteOrphanedTagsAndCategories,
+	upsertCategory,
+	upsertTags
+} from '#lib/server/services/tags-categories.ts';
+import { deleteRecipeUploadsDir, deleteUploadedFile } from '#lib/server/uploads.ts';
+import { parseIngredientLine } from '#lib/shared/ingredient-parser.ts';
 import { decimalString } from '#lib/shared/numeric.ts';
+import { toRecipeSnapshot } from '#lib/shared/recipe-snapshot.ts';
 import type {
 	Ingredient,
 	Instruction,
@@ -78,8 +95,12 @@ export async function listRecipes(
 
 /** One of the family's recipes with its ingredients and steps, or null (missing, or another
  * family's). */
-export async function getRecipe(recipeId: number, familyId: number): Promise<RecipeDetail | null> {
-	const row = await db.query.recipes.findFirst({
+export async function getRecipe(
+	recipeId: number,
+	familyId: number,
+	executor: DbExecutor = db
+): Promise<RecipeDetail | null> {
+	const row = await executor.query.recipes.findFirst({
 		where: and(eq(recipes.id, recipeId), eq(recipes.familyId, familyId)),
 		with: {
 			...SUMMARY_RELATIONS,
@@ -94,6 +115,170 @@ export async function getRecipe(recipeId: number, familyId: number): Promise<Rec
 		ingredients: row.ingredients.map(toIngredient),
 		instructions: row.instructions.map(toInstruction)
 	};
+}
+
+/** Saves a new recipe for the family and returns its id. */
+export async function createRecipe(
+	input: RecipeBody,
+	{ familyId, authorId }: { familyId: number; authorId: string }
+): Promise<number> {
+	return db.transaction(async (tx) => {
+		const categoryId = await upsertCategory(tx, input.category, familyId);
+		const [row] = await tx
+			.insert(recipes)
+			.values({
+				...scalarColumns(input),
+				imagePath: externalImageUrl(input.image_path),
+				categoryId,
+				familyId,
+				authorId
+			})
+			.returning({ id: recipes.id });
+		await insertChildren(tx, row.id, input, familyId);
+		return row.id;
+	});
+}
+
+/**
+ * Replaces the recipe's content, first keeping what it replaces as a version (the snapshot and the
+ * update commit together, so a failed save leaves no version behind). Every save writes one, even
+ * an unchanged one, as on main. The photo is left alone: the photo action owns it. Returns false if
+ * the recipe isn't the family's.
+ */
+export async function updateRecipe(
+	recipeId: number,
+	input: RecipeBody,
+	familyId: number
+): Promise<boolean> {
+	return db.transaction(async (tx) => {
+		const previous = await getRecipe(recipeId, familyId, tx);
+		if (!previous) return false;
+
+		await tx.insert(recipeVersions).values({
+			recipeId,
+			savedAt: previous.updated_at,
+			snapshot: toRecipeSnapshot(previous)
+		});
+
+		const categoryId = await upsertCategory(tx, input.category, familyId);
+		await tx
+			.update(recipes)
+			.set({ ...scalarColumns(input), categoryId, updatedAt: new Date() })
+			.where(and(eq(recipes.id, recipeId), eq(recipes.familyId, familyId)));
+
+		await tx.delete(ingredients).where(eq(ingredients.recipeId, recipeId));
+		await tx.delete(instructions).where(eq(instructions.recipeId, recipeId));
+		await tx.delete(recipeTags).where(eq(recipeTags.recipeId, recipeId));
+		await insertChildren(tx, recipeId, input, familyId);
+		await deleteOrphanedTagsAndCategories(tx, familyId);
+		return true;
+	});
+}
+
+/** Deletes the recipe (its rows and versions go with it by cascade) and its photos. Returns false
+ * if the recipe isn't the family's. */
+export async function deleteRecipe(recipeId: number, familyId: number): Promise<boolean> {
+	const deleted = await db.transaction(async (tx) => {
+		const rows = await tx
+			.delete(recipes)
+			.where(and(eq(recipes.id, recipeId), eq(recipes.familyId, familyId)))
+			.returning({ id: recipes.id });
+		if (rows.length === 0) return false;
+		await deleteOrphanedTagsAndCategories(tx, familyId);
+		return true;
+	});
+	// After the commit, so a rolled-back delete never loses its files.
+	if (deleted) await deleteRecipeUploadsDir(recipeId);
+	return deleted;
+}
+
+/** Points the recipe at a newly stored photo and removes the one it replaces. Writes no version.
+ * Returns false if the recipe isn't the family's (the caller then removes the new file). */
+export async function setRecipePhoto(
+	recipeId: number,
+	imagePath: string,
+	familyId: number
+): Promise<boolean> {
+	const where = and(eq(recipes.id, recipeId), eq(recipes.familyId, familyId));
+	const [current] = await db.select({ imagePath: recipes.imagePath }).from(recipes).where(where);
+	if (!current) return false;
+
+	const updated = await db
+		.update(recipes)
+		.set({ imagePath, updatedAt: new Date() })
+		.where(where)
+		.returning({ id: recipes.id });
+	if (updated.length === 0) return false;
+
+	if (current.imagePath && current.imagePath !== imagePath) {
+		await deleteUploadedFile(current.imagePath);
+	}
+	return true;
+}
+
+function scalarColumns(input: RecipeBody) {
+	return {
+		title: input.title,
+		description: input.description ?? null,
+		prepTimeMinutes: input.prep_time_minutes ?? null,
+		cookTimeMinutes: input.cook_time_minutes ?? null,
+		totalTimeMinutes: input.total_time_minutes ?? null,
+		servings: String(input.servings),
+		calories: decimalColumn(input.calories),
+		fatContent: decimalColumn(input.fat_content),
+		carbohydrateContent: decimalColumn(input.carbohydrate_content),
+		proteinContent: decimalColumn(input.protein_content)
+	};
+}
+
+function decimalColumn(value: number | null | undefined): string | null {
+	return value == null ? null : String(value);
+}
+
+async function insertChildren(
+	tx: DbExecutor,
+	recipeId: number,
+	input: RecipeBody,
+	familyId: number
+): Promise<void> {
+	if (input.ingredients.length > 0) {
+		await tx.insert(ingredients).values(
+			input.ingredients.map((line, index) => {
+				const parsed = parseIngredientLine(line);
+				return {
+					recipeId,
+					rawText: parsed.raw_text,
+					amount: decimalColumn(parsed.amount),
+					unit: parsed.unit,
+					name: parsed.name,
+					isScalable: parsed.is_scalable,
+					sortOrder: index
+				};
+			})
+		);
+	}
+	if (input.instructions.length > 0) {
+		await tx.insert(instructions).values(
+			input.instructions.map((step) => ({
+				recipeId,
+				stepNumber: step.step_number,
+				text: step.text
+			}))
+		);
+	}
+	await upsertTags(tx, recipeId, input.tags, familyId);
+}
+
+/** The only `image_path` a client may set: an absolute http(s) URL, as an imported draft carries.
+ * Anything else, `/uploads/...` included, is dropped, so a save can't point at another file. */
+function externalImageUrl(value: string | null | undefined): string | null {
+	if (!value) return null;
+	try {
+		const url = new URL(value);
+		return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
+	} catch {
+		return null;
+	}
 }
 
 const SUMMARY_RELATIONS = {
