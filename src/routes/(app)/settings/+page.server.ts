@@ -1,22 +1,28 @@
-import { fail, redirect } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { m } from '#lib/paraglide/messages.js';
 import { auth } from '#lib/server/auth.ts';
 import { authRefusal } from '#lib/server/auth-forms.ts';
 import { requireUser } from '#lib/server/guards.ts';
+import { kindedError } from '#lib/server/kinded-errors.ts';
 import { parsePreferences } from '#lib/server/preferences.ts';
 import {
 	changePasswordLimiter,
 	deleteAccountLimiter,
 	limitClient
 } from '#lib/server/rate-limit.ts';
+import { getFamily, inviteUrl, leaveFamily } from '#lib/server/services/family.ts';
 import { updatePreferences } from '#lib/server/services/user-preferences.ts';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = (event) => {
-	const { user } = requireUser(event);
+export const load: PageServerLoad = async (event) => {
+	const { user, familyId } = requireUser(event);
+	const family = await getFamily(familyId);
+	if (!family) error(404, 'Family not found.');
 	return {
-		preferences: { locale: user.locale, jsonImportExportEnabled: user.jsonImportExportEnabled }
-		// Step 18 adds the family (members, invite link) here, and step 22 the AI budget status.
+		userId: user.id,
+		preferences: { locale: user.locale, jsonImportExportEnabled: user.jsonImportExportEnabled },
+		family: { members: family.members, inviteUrl: inviteUrl(event.url.origin, family.invite_token) }
+		// Step 22 adds the AI budget status here.
 	};
 };
 
@@ -71,6 +77,20 @@ export const actions: Actions = {
 			return fail(status, { passwordError: message });
 		}
 		return { passwordSaved: true };
+	},
+
+	// Into a new, empty family of one; the shared recipes stay behind. Every page load reads the
+	// family afresh (guards.ts), so pages of the old family 404 from the next navigation on.
+	leaveFamily: async (event) => {
+		const { user } = requireUser(event);
+		try {
+			await leaveFamily(user.id);
+		} catch (err) {
+			const known = kindedError(err);
+			if (!known) throw err;
+			return fail(known.status, { leaveError: known.message });
+		}
+		return { left: true };
 	},
 
 	deleteAccount: async (event) => {

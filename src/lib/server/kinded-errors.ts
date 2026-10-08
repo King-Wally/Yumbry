@@ -1,5 +1,6 @@
 import { error, fail, type ActionFailure } from '@sveltejs/kit';
 import { AiProviderError, type AiProviderErrorKind } from '#lib/shared/ai-provider-error.ts';
+import { FamilyError, type FamilyErrorKind } from '#lib/server/family-error.ts';
 import { UrlImportError, type UrlImportErrorKind } from '#lib/server/url-import-error.ts';
 
 // Domain errors carry a `kind`; this is the one place that turns a kind into an HTTP status.
@@ -28,6 +29,12 @@ const URL_IMPORT_STATUS: Record<UrlImportErrorKind, number> = {
 	no_recipe_found: 400
 };
 
+const FAMILY_STATUS: Record<FamilyErrorKind, number> = {
+	invalid_invite: 404,
+	already_member: 409,
+	nothing_to_leave: 409
+};
+
 export interface KindedError {
 	status: number;
 	message: string;
@@ -41,6 +48,9 @@ export function kindedError(err: unknown): KindedError | null {
 	}
 	if (err instanceof UrlImportError) {
 		return { status: URL_IMPORT_STATUS[err.kind], message: err.message, kind: err.kind };
+	}
+	if (err instanceof FamilyError) {
+		return { status: FAMILY_STATUS[err.kind], message: err.message, kind: err.kind };
 	}
 	return null;
 }

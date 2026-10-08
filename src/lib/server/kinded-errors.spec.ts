@@ -1,6 +1,7 @@
 import { isActionFailure, isHttpError } from '@sveltejs/kit';
 import { describe, expect, it } from 'vitest';
 import { AiProviderError } from '#lib/shared/ai-provider-error.ts';
+import { FamilyError } from '#lib/server/family-error.ts';
 import { failKinded, kindedError, throwKinded } from '#lib/server/kinded-errors.ts';
 import { UrlImportError } from '#lib/server/url-import-error.ts';
 
@@ -25,7 +26,10 @@ describe('kindedError', () => {
 		[new UrlImportError('slow', 'timeout'), 422],
 		[new UrlImportError('net', 'network_error'), 422],
 		[new UrlImportError('bot', 'bot_challenge'), 422],
-		[new UrlImportError('none', 'no_recipe_found'), 400]
+		[new UrlImportError('none', 'no_recipe_found'), 400],
+		[new FamilyError('bad link', 'invalid_invite'), 404],
+		[new FamilyError('same', 'already_member'), 409],
+		[new FamilyError('alone', 'nothing_to_leave'), 409]
 	])('maps %o to %d', (err, status) => {
 		expect(kindedError(err)).toEqual({ status, message: err.message, kind: err.kind });
 	});

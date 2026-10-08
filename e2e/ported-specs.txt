@@ -68,3 +68,6 @@ specs/auth.spec.ts:5
 # forgot and reset password via Resend (step 17). minimal.spec.ts:61, listed with step 12, now checks
 # a real flag.
 specs/auth.spec.ts:68
+
+# family invite links, join and leave (step 18)
+specs/family.spec.ts

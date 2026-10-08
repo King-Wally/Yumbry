@@ -2,6 +2,7 @@
 	import './layout.css';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
+	import { untrack } from 'svelte';
 	import { NavigationMenu } from 'bits-ui';
 	import {
 		Camera,
@@ -15,6 +16,7 @@
 	} from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import Toaster from '#lib/components/Toaster.svelte';
+	import { showToast } from '#lib/toast.svelte.ts';
 	import { version } from '../../package.json';
 	import type { LayoutProps } from './$types';
 
@@ -24,6 +26,14 @@
 
 	// A page that brings its own header and footer (onboarding) opts out of the app's.
 	const fullScreen = $derived(page.data.fullScreen === true);
+
+	// A one-shot notice from #lib/server/flash.ts, set by a form action just before its redirect.
+	// Untracked: showToast reads the toast list, which would otherwise re-run this on every change.
+	$effect(() => {
+		if (data.flash === 'family_joined') {
+			untrack(() => showToast({ title: m.join_family_joined_toast() }));
+		}
+	});
 </script>
 
 <div class="flex flex-col bg-cream {fullScreen ? 'h-dvh' : 'min-h-screen'}">

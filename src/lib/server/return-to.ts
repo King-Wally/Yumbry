@@ -20,11 +20,12 @@ export function safeReturnPath(raw: string | undefined, origin: string): string 
 	}
 }
 
-/** Remembers the current page as the place to return to after logging in. GET only: a form
- * action can't be replayed by a redirect. */
-export function rememberReturnTo(event: RequestEvent): void {
-	if (event.request.method !== 'GET') return;
-	event.cookies.set(RETURN_TO_COOKIE, event.url.pathname + event.url.search, {
+/** Remembers the current page as the place to return to after logging in. A form action can't be
+ * replayed by a redirect, so for anything but a GET it only remembers an explicit `path`: the page
+ * the action belongs to (the join-family page sends a signed-out visitor to log in this way). */
+export function rememberReturnTo(event: RequestEvent, path?: string): void {
+	if (path === undefined && event.request.method !== 'GET') return;
+	event.cookies.set(RETURN_TO_COOKIE, path ?? event.url.pathname + event.url.search, {
 		path: '/',
 		httpOnly: true,
 		sameSite: 'lax',

@@ -60,6 +60,16 @@ describe('rememberReturnTo', () => {
 		rememberReturnTo(e);
 		expect(cookies.set).not.toHaveBeenCalled();
 	});
+
+	it('stores an explicit path from a form action', () => {
+		const { event: e, cookies } = event('/join-family/abc?/join', 'POST');
+		rememberReturnTo(e, '/join-family/abc');
+		expect(cookies.set).toHaveBeenCalledWith(
+			RETURN_TO_COOKIE,
+			'/join-family/abc',
+			expect.objectContaining({ path: '/', httpOnly: true })
+		);
+	});
 });
 
 describe('takeReturnTo', () => {

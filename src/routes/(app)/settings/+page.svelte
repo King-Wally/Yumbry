@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { tick, untrack } from 'svelte';
-	import { ArrowLeft, FileBraces, Globe, Lock, TriangleAlert } from '@lucide/svelte';
+	import { ArrowLeft, FileBraces, Globe, Lock, TriangleAlert, Users } from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import Card from '#lib/components/Card.svelte';
 	import CardHeader from '#lib/components/CardHeader.svelte';
@@ -40,6 +40,17 @@
 	// it only moves once the reloaded data says so.
 	const jsonEnabled = $derived(data.preferences.jsonImportExportEnabled);
 	let savingJson = $state(false);
+
+	// Family
+	let copied = $state(false);
+	let leaveOpen = $state(false);
+	let leaving = $state(false);
+
+	async function copyInvite() {
+		await navigator.clipboard.writeText(data.family.inviteUrl);
+		copied = true;
+		setTimeout(() => (copied = false), 2000);
+	}
 
 	// Delete account
 	let deleteOpen = $state(false);
@@ -196,7 +207,59 @@
 			</form>
 		</Card>
 
-		<!-- Family (step 18): members, invite link and Leave family, from data.family. -->
+		<Card>
+			<CardHeader title={m.settings_family_title()} description={m.settings_family_description()}>
+				{#snippet icon()}<Users size={20} strokeWidth={2} />{/snippet}
+			</CardHeader>
+
+			<div class="mb-4.5">
+				<h3 class="mb-1.5 text-[13px] font-medium text-stone-700">{m.settings_family_members()}</h3>
+				<ul class="divide-y divide-stone-200 rounded-md border border-stone-300">
+					{#each data.family.members as member (member.id)}
+						<li class="px-3 py-2 text-sm text-stone-700">
+							{member.email}
+							{#if member.id === data.userId}
+								<span class="ml-2 text-stone-400">{m.settings_family_you()}</span>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			</div>
+
+			<div class="mb-4.5">
+				<label class="mb-1.5 block text-sm font-medium text-stone-700" for="invite-link">
+					{m.settings_family_invite_label()}
+				</label>
+				<div class="flex gap-2">
+					<input
+						id="invite-link"
+						type="text"
+						readonly
+						value={data.family.inviteUrl}
+						onfocus={(event) => event.currentTarget.select()}
+						class="w-full rounded-md border border-stone-300 bg-stone-50 px-3 py-2 text-[13px] text-stone-600 focus:border-clay focus:outline-none"
+					/>
+					<button
+						type="button"
+						onclick={copyInvite}
+						class="shrink-0 rounded-md bg-clay px-4 py-2 text-[13px] text-white"
+					>
+						{copied ? m.settings_family_copied() : m.settings_family_copy_link()}
+					</button>
+				</div>
+				<p class="mt-2 text-xs text-stone-500">{m.settings_family_invite_hint()}</p>
+			</div>
+
+			{#if data.family.members.length > 1}
+				<button
+					type="button"
+					onclick={() => (leaveOpen = true)}
+					class="rounded-md border border-stone-300 px-3.5 py-1.5 text-[13px] text-stone-700 transition-colors hover:border-stone-400 hover:bg-stone-100"
+				>
+					{m.settings_family_leave()}
+				</button>
+			{/if}
+		</Card>
 
 		<!-- AI usage (step 22): the caller's budget status, only when the AI is configured. -->
 
@@ -325,6 +388,47 @@
 					deleteOpen = false;
 					deletePassword = '';
 				}}
+				class="rounded-md border border-stone-300 px-4 py-2 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
+			>
+				{m.common_cancel()}
+			</button>
+		</div>
+	</form>
+</Dialog>
+
+<Dialog
+	bind:open={leaveOpen}
+	title={m.settings_family_leave_dialog_title()}
+	description={m.settings_family_leave_dialog_description()}
+>
+	<form
+		method="POST"
+		action="?/leaveFamily"
+		class="space-y-3"
+		use:enhance={() => {
+			leaving = true;
+			return async ({ result, update }) => {
+				leaving = false;
+				if (result.type === 'success') leaveOpen = false;
+				await update();
+			};
+		}}
+	>
+		{#if form?.leaveError}
+			<p role="alert" class="text-sm text-red-600">{form.leaveError}</p>
+		{/if}
+
+		<div class="flex gap-2">
+			<button
+				type="submit"
+				disabled={leaving}
+				class="rounded-md bg-clay px-4 py-2 text-white disabled:opacity-50"
+			>
+				{leaving ? m.settings_family_leaving() : m.settings_family_confirm_leave()}
+			</button>
+			<button
+				type="button"
+				onclick={() => (leaveOpen = false)}
 				class="rounded-md border border-stone-300 px-4 py-2 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
 			>
 				{m.common_cancel()}

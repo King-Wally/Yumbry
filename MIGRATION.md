@@ -89,7 +89,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 - [x] 15. Settings
 - [x] 16. Onboarding
 - [x] 17. Password reset email
-- [ ] 18. Families
+- [x] 18. Families
 - [ ] 19. Public share links
 - [ ] 20. JSON-LD import and export
 - [ ] 21. URL import
@@ -1172,6 +1172,32 @@ SettingsPage.tsx, hooks/useInvalidateFamilyData.ts.
 Add family.spec.ts to e2e/ported-specs.txt. Tick Step 18 and commit as
 "feat(family): invite links, join and leave".
 ```
+
+**Outcome.** `joinFamily`, `leaveFamily` and the private `mergeFamilyContent` are in
+`#lib/server/services/family.ts`. Each runs in one `db.transaction`, statement for statement as on
+`main`: categories, then tags (`INSERT … ON CONFLICT DO NOTHING`), then recipes, with the merge only
+when the joiner was alone. Settings has the Family card and a `?/leaveFamily` action.
+`/join-family/[token]` is public, with one default action. Seams later steps build on:
+
+- **`FamilyError`** lives in `#lib/server/family-error.ts`, and `kindedError` maps it (404/409/409)
+  with `main`'s English messages, as `main` showed the server's text.
+- **`createFamily(executor = db)`** takes a transaction, which `leaveFamily` uses. The auth hook
+  still calls it bare. `inviteUrl(origin, token)` builds the link for Settings and onboarding.
+- **Flash notices:** `#lib/server/flash.ts` has `setFlash(event, key)` and `takeFlash`. The root
+  layout load hands the key to `+layout.svelte`, which shows it as a toast. Unlike a toast fired in
+  an enhance callback, this also survives a plain POST or a click before hydration. Keys, not text,
+  so the toast is in the viewer's language. "You've joined the family" is the first one. **Step 19**'s
+  "Save a copy" can add its own.
+- **Logging in to join:** a signed-out POST calls `rememberReturnTo(event, event.url.pathname)`. It
+  now takes an explicit path, which an action may store. Then it redirects to `/login`, and the
+  login action's `takeReturnTo` brings the visitor back. Register goes through onboarding's
+  `?/finish`. Nothing happens on load, so previews can't use the invite up.
+- **Nothing to invalidate:** there is no client cache. Loads read `familyId` fresh on every request,
+  so a recipe of the old family 404s on the next navigation, `goBack()` included.
+- **Service tests:** `family.db.spec.ts` covers the merge (including duplicate tags and
+  categories), invalid and same-family tokens, a sharing member joining a third family, leaving,
+  and that the last member can't leave.
+- **e2e:** allowlisted all of `family.spec.ts`. It passed 10 of 10 runs with `--repeat-each=10`.
 
 ### 19. Public share links
 

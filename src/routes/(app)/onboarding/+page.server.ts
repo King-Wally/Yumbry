@@ -1,7 +1,7 @@
 import { error, redirect } from '@sveltejs/kit';
 import { requireUser } from '#lib/server/guards.ts';
 import { takeReturnTo } from '#lib/server/return-to.ts';
-import { getFamily } from '#lib/server/services/family.ts';
+import { getFamily, inviteUrl } from '#lib/server/services/family.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
@@ -13,7 +13,7 @@ export const load: PageServerLoad = async (event) => {
 		// app's, and doesn't remount the page on a language switch (see +layout.svelte).
 		fullScreen: true,
 		family,
-		inviteUrl: `${event.url.origin}/join-family/${family.invite_token}`
+		inviteUrl: inviteUrl(event.url.origin, family.invite_token)
 	};
 };
 
