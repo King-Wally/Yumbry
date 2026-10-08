@@ -94,7 +94,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 - [x] 20. JSON-LD import and export
 - [x] 21. URL import
 - [x] 22. AI provider, budget, nutrition estimates
-- [ ] 23. AI chat (create/improve) and photo import
+- [x] 23. AI chat (create/improve) and photo import
 - [ ] 24. Server-unavailable screen and PWA
 
 **Phase D: Finish**
@@ -1501,6 +1501,43 @@ src/lib/shared/ai-recipe-draft.ts, render-draft.ts, ai-photo-import.ts.
 Add the green tests to e2e/ported-specs.txt. Tick Step 23 and commit as
 "feat(ai): create and improve with AI, photo import".
 ```
+
+**Outcome.** All of `ai.spec.ts` and `ai-budget.spec.ts` are allowlisted as whole files, replacing
+step 22's two line entries. The minimal-server checks (`minimal.spec.ts:16`, `:28`) were already
+listed. The new AI specs passed 100 of 100 runs with `--repeat-each=10`, and the full allowlist
+(119 tests) is green. Seams and choices:
+
+- **A chat turn is a form action, not `+server.ts`.** `chatWithAi` answers in one piece, so there
+  is nothing to stream. Both chat routes mount `?/chat` and `?/review`, from
+  `#lib/server/ai-chat-action.ts` (`chatTurn`, `reviewDraft`).
+  - **Transcript:** the page holds the transcript and draft and posts them each turn, as hidden
+    `messages` / `current_draft` JSON plus the new `message`. The action returns the whole next
+    state, and a failure returns `{ ...kinded, messages, draft }`. The page seeds its state from
+    `form`, so a plain POST works too.
+  - **Server-side checks:** the posted JSON is validated by `#lib/server/ai-chat-schema.ts`, main's
+    schema with size bounds added.
+  - **Mode and tier:** the mode comes from the route, never from the client. `chatTier` picks big
+    only for create on turn 1.
+  - **Budget check:** `assertOpenRouterBudget` runs _after_ the small body is read here, so a refusal
+    can echo the transcript back. Photo import still checks the budget before reading the upload.
+- **The units selects** redraw the preview locally (`renderDraftForReader`), with no AI call. They
+  also save the preference by posting to `/settings?/preferences`, fire-and-forget, as main did.
+- **The draft hand-off** now carries a target: `stashDraft(..., source, target)` and
+  `takeDraft(cookies, userId, target)`, where `null` means `/recipes/new` and a number is the recipe
+  whose edit form should take it. The cookie path widened to `/recipes`. A draft for another form is
+  left in place. The edit page shows the AI notice and saves through `updateRecipe`. The notice
+  mapping is shared in `#lib/draft-notice.ts`.
+- **Photo import** (`/import/photo`) is one default action:
+  - `photoImportLimiter`, then the budget check, then reading the form;
+  - the first non-empty `photo` (the page has camera and file inputs), checked by `checkPhotoFile`;
+  - `prepareImageForModel` and the image tier, then the draft is handed off.
+  - An empty envelope becomes 422 with the model's reply as the message, as on main. Like main, it
+    logs no import attempt.
+- **Prompt fix:** main's chat prompt carried literal merge-conflict markers and listed the fields
+  twice. The per-serving nutrition block is now `nutritionFieldsSection()`, used by both the chat
+  and photo prompts. Their specs assert there are no markers and that each field is listed once.
+- **Bun quirk:** `import { z } from 'zod'` came out `undefined` under `bun --bun vitest` for the new
+  schema module, so it uses `import * as z`, as `preferences.ts` already did.
 
 ### 24. Server-unavailable screen and PWA
 

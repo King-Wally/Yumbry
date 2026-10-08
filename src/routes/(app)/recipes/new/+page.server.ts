@@ -11,7 +11,7 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = async (event) => {
 	const { user, familyId } = requireUser(event);
 	// A draft handed over by an import (draft-handoff.ts) pre-fills the form for review.
-	const pending = takeDraft(event.cookies, user.id);
+	const pending = takeDraft(event.cookies, user.id, null);
 	const [tags, categories] = await Promise.all([listTags(familyId), listCategories(familyId)]);
 	return {
 		tags,

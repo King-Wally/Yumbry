@@ -1,6 +1,7 @@
 import { workedExampleJson } from '#lib/shared/ai-worked-example.ts';
 import {
 	hardRequirements,
+	nutritionFieldsSection,
 	recipeFieldsSection,
 	reminder,
 	type AiChatMessage
@@ -60,6 +61,8 @@ photo that is not a recipe: return null and say so.
   object   When you can read a recipe. Send every field, fully filled.
 
 ${recipeFieldsSection(language)}
+
+${nutritionFieldsSection()}
 
 "reply"                      Two or three sentences, never more, never empty. Say what you read and
                              name anything you could not: a smudged quantity, a step running off

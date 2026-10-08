@@ -82,6 +82,6 @@ specs/export.spec.ts
 # recipe, and the block reported when there is no browser (step 21)
 specs/import.spec.ts:99
 specs/minimal.spec.ts:69
-# AI provider, budget ledger and nutrition estimates (step 22)
-specs/ai.spec.ts:231
-specs/ai-budget.spec.ts:54
+# AI provider, budget, nutrition (step 22); AI chat and photo import (step 23)
+specs/ai.spec.ts
+specs/ai-budget.spec.ts

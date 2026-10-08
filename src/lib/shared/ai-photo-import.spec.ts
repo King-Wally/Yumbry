@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildPhotoImportMessages } from '#lib/shared/ai-photo-import.ts';
+import { NUTRITION_FIELDS } from '#lib/shared/ai-nutrition.ts';
 import { buildChatMessages, type AiContentPart } from '#lib/shared/ai-recipe-draft.ts';
 import { LANGUAGE_NAMES, SUPPORTED_LOCALES, type SupportedLocale } from '#lib/shared/locale.ts';
 
@@ -80,6 +81,15 @@ describe('buildPhotoImportMessages', () => {
 			'"recipe.ingredients"         One object per ingredient, in the order they are used.';
 		expect(chatSystem.content).toContain(shared);
 		expect(systemText()).toContain(shared);
+	});
+
+	// The envelope schema requires them here too, and the schema-less rungs of the downgrade ladder
+	// enforce nothing the prompt does not say.
+	it('documents every nutrition field, per serving', () => {
+		for (const field of NUTRITION_FIELDS) {
+			expect(systemText(), field).toContain(`"recipe.${field}"`);
+		}
+		expect(systemText()).toContain('for ONE serving');
 	});
 
 	it('numbers every hard requirement uniquely', () => {

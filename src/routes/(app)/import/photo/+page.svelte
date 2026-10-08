@@ -1,0 +1,172 @@
+<script lang="ts">
+	import { enhance, type SubmitFunction } from '$app/forms';
+	import { ArrowLeft, Camera, X } from '@lucide/svelte';
+	import AiErrorBanner from '#lib/components/AiErrorBanner.svelte';
+	import Card from '#lib/components/Card.svelte';
+	import CardHeader from '#lib/components/CardHeader.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { AiQuotaScope } from '#lib/shared/ai-budget.ts';
+	import type { PageProps } from './$types';
+
+	let { form }: PageProps = $props();
+
+	type PhotoError = {
+		message: string;
+		kind?: string;
+		scope?: AiQuotaScope;
+		retryAt?: string | null;
+	};
+
+	// An object URL beats a base64 data URL: the file goes up as multipart, so nothing else needs it
+	// in memory.
+	let photo = $state<{ file: File; url: string } | null>(null);
+	let pending = $state(false);
+	let error = $state<PhotoError | null>(null);
+	// The action's `form` outlives the attempt it reports, so it is dropped once the cook moves on.
+	let formSeen = $state(false);
+
+	// The page's own error after an enhanced submit; the action's `form` after a plain one.
+	const shownError: PhotoError | null = $derived(error ?? (formSeen ? null : (form ?? null)));
+
+	// Revokes the previous URL whenever the photo changes, and the last one on unmount.
+	$effect(() => {
+		if (!photo) return;
+		const { url } = photo;
+		return () => URL.revokeObjectURL(url);
+	});
+
+	function choosePhoto(event: Event & { currentTarget: HTMLInputElement }) {
+		const file = event.currentTarget.files?.[0];
+		if (file) {
+			photo = { file, url: URL.createObjectURL(file) };
+			error = null;
+			formSeen = true;
+		}
+	}
+
+	function removePhoto() {
+		photo = null;
+		error = null;
+		formSeen = true;
+	}
+
+	/** Sends the chosen photo (the inputs are gone once one is picked), and keeps it on a failure so
+	 * the cook can retry. A success redirects to the draft, which `update` follows. */
+	const readPhoto: SubmitFunction = ({ formData }) => {
+		formData.delete('photo');
+		if (photo) formData.set('photo', photo.file);
+		pending = true;
+		error = null;
+		formSeen = true;
+		return async ({ result, update }) => {
+			pending = false;
+			if (result.type === 'failure') error = (result.data as PhotoError | undefined) ?? null;
+			await update({ reset: false });
+		};
+	};
+</script>
+
+<div class="mx-auto max-w-2xl pb-4">
+	<div class="mb-4 flex items-center gap-3">
+		<a
+			href="/"
+			aria-label={m.common_back()}
+			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-300 text-stone-600 hover:bg-stone-100"
+		>
+			<ArrowLeft size={18} />
+		</a>
+		<h1 class="font-serif text-2xl font-bold text-stone-900">{m.import_photo_title()}</h1>
+	</div>
+
+	<Card>
+		<CardHeader title={m.import_photo_card_title()} description={m.import_photo_card_description()}>
+			{#snippet icon()}<Camera size={20} strokeWidth={2} />{/snippet}
+		</CardHeader>
+
+		<form method="POST" enctype="multipart/form-data" use:enhance={readPhoto}>
+			{#if !photo}
+				<div
+					class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-stone-300 px-4 py-10 text-center"
+				>
+					<div class="flex flex-wrap items-center justify-center gap-3">
+						<!-- `capture` asks a phone for the camera directly; desktop browsers ignore it and fall
+						     back to the file picker, which is why the second button exists. -->
+						<label
+							class="cursor-pointer rounded-md bg-clay px-4 py-2 text-sm font-medium text-white focus-within:ring-2 focus-within:ring-clay/50"
+						>
+							<input
+								type="file"
+								name="photo"
+								accept="image/*"
+								capture="environment"
+								class="sr-only"
+								onchange={choosePhoto}
+							/>
+							{m.import_photo_take_photo()}
+						</label>
+						<label
+							class="cursor-pointer rounded-md border border-stone-300 px-4 py-2 text-sm font-medium text-stone-600 focus-within:ring-2 focus-within:ring-clay/50 hover:bg-stone-100"
+						>
+							<input
+								type="file"
+								name="photo"
+								accept="image/*"
+								class="sr-only"
+								onchange={choosePhoto}
+							/>
+							{m.import_photo_upload_photo()}
+						</label>
+					</div>
+					<p class="text-sm text-stone-400">{m.import_photo_hint()}</p>
+					<!-- Without JS the choice never reaches the page's state, so the form posts it as is. -->
+					<noscript>
+						<button
+							type="submit"
+							class="rounded-md bg-clay px-4 py-2 text-sm font-medium text-white"
+						>
+							{m.import_photo_submit()}
+						</button>
+					</noscript>
+				</div>
+			{:else}
+				<div class="space-y-3">
+					<div class="relative overflow-hidden rounded-lg border border-stone-200">
+						<img
+							src={photo.url}
+							alt={m.import_photo_preview_alt()}
+							class="max-h-80 w-full bg-stone-100 object-contain"
+						/>
+						{#if !pending}
+							<button
+								type="button"
+								onclick={removePhoto}
+								aria-label={m.import_photo_remove_photo()}
+								class="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-stone-600 shadow-sm hover:bg-white"
+							>
+								<X size={16} />
+							</button>
+						{/if}
+					</div>
+					<button
+						type="submit"
+						disabled={pending}
+						class="rounded-md bg-clay px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+					>
+						{pending ? m.import_photo_reading() : m.import_photo_submit()}
+					</button>
+				</div>
+			{/if}
+		</form>
+
+		{#if shownError}
+			<div class="mt-3">
+				<AiErrorBanner
+					message={shownError.message}
+					kind={shownError.kind}
+					scope={shownError.scope}
+					retryAt={shownError.retryAt}
+				/>
+			</div>
+		{/if}
+	</Card>
+</div>

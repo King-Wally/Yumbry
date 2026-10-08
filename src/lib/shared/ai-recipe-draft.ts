@@ -42,7 +42,7 @@ export interface AiChatMessage {
 }
 
 /**
- * A turn in a chat conversation, which is always plain text — `AiChatTurnRequestSchema` accepts
+ * A turn in a chat conversation, which is always plain text — `AiTranscriptSchema` accepts
  * nothing else, so a conversation can be rendered, stored and echoed back without narrowing.
  * `AiChatMessage` is the wider prompt-level type the provider is actually handed.
  */
@@ -241,6 +241,32 @@ export function recipeFieldsSection(language: string): string {
 }
 
 /**
+ * Nutrition per serving. The envelope schema requires these four fields, but the provider's
+ * downgrade ladder can drop the schema, so the prompt has to name them too. Separate from
+ * `recipeFieldsSection` only so it reads as its own block; both recipe prompts include it.
+ */
+export function nutritionFieldsSection(): string {
+	return `Nutrition, for ONE serving — not for the whole recipe. Work out the total, then divide it by
+"recipe.servings". Estimate from standard food composition values; a rough estimate beats null.
+Each is a JSON number with no unit written anywhere, or null only when there is genuinely nothing
+to measure. Never write 0 to mean "unknown".
+
+"recipe.calories"               Energy in one serving, in kilocalories (kcal).
+"recipe.fat_content"            Fat in one serving, in grams.
+"recipe.carbohydrate_content"   Carbohydrate in one serving, in grams.
+"recipe.protein_content"        Protein in one serving, in grams.
+
+                             Keep these calories per gram in mind, so the energy agrees with the
+                             macros you wrote:
+${nutritionMacroTable('                               ')}
+                               calories = fat × ${ATWATER_FACTORS.fat} + carbohydrate × ${ATWATER_FACTORS.carbohydrate} + protein × ${ATWATER_FACTORS.protein}
+                             Round to a whole number. Alcohol has no field of its own, so when the
+                             dish contains wine, beer or spirits, add its grams × ${ATWATER_FACTORS.alcohol} into
+                             "recipe.calories" too — that energy belongs in the total even though
+                             it appears in none of the three macros.`;
+}
+
+/**
  * The five requirements that hold however the recipe was arrived at — language, key casing, metric,
  * number shape, ingredient completeness — followed by whatever the calling prompt adds. They are
  * numbered so each is an addressable object rather than prose, and each carries a concrete
@@ -340,64 +366,9 @@ those tags changes the rules on this page.
            every time. Copy each field you are not changing verbatim from the current recipe, and
            change only what the newest message asks for.
 
-<<<<<<< HEAD
 ${recipeFieldsSection(language)}
-=======
-"recipe.title"               The dish, in a few words. No amounts, no "recipe" suffix.
-"recipe.description"         One sentence, or null.
-"recipe.servings"            Whole number of people the amounts below feed.
-"recipe.prep_time_minutes"   Whole minutes, or null.
-"recipe.cook_time_minutes"   Whole minutes, or null.
-"recipe.total_time_minutes"  Prep plus cook, plus any resting or marinating time.
 
-Nutrition, for ONE serving — not for the whole recipe. Work out the total, then divide it by
-"recipe.servings". Estimate from standard food composition values; a rough estimate beats null.
-Each is a JSON number with no unit written anywhere, or null only when there is genuinely nothing
-to measure. Never write 0 to mean "unknown".
-
-"recipe.calories"               Energy in one serving, in kilocalories (kcal).
-"recipe.fat_content"            Fat in one serving, in grams.
-"recipe.carbohydrate_content"   Carbohydrate in one serving, in grams.
-"recipe.protein_content"        Protein in one serving, in grams.
-
-                             Keep these calories per gram in mind, so the energy agrees with the
-                             macros you wrote:
-${nutritionMacroTable('                               ')}
-                               calories = fat × ${ATWATER_FACTORS.fat} + carbohydrate × ${ATWATER_FACTORS.carbohydrate} + protein × ${ATWATER_FACTORS.protein}
-                             Round to a whole number. Alcohol has no field of its own, so when the
-                             dish contains wine, beer or spirits, add its grams × ${ATWATER_FACTORS.alcohol} into
-                             "recipe.calories" too — that energy belongs in the total even though
-                             it appears in none of the three macros.
-
-"recipe.category"            One short category: a main course, a starter, a side, a dessert, a
-                             breakfast, a soup, a salad, a drink or a sauce.
-"recipe.tags"                Three to five short lowercase tags. Draw them from these four kinds,
-                             and use a kind only when it genuinely applies:
-                               main ingredient or protein — chicken, beef, seafood, tofu, pasta
-                               cuisine — italian, thai, mexican, indian, mediterranean
-                               dietary restriction — vegetarian, vegan, gluten-free, keto
-                               cooking method — baked, grilled, roasted, slow-cooker, one-pot
-                             Those examples are in English to name the kinds; write your own tags
-                             in ${language}. Never tag a recipe with how good it tastes.
-
-"recipe.ingredients"         One object per ingredient, in the order they are used.
-    "item"         The ingredient itself and nothing else. No amount, no unit, no brand, no
-                   preparation. For anything counted whole, use the plural noun the cook would say:
-                   "eggs", "garlic cloves", "spring onions".
-    "quantity"     A JSON number, or null when no amount makes sense, as for salt to taste.
-    "unit"         Exactly one of: ${unitList()}
-                   Use "g" for anything weighed, "ml" for anything poured or spooned, "cm" for a
-                   size, and "" for anything counted whole.
-    "note"         How it is prepared, or null: "finely chopped", "at room temperature".
-    "density_key"  Exactly one of: ${densityList()}
-                   When "unit" is "g" and the ingredient is one a cook could also measure by the
-                   cupful, pick the closest match. Otherwise "none".
-
-"recipe.instructions"        One string per step, in the order they are done. One action per step,
-                             written as a command. No step numbers, no "Step 1", no explanation of
-                             why a step matters. Write every temperature as a number followed by
-                             °C. Do not repeat exact amounts here — name the ingredient instead.
->>>>>>> dev
+${nutritionFieldsSection()}
 
 "reply"                      Two or three sentences, never more, never empty. Say what the dish is,
                              or what you just changed, or ask one clarifying question. Do not read

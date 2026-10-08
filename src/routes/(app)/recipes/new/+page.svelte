@@ -1,21 +1,12 @@
 <script lang="ts">
 	import RecipeForm from '#lib/components/RecipeForm.svelte';
-	import { m } from '#lib/paraglide/messages.js';
+	import { draftNotice } from '#lib/draft-notice.ts';
 	import { EMPTY_RECIPE_FORM } from '#lib/shared/recipe-form.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 
-	// Says where a handed-off draft came from, so the cook knows nothing is saved yet.
-	const notice = $derived(
-		data.draftSource === 'url'
-			? m.recipe_form_reviewing_url_draft()
-			: data.draftSource === 'photo'
-				? m.recipe_form_reviewing_photo_draft()
-				: data.draftSource === 'ai'
-					? m.recipe_form_reviewing_ai_draft()
-					: undefined
-	);
+	const notice = $derived(draftNotice(data.draftSource));
 </script>
 
 <RecipeForm

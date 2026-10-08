@@ -575,6 +575,15 @@ describe('prompt structure', () => {
 		expect(prompt).toContain('divide it by');
 	});
 
+	// A merge once left its conflict markers inside the prompt's template string, where they compile.
+	it('carries no merge-conflict markers, and lists each field once', () => {
+		const prompt = textOf(buildChatMessages([{ role: 'user', content: 'soup' }], null)[0]);
+		expect(prompt).not.toMatch(/^(<{7}|={7}|>{7})/m);
+		for (const field of ['title', 'calories']) {
+			expect(prompt.match(new RegExp(`^"recipe\\.${field}" `, 'gm')), field).toHaveLength(1);
+		}
+	});
+
 	// The old wording ("never mention units") left the model deflecting when a cook asked a
 	// perfectly reasonable question about how an amount was written.
 	it('lets the model explain that the app controls units', () => {

@@ -1,4 +1,5 @@
 import { error, fail, redirect } from '@sveltejs/kit';
+import { takeDraft } from '#lib/server/draft-handoff.ts';
 import { requireRecipe } from '#lib/server/guards.ts';
 import { optimizeRecipePhoto, UnreadableImageError } from '#lib/server/image-prep.ts';
 import { estimateNutrition } from '#lib/server/nutrition-action.ts';
@@ -11,10 +12,13 @@ import {
 	saveRecipePhoto,
 	type PhotoError
 } from '#lib/server/uploads.ts';
+import { formStateFromDraft } from '#lib/shared/recipe-form.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
-	const { recipeId, familyId } = await requireRecipe(event, event.params.id);
+	const { user, recipeId, familyId } = await requireRecipe(event, event.params.id);
+	// A draft from "Improve with AI" (draft-handoff.ts) replaces the saved values for review.
+	const pending = takeDraft(event.cookies, user.id, recipeId);
 	const [recipe, tags, categories] = await Promise.all([
 		getRecipe(recipeId, familyId),
 		listTags(familyId),
@@ -22,7 +26,13 @@ export const load: PageServerLoad = async (event) => {
 	]);
 	// Null only if the recipe was deleted since requireRecipe looked.
 	if (!recipe) error(404, 'Recipe not found.');
-	return { recipe, tags, categories };
+	return {
+		recipe,
+		tags,
+		categories,
+		draft: pending ? formStateFromDraft(pending.draft) : null,
+		draftSource: pending?.source ?? null
+	};
 };
 
 export const actions: Actions = {
