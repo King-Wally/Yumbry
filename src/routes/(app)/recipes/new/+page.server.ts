@@ -1,6 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import { takeDraft } from '#lib/server/draft-handoff.ts';
 import { requireUser } from '#lib/server/guards.ts';
+import { estimateNutrition } from '#lib/server/nutrition-action.ts';
 import { parseRecipeForm } from '#lib/server/recipe-form-action.ts';
 import { createRecipe } from '#lib/server/services/recipes.ts';
 import { listCategories, listTags } from '#lib/server/services/tags-categories.ts';
@@ -21,6 +22,8 @@ export const load: PageServerLoad = async (event) => {
 };
 
 export const actions: Actions = {
+	estimateNutrition,
+
 	save: async (event) => {
 		const { user, familyId } = requireUser(event);
 		const parsed = await parseRecipeForm(event.request);

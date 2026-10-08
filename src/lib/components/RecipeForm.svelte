@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { untrack, type Snippet } from 'svelte';
 	import { ArrowLeft, Clock, Flame, ReceiptText, Tags } from '@lucide/svelte';
-	import { enhance } from '$app/forms';
+	import { deserialize, enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import AiErrorBanner from '#lib/components/AiErrorBanner.svelte';
 	import Card from '#lib/components/Card.svelte';
 	import CardHeader from '#lib/components/CardHeader.svelte';
 	import CategoryPicker from '#lib/components/CategoryPicker.svelte';
@@ -10,7 +13,13 @@
 	import TagEditor from '#lib/components/TagEditor.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { toNullableNumber } from '#lib/shared/numeric.ts';
-	import type { RecipeFormState } from '#lib/shared/recipe-form.ts';
+	import type { AiQuotaScope } from '#lib/shared/ai-budget.ts';
+	import type { AiNutritionEstimate } from '#lib/shared/ai-nutrition.ts';
+	import {
+		mergeNutritionEstimate,
+		nutritionRequestFromForm,
+		type RecipeFormState
+	} from '#lib/shared/recipe-form.ts';
 
 	type Named = { id: number; name: string };
 
@@ -54,6 +63,64 @@
 	});
 
 	let saving = $state(false);
+	let formEl = $state<HTMLFormElement>();
+
+	// The fields read back into the editor-free shape the shared rules take.
+	const current: RecipeFormState = $derived({
+		...fields,
+		ingredients: fields.ingredients.map((item) => item.text),
+		instructions: fields.instructions.map((step) => ({ id: step.id, text: step.text }))
+	});
+
+	// Nutrition estimate
+	type EstimateError = {
+		message: string;
+		kind?: string;
+		scope?: AiQuotaScope;
+		retryAt?: string | null;
+	};
+	const nutritionConfigured = $derived(page.data.nutritionConfigured === true);
+	const canEstimate = $derived(nutritionRequestFromForm(current) !== null);
+	let estimating = $state(false);
+	let estimateError = $state<EstimateError | null>(null);
+
+	/** Posts the form's fields to `?/estimateNutrition` the way `use:enhance` would, but handles the
+	 * result here: only the four nutrition fields change, and nothing else on the page reloads. */
+	async function estimateNutrition() {
+		if (!formEl) return;
+		estimateError = null;
+		estimating = true;
+		try {
+			// Includes the title and description, which join the form through their `form` attribute.
+			const response = await fetch('?/estimateNutrition', {
+				method: 'POST',
+				body: new FormData(formEl),
+				headers: { 'x-sveltekit-action': 'true' }
+			});
+			const result = deserialize<{ estimate: AiNutritionEstimate }, EstimateError>(
+				await response.text()
+			);
+			if (result.type === 'success' && result.data) {
+				// The merge rule (a null keeps what was typed) lives with the other form rules.
+				const merged = mergeNutritionEstimate(current, result.data.estimate);
+				fields.calories = merged.calories;
+				fields.fat_content = merged.fat_content;
+				fields.carbohydrate_content = merged.carbohydrate_content;
+				fields.protein_content = merged.protein_content;
+			} else if (result.type === 'failure' && result.data) {
+				estimateError = result.data;
+			} else if (result.type === 'redirect') {
+				// The session ran out: off to sign in, like an enhanced form would.
+				await goto(result.location);
+			} else {
+				estimateError = { message: m.common_something_went_wrong() };
+			}
+		} catch {
+			estimateError = { message: m.common_something_went_wrong() };
+		} finally {
+			estimating = false;
+		}
+	}
 
 	const uid = $props.id();
 	const errorId = (name: string) => `${uid}-${name}-error`;
@@ -174,6 +241,7 @@
 		</Card>
 
 		<form
+			bind:this={formEl}
 			id="recipe-form"
 			method="POST"
 			action="?/save"
@@ -242,7 +310,25 @@
 				>
 					{#snippet icon()}<Flame size={20} strokeWidth={2} />{/snippet}
 				</CardHeader>
-				<!-- The "Estimate with AI" button joins here in step 22. -->
+				{#if nutritionConfigured}
+					<div class="mb-4">
+						<!-- Not a submit button: a second one ahead of Save would become the form's default,
+						     run by Enter in any field. -->
+						<button
+							type="button"
+							onclick={estimateNutrition}
+							disabled={estimating || !canEstimate}
+							class="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100 disabled:opacity-50"
+						>
+							{estimating
+								? m.recipe_form_estimating_nutrition()
+								: m.recipe_form_estimate_nutrition()}
+						</button>
+						{#if estimateError}
+							<div class="mt-2"><AiErrorBanner {...estimateError} /></div>
+						{/if}
+					</div>
+				{/if}
 				<div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
 					{@render numberField('calories', m.recipe_form_calories(), 'any')}
 					{@render numberField('fat_content', m.recipe_form_fat(), 'any')}

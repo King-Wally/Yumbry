@@ -1,6 +1,7 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { requireRecipe } from '#lib/server/guards.ts';
 import { optimizeRecipePhoto, UnreadableImageError } from '#lib/server/image-prep.ts';
+import { estimateNutrition } from '#lib/server/nutrition-action.ts';
 import { parseRecipeForm } from '#lib/server/recipe-form-action.ts';
 import { getRecipe, setRecipePhoto, updateRecipe } from '#lib/server/services/recipes.ts';
 import { listCategories, listTags } from '#lib/server/services/tags-categories.ts';
@@ -25,6 +26,8 @@ export const load: PageServerLoad = async (event) => {
 };
 
 export const actions: Actions = {
+	estimateNutrition,
+
 	save: async (event) => {
 		const { recipeId, familyId } = await requireRecipe(event, event.params.id);
 		const parsed = await parseRecipeForm(event.request);

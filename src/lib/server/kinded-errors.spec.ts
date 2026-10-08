@@ -1,6 +1,6 @@
 import { isActionFailure, isHttpError } from '@sveltejs/kit';
 import { describe, expect, it } from 'vitest';
-import { AiProviderError } from '#lib/shared/ai-provider-error.ts';
+import { AiProviderError, AiQuotaExceededError } from '#lib/shared/ai-provider-error.ts';
 import { FamilyError } from '#lib/server/family-error.ts';
 import { failKinded, kindedError, throwKinded } from '#lib/server/kinded-errors.ts';
 import { UrlImportError } from '#lib/server/url-import-error.ts';
@@ -34,6 +34,17 @@ describe('kindedError', () => {
 		expect(kindedError(err)).toEqual({ status, message: err.message, kind: err.kind });
 	});
 
+	it('carries a spent budget’s scope and retry time', () => {
+		const err = new AiQuotaExceededError('user', '2026-09-11T00:00:00.000Z');
+		expect(kindedError(err)).toEqual({
+			status: 429,
+			message: err.message,
+			kind: 'quota_exceeded',
+			scope: 'user',
+			retryAt: '2026-09-11T00:00:00.000Z'
+		});
+	});
+
 	it('returns null for an unrelated error', () => {
 		expect(kindedError(new Error('unrelated'))).toBeNull();
 	});
@@ -45,6 +56,12 @@ describe('failKinded', () => {
 		expect(isActionFailure(result)).toBe(true);
 		expect(result.status).toBe(422);
 		expect(result.data).toEqual({ message: 'Blocked by bot protection.', kind: 'bot_challenge' });
+	});
+
+	it('passes a spent budget’s scope and retry time on to the page', () => {
+		const result = failKinded(new AiQuotaExceededError('shared', null));
+		expect(result.status).toBe(429);
+		expect(result.data).toMatchObject({ kind: 'quota_exceeded', scope: 'shared', retryAt: null });
 	});
 
 	it('rethrows an unrelated error unchanged', () => {

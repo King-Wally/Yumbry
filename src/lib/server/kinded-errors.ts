@@ -1,5 +1,10 @@
 import { error, fail, type ActionFailure } from '@sveltejs/kit';
-import { AiProviderError, type AiProviderErrorKind } from '#lib/shared/ai-provider-error.ts';
+import type { AiQuotaScope } from '#lib/shared/ai-budget.ts';
+import {
+	AiProviderError,
+	AiQuotaExceededError,
+	type AiProviderErrorKind
+} from '#lib/shared/ai-provider-error.ts';
 import { FamilyError, type FamilyErrorKind } from '#lib/server/family-error.ts';
 import { UrlImportError, type UrlImportErrorKind } from '#lib/server/url-import-error.ts';
 
@@ -39,10 +44,24 @@ export interface KindedError {
 	status: number;
 	message: string;
 	kind: string;
+	/** Only on a spent AI budget: whose it was and when it refills. */
+	scope?: AiQuotaScope;
+	retryAt?: string | null;
 }
+
+type KindedData = Omit<KindedError, 'status'>;
 
 /** The status, message and kind for a known domain error, or null for anything else. */
 export function kindedError(err: unknown): KindedError | null {
+	if (err instanceof AiQuotaExceededError) {
+		return {
+			status: AI_PROVIDER_STATUS[err.kind],
+			message: err.message,
+			kind: err.kind,
+			scope: err.scope,
+			retryAt: err.retryAt
+		};
+	}
 	if (err instanceof AiProviderError) {
 		return { status: AI_PROVIDER_STATUS[err.kind], message: err.message, kind: err.kind };
 	}
@@ -55,12 +74,14 @@ export function kindedError(err: unknown): KindedError | null {
 	return null;
 }
 
-/** For form actions: a known domain error becomes `fail(status, { message, kind })`. Anything else
- * is rethrown unchanged, so it reaches handleError as a 500. */
-export function failKinded(err: unknown): ActionFailure<{ message: string; kind: string }> {
+/** For form actions: a known domain error becomes `fail(status, { message, kind })`, plus `scope`
+ * and `retryAt` for a spent AI budget. Anything else is rethrown unchanged, so it reaches
+ * handleError as a 500. */
+export function failKinded(err: unknown): ActionFailure<KindedData> {
 	const known = kindedError(err);
 	if (!known) throw err;
-	return fail(known.status, { message: known.message, kind: known.kind });
+	const { status, ...data } = known;
+	return fail(status, data);
 }
 
 /** For loads and `+server` handlers: a known domain error becomes `error(status, { message, kind })`.
@@ -68,5 +89,6 @@ export function failKinded(err: unknown): ActionFailure<{ message: string; kind:
 export function throwKinded(err: unknown): never {
 	const known = kindedError(err);
 	if (!known) throw err;
-	error(known.status, { message: known.message, kind: known.kind });
+	const { status, ...data } = known;
+	error(status, data);
 }

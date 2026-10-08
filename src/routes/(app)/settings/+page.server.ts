@@ -1,4 +1,5 @@
 import { error, fail, redirect } from '@sveltejs/kit';
+import { OPENROUTER_API_KEY } from '$app/env/private';
 import { m } from '#lib/paraglide/messages.js';
 import { auth } from '#lib/server/auth.ts';
 import { authRefusal } from '#lib/server/auth-forms.ts';
@@ -10,19 +11,27 @@ import {
 	deleteAccountLimiter,
 	limitClient
 } from '#lib/server/rate-limit.ts';
+import { getOpenRouterBudget } from '#lib/server/services/ai-budget.ts';
 import { getFamily, inviteUrl, leaveFamily } from '#lib/server/services/family.ts';
 import { updatePreferences } from '#lib/server/services/user-preferences.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
 	const { user, familyId } = requireUser(event);
-	const family = await getFamily(familyId);
+	const [family, aiBudget] = await Promise.all([
+		getFamily(familyId),
+		// The AI usage card: only where there is an AI to spend on.
+		OPENROUTER_API_KEY ? getOpenRouterBudget(user.id) : null
+	]);
 	if (!family) error(404, 'Family not found.');
 	return {
 		userId: user.id,
 		preferences: { locale: user.locale, jsonImportExportEnabled: user.jsonImportExportEnabled },
-		family: { members: family.members, inviteUrl: inviteUrl(event.url.origin, family.invite_token) }
-		// Step 22 adds the AI budget status here.
+		family: {
+			members: family.members,
+			inviteUrl: inviteUrl(event.url.origin, family.invite_token)
+		},
+		aiBudget
 	};
 };
 

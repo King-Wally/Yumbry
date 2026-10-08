@@ -93,7 +93,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 - [x] 19. Public share links
 - [x] 20. JSON-LD import and export
 - [x] 21. URL import
-- [ ] 22. AI provider, budget, nutrition estimates
+- [x] 22. AI provider, budget, nutrition estimates
 - [ ] 23. AI chat (create/improve) and photo import
 - [ ] 24. Server-unavailable screen and PWA
 
@@ -1441,6 +1441,33 @@ src/lib/shared/ai-*.ts.
 Port the unit tests. Add the green tests to e2e/ported-specs.txt. Tick Step 22 and commit as
 "feat(ai): provider, budget ledger and nutrition estimates".
 ```
+
+**Outcome.** The provider and ledger are main's code on Drizzle and `$app/env/private`, read at call
+time. The four target tests passed 40 of 40 runs with `--repeat-each=10`. Seams for **step 23**:
+
+- **Provider** (`services/ai-provider.ts`): `chatWithAi(messages, { userId, tier, jsonSchema?,
+sampling? })`. It has the same tiers, defaults, reasoning efforts and response_format downgrade
+  ladder as main, and writes the ledger row itself.
+- **Budget** (`services/ai-budget.ts`): `getOpenRouterBudget`, `getGeminiQuota` and `recordAiUsage`.
+  Drizzle returns `sum()` over a numeric column as a string, so the sums go through `Number`.
+  Main's `readNumberEnv` fallback is gone because `env.ts` already refuses bad numbers at boot.
+- **Guards** replace the middleware: `assertOpenRouterBudget(userId)` and `assertGeminiQuota()` throw
+  `AiQuotaExceededError` (`#lib/shared/ai-provider-error.ts`, carrying `scope` and `retryAt`). An
+  action calls one first, **before `request.formData()`**, and returns `failKinded(err)`.
+  `KindedError`, `failKinded`, `throwKinded` and `App.Error` now pass `scope` and `retryAt` through.
+- **`AiErrorBanner.svelte`** takes that failure data (`message`, `kind`, `scope`, `retryAt`) and
+  renders a spent budget from Paraglide in the reader's time zone.
+- **Flags:** the root layout returns `aiConfigured` (`OPENROUTER_API_KEY`) and `nutritionConfigured`
+  (`GEMINI_API_KEY`). The Estimate button checks `nutritionConfigured`, not the OpenRouter flag main
+  used, because it only calls Gemini. Settings loads `aiBudget` only when OpenRouter is configured.
+- **Estimate with AI** is the `estimateNutrition` action (`#lib/server/nutrition-action.ts`) on the
+  new and edit pages. It returns `{ estimate }`. The button is `type="button"` and posts the form's
+  `FormData` with `deserialize`, then merges the four fields locally with `mergeNutritionEstimate`.
+  It is not a second submit button because a submit button ahead of Save would become the form's
+  default and run on Enter. It therefore needs JS, as main's did.
+- **Tests:** `ai-provider.spec.ts` and `ai-budget.spec.ts` are main's tests ported. The provider
+  spec stubs global `fetch`, and the OpenAI SDK uses it under Bun. `ai-budget.db.spec.ts` is new:
+  it covers the windows, numeric sums, guards and ledger writes on a real database.
 
 ### 23. AI chat (create/improve) and photo import
 

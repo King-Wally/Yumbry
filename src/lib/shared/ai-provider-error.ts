@@ -32,3 +32,17 @@ export function quotaExceededMessage(scope: AiQuotaScope): string {
 		? "You've reached your daily AI limit. It resets at midnight (UTC)."
 		: 'The AI budget for today is used up. Please try again later.';
 }
+
+/** A request refused before it reached the provider because a budget is spent. `scope` says whose,
+ * and `retryAt` when it refills, so the page can say it in the reader's language and time zone. */
+export class AiQuotaExceededError extends AiProviderError {
+	readonly scope: AiQuotaScope;
+	readonly retryAt: string | null;
+
+	constructor(scope: AiQuotaScope, retryAt: string | null) {
+		super(quotaExceededMessage(scope), 'quota_exceeded');
+		this.name = 'AiQuotaExceededError';
+		this.scope = scope;
+		this.retryAt = retryAt;
+	}
+}

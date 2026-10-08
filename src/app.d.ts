@@ -1,4 +1,5 @@
 import type { Session } from '#lib/server/auth.ts';
+import type { AiQuotaScope } from '#lib/shared/ai-budget.ts';
 
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
@@ -13,6 +14,9 @@ declare global {
 			message: string;
 			/** A domain error's kind (see #lib/server/kinded-errors.ts), for the page to branch on. */
 			kind?: string;
+			/** On a spent AI budget: whose it was and when it refills. */
+			scope?: AiQuotaScope;
+			retryAt?: string | null;
 		}
 		// interface PageData {}
 		// interface PageState {}

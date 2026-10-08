@@ -1,4 +1,4 @@
-import { OPENROUTER_API_KEY } from '$app/env/private';
+import { GEMINI_API_KEY, OPENROUTER_API_KEY } from '$app/env/private';
 import { getLocale } from '#lib/paraglide/runtime.js';
 import { takeFlash } from '#lib/server/flash.ts';
 import type { LayoutServerLoad } from './$types';
@@ -12,6 +12,9 @@ export const load: LayoutServerLoad = (event) => ({
 	user: event.locals.user
 		? { jsonImportExportEnabled: event.locals.user.jsonImportExportEnabled }
 		: null,
+	// Which AI features this server offers: chat and photo import run on OpenRouter, nutrition
+	// estimates on Gemini. The minimal (keyless) server shows neither.
 	aiConfigured: Boolean(OPENROUTER_API_KEY),
+	nutritionConfigured: Boolean(GEMINI_API_KEY),
 	flash: takeFlash(event)
 });

@@ -1,12 +1,27 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { tick, untrack } from 'svelte';
-	import { ArrowLeft, FileBraces, Globe, Lock, TriangleAlert, Users } from '@lucide/svelte';
+	import {
+		ArrowLeft,
+		FileBraces,
+		Globe,
+		Lock,
+		Sparkles,
+		TriangleAlert,
+		Users
+	} from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import Card from '#lib/components/Card.svelte';
 	import CardHeader from '#lib/components/CardHeader.svelte';
 	import Dialog from '#lib/components/Dialog.svelte';
 	import { applyLocale } from '#lib/locale-client.ts';
+	import {
+		formatRetryAt,
+		nextUtcMidnight,
+		sharedPoolDaysLeft,
+		userAllowancePercentLeft
+	} from '#lib/shared/ai-budget-display.ts';
 	import { isSupportedLocale, LOCALE_LABELS, SUPPORTED_LOCALES } from '#lib/shared/locale.ts';
 	import type { PageProps } from './$types';
 
@@ -51,6 +66,16 @@
 		copied = true;
 		setTimeout(() => (copied = false), 2000);
 	}
+
+	// AI usage
+	const userLeftPercent = $derived(data.aiBudget ? userAllowancePercentLeft(data.aiBudget) : null);
+	const sharedDaysLeft = $derived(
+		data.aiBudget
+			? new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 1 }).format(
+					sharedPoolDaysLeft(data.aiBudget)
+				)
+			: ''
+	);
 
 	// Delete account
 	let deleteOpen = $state(false);
@@ -261,7 +286,63 @@
 			{/if}
 		</Card>
 
-		<!-- AI usage (step 22): the caller's budget status, only when the AI is configured. -->
+		{#if data.aiBudget}
+			{@const budget = data.aiBudget}
+			<Card>
+				<CardHeader
+					title={m.settings_ai_usage_title()}
+					description={m.settings_ai_usage_description()}
+				>
+					{#snippet icon()}<Sparkles size={20} strokeWidth={2} />{/snippet}
+				</CardHeader>
+
+				<div class="flex flex-col gap-4">
+					{#if userLeftPercent !== null}
+						<div>
+							<div class="mb-1.5 flex items-baseline justify-between text-sm">
+								<span class="font-medium text-stone-700">
+									{m.settings_ai_usage_your_allowance()}
+								</span>
+								<span class="text-stone-500">
+									{m.settings_ai_usage_percent_left({ percent: userLeftPercent })}
+								</span>
+							</div>
+							<div
+								role="meter"
+								aria-label={m.settings_ai_usage_your_allowance()}
+								aria-valuemin={0}
+								aria-valuemax={100}
+								aria-valuenow={userLeftPercent}
+								class="h-2 overflow-hidden rounded-full bg-stone-200"
+							>
+								<div
+									class="h-full rounded-full bg-clay transition-[width]"
+									style:width="{userLeftPercent}%"
+								></div>
+							</div>
+						</div>
+					{/if}
+					<div class="flex items-baseline justify-between text-sm">
+						<span class="font-medium text-stone-700">{m.settings_ai_usage_shared_budget()}</span>
+						<span class="text-stone-500">
+							{m.settings_ai_usage_days_left({ days: sharedDaysLeft })}
+						</span>
+					</div>
+					{#if budget.allowed}
+						<p class="text-xs text-stone-500">
+							{m.settings_ai_usage_refills({ time: formatRetryAt(nextUtcMidnight(), getLocale()) })}
+						</p>
+					{:else}
+						{@const time = formatRetryAt(budget.retryAt ?? nextUtcMidnight(), getLocale())}
+						<p role="status" class="text-[13px] text-red-600">
+							{budget.blockedBy === 'user'
+								? m.ai_quota_user_exceeded_at({ time })
+								: m.ai_quota_shared_exceeded_at({ time })}
+						</p>
+					{/if}
+				</div>
+			</Card>
+		{/if}
 
 		<Card>
 			<CardHeader
