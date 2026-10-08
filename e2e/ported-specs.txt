@@ -23,3 +23,6 @@ specs/http-contract.spec.ts:121
 # real implementation from the moment it lands (steps 12 and 14).
 specs/http-contract.spec.ts:155
 specs/versions.spec.ts:110
+
+# not-found page (the signed-in variant at :158 also needs / and sign-in, steps 11-12)
+specs/i18n.spec.ts:166

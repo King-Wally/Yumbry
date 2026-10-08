@@ -78,7 +78,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 
 - [x] 8. Server platform: env, hooks, security headers, rate limits, auth helpers
 - [x] 9. i18n with Paraglide
-- [ ] 10. App shell and design system
+- [x] 10. App shell and design system
 - [ ] 11. Auth pages and route protection
 
 **Phase C: Features**
@@ -653,6 +653,23 @@ Compare against main's build with screenshots (desktop and ~390px wide) using Pl
 a scratch script. Add the passing not-found spec to e2e/ported-specs.txt. Tick Step 10 and
 commit as "feat(ui): app shell, design tokens and base components".
 ```
+
+**Outcome.** The not-found page and the header (signed out, signed in, both menus open) are
+pixel-identical to `main` at 1280×800 and 390×844. Seams later steps build on:
+
+- **Header menus** use bits-ui `NavigationMenu`, as `main` used Radix's. `DropdownMenu` would
+  render the entries as `menuitem`s, and the specs select them as `link`s. Each `List` needs
+  `class="relative"` to anchor its content as Radix's wrapper did.
+- **Shell data** comes from the root `+layout.server.ts`: `user` (only
+  `jsonImportExportEnabled` for now) and `aiConfigured`, which is `Boolean(OPENROUTER_API_KEY)`
+  as on `main`. Later steps widen `user`.
+- **Log out** is a `POST` form to `/logout`. Step 11 adds that action.
+- **`ConfirmDialog`** takes `onconfirm`, or `action` (a form action URL), which submits with
+  `use:enhance`, shows its own pending state and closes on success. It builds on bits-ui `Dialog`,
+  not `AlertDialog`, because the specs look for `role=dialog`.
+- **Toasts:** `showToast({ title, description })` from `#lib/toast.svelte.ts`, rendered by
+  `<Toaster />` in the root layout. Main's swipe-to-dismiss was dropped.
+- **Onboarding** still gets the header and footer. Step 16 gives it a full-screen layout.
 
 ### 11. Auth pages and route protection
 
