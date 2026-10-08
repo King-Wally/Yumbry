@@ -14,8 +14,10 @@ vi.mock('$app/env/private', () => ({
 const {
 	absoluteUploadPath,
 	checkPhotoFile,
+	copyRecipeUpload,
 	deleteRecipeUploadsDir,
 	deleteUploadedFile,
+	resolveStoredUpload,
 	resolveUploadPath,
 	saveRecipePhoto
 } = await import('#lib/server/uploads.ts');
@@ -131,6 +133,31 @@ describe('writing photos', () => {
 		expect(absoluteUploadPath('/etc/passwd')).toBeNull();
 		expect(absoluteUploadPath('/uploads/../../etc/passwd')).toBeNull();
 		expect(absoluteUploadPath('/uploads/recipes/../../../etc/passwd')).toBeNull();
+	});
+
+	it('resolves a stored path to its file and type', async () => {
+		const stored = await saveRecipePhoto(44, new Uint8Array([1]));
+		expect(resolveStoredUpload(stored)).toEqual({
+			recipeId: 44,
+			absolutePath: absoluteUploadPath(stored),
+			contentType: 'image/webp'
+		});
+		expect(resolveStoredUpload('https://example.com/photo.webp')).toBeNull();
+	});
+
+	it('copies a photo to another recipe under a fresh name, keeping its extension', async () => {
+		const stored = await saveRecipePhoto(45, new Uint8Array([7, 8, 9]));
+		const copy = await copyRecipeUpload(stored, 46);
+		expect(copy).toMatch(/^\/uploads\/recipes\/46\/[0-9a-f-]{36}\.webp$/);
+		expect(new Uint8Array(await Bun.file(absoluteUploadPath(copy!)!).arrayBuffer())).toEqual(
+			new Uint8Array([7, 8, 9])
+		);
+		expect(existsSync(absoluteUploadPath(stored)!)).toBe(true);
+	});
+
+	it('copies nothing that is not a local upload, and throws for a missing file', async () => {
+		await expect(copyRecipeUpload('https://example.com/photo.jpg', 46)).resolves.toBeNull();
+		await expect(copyRecipeUpload('/uploads/recipes/45/missing.webp', 46)).rejects.toThrow();
 	});
 
 	it('ignores paths it does not own when deleting', async () => {

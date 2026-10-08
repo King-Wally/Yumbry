@@ -4,11 +4,13 @@ import { auth } from '#lib/server/auth.ts';
 import { authFailure, readCredentials } from '#lib/server/auth-forms.ts';
 import { getUser } from '#lib/server/guards.ts';
 import { signUpLimiter } from '#lib/server/rate-limit.ts';
-import { takeReturnTo } from '#lib/server/return-to.ts';
+import { rememberRequestedReturnTo, takeReturnTo } from '#lib/server/return-to.ts';
 import type { Actions, PageServerLoad } from './$types';
 
-// Already signed in: go where they were headed instead.
+// A link may ask to come back to its page afterwards (the share page's "Log in"). Already signed
+// in: go where they were headed instead.
 export const load: PageServerLoad = (event) => {
+	rememberRequestedReturnTo(event);
 	if (getUser(event)) redirect(303, takeReturnTo(event));
 };
 

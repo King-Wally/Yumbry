@@ -71,3 +71,6 @@ specs/auth.spec.ts:68
 
 # family invite links, join and leave (step 18)
 specs/family.spec.ts
+
+# public share links: the share dialog, the public page, its photo and saving a copy (step 19)
+specs/share.spec.ts

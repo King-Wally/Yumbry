@@ -100,8 +100,27 @@ export async function getRecipe(
 	familyId: number,
 	executor: DbExecutor = db
 ): Promise<RecipeDetail | null> {
+	const found = await findRecipeDetail(
+		and(eq(recipes.id, recipeId), eq(recipes.familyId, familyId)),
+		executor
+	);
+	return found?.recipe ?? null;
+}
+
+/** The recipe a public share link points at, with the family that owns it, or null. The one read
+ * not scoped by the viewer's family on purpose: the token is the credential. */
+export async function getRecipeByShareToken(
+	token: string
+): Promise<{ recipe: RecipeDetail; familyId: number } | null> {
+	return findRecipeDetail(eq(recipes.shareToken, token));
+}
+
+async function findRecipeDetail(
+	where: SQL | undefined,
+	executor: DbExecutor = db
+): Promise<{ recipe: RecipeDetail; familyId: number } | null> {
 	const row = await executor.query.recipes.findFirst({
-		where: and(eq(recipes.id, recipeId), eq(recipes.familyId, familyId)),
+		where,
 		with: {
 			...SUMMARY_RELATIONS,
 			ingredients: { orderBy: (i, { asc }) => [asc(i.sortOrder), asc(i.id)] },
@@ -111,9 +130,12 @@ export async function getRecipe(
 	if (!row) return null;
 
 	return {
-		...toRecipeSummary(row),
-		ingredients: row.ingredients.map(toIngredient),
-		instructions: row.instructions.map(toInstruction)
+		recipe: {
+			...toRecipeSummary(row),
+			ingredients: row.ingredients.map(toIngredient),
+			instructions: row.instructions.map(toInstruction)
+		},
+		familyId: row.familyId
 	};
 }
 

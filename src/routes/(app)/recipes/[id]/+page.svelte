@@ -1,14 +1,24 @@
 <script lang="ts">
-	import { ArrowLeft, FileDown, Pencil, RotateCcwClock, Sparkles, Trash } from '@lucide/svelte';
+	import {
+		ArrowLeft,
+		FileDown,
+		Pencil,
+		RotateCcwClock,
+		Share2,
+		Sparkles,
+		Trash
+	} from '@lucide/svelte';
 	import CollapsibleActions from '#lib/components/CollapsibleActions.svelte';
 	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
 	import RecipeDetailView from '#lib/components/RecipeDetailView.svelte';
+	import ShareRecipeDialog from '#lib/components/ShareRecipeDialog.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	let confirmDeleteOpen = $state(false);
+	let shareOpen = $state(false);
 
 	const id = $derived(data.recipe.id);
 </script>
@@ -41,6 +51,14 @@
 					{m.recipes_detail_improve_with_ai()}
 				</a>
 			{/if}
+			<button
+				type="button"
+				onclick={() => (shareOpen = true)}
+				class="inline-flex items-center gap-2 rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
+			>
+				<Share2 class="h-4 w-4" />
+				{m.recipes_detail_share()}
+			</button>
 			{#if data.user?.jsonImportExportEnabled}
 				<a
 					href="/recipes/{id}/export"
@@ -77,6 +95,7 @@
 		action="?/delete"
 		danger
 	/>
+	<ShareRecipeDialog bind:open={shareOpen} shareUrl={data.shareUrl} />
 
 	{#key data.recipe.id}
 		<RecipeDetailView recipe={data.recipe} />

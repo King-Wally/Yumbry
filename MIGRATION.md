@@ -90,7 +90,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 - [x] 16. Onboarding
 - [x] 17. Password reset email
 - [x] 18. Families
-- [ ] 19. Public share links
+- [x] 19. Public share links
 - [ ] 20. JSON-LD import and export
 - [ ] 21. URL import
 - [ ] 22. AI provider, budget, nutrition estimates
@@ -1228,6 +1228,38 @@ components/ShareRecipeDialog.tsx.
 Add share.spec.ts to e2e/ported-specs.txt. Tick Step 19 and commit as
 "feat(share): public share links".
 ```
+
+**Outcome.** The recipe page's Share button opens `ShareRecipeDialog`, which posts `?/share` and
+`?/unshare` on `/recipes/[id]`. The load hands it `shareUrl`. `/share/[token]` is public, with one
+`?/import` action. Copying is confirmed by the button turning into "Copied!", which is what main did
+and what the spec checks, so there is no separate toast. Seams later steps build on:
+
+- **Services** (`#lib/server/services/recipe-share.ts`):
+  - `enableShare` is idempotent and race-safe: it updates only while `share_token IS NULL`.
+  - `enableShare` and `disableShare` both keep `updated_at` (set to itself, since the schema's
+    `$onUpdate` would bump it). Sharing isn't an edit.
+  - `getSharedRecipe` drops `id`, `share_token` and `category_id`, and adds `own_recipe_id` for the
+    owner's family (the `SharedRecipe` DTO).
+  - `importSharedRecipe` copies through `createRecipe`. Tags and the category travel by name, and
+    ingredient lines are parsed again, as on every save. Main copied the parsed columns as stored.
+  - `getRecipeByShareToken` (`recipes.ts`) is the one read not scoped by family, on purpose.
+- **A malformed, unknown or stopped token** is the same 404, shown by `share/[token]/+error.svelte`
+  as the dead-link page. The page is `Cache-Control: no-store`.
+- **Photos:** a local photo is served from `/share/<token>/photo` (`Cache-Control: no-cache`, so
+  stopping sharing takes it down too). Remote URLs pass through. `uploads.ts` gained
+  `resolveStoredUpload` and `copyRecipeUpload`. The copy is best-effort: a missing file still
+  copies the recipe.
+- **Coming back after logging in:** explicit links can ask for it with `/login?redirectTo=<path>`
+  or `/register?redirectTo=<path>`. Both loads call `rememberRequestedReturnTo`, which puts a
+  same-origin path into step 11's return-to cookie, and the existing `takeReturnTo` calls do the
+  rest (register goes through onboarding's `?/finish`). Protected redirects still go to a bare
+  `/login`. A signed-out POST to `?/import` sends the visitor to log in, as join-family does.
+- **Flash:** the `recipe_imported` key shows "Added to your recipes" on the new copy.
+- **Tests:** `recipe-share.db.spec.ts` covers idempotence and `updated_at`, other families, stop
+  then share again, the public shape, photos, and import (including a missing photo file).
+- **e2e:** allowlisted all of `share.spec.ts`. It passed 90 of 90 runs with `--repeat-each=10`.
+  `recipe-list.spec.ts:116`, the open issue's filter-chip race, failed now and then under local
+  load. HEAD fails it just as often (8 of 20), so this step doesn't cause it.
 
 ### 20. JSON-LD import and export
 

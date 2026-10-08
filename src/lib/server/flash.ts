@@ -6,7 +6,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 // viewer's language.
 
 export const FLASH_COOKIE = 'yumbry-flash';
-const FLASH_KEYS = ['family_joined'] as const;
+const FLASH_KEYS = ['family_joined', 'recipe_imported'] as const;
 export type FlashKey = (typeof FLASH_KEYS)[number];
 
 export function setFlash(event: RequestEvent, key: FlashKey): void {

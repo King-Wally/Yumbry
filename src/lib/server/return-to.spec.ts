@@ -2,6 +2,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import { describe, expect, it, vi } from 'vitest';
 import {
 	RETURN_TO_COOKIE,
+	rememberRequestedReturnTo,
 	rememberReturnTo,
 	safeReturnPath,
 	takeReturnTo
@@ -70,6 +71,23 @@ describe('rememberReturnTo', () => {
 			expect.objectContaining({ path: '/', httpOnly: true })
 		);
 	});
+});
+
+describe('rememberRequestedReturnTo', () => {
+	it('stores a same-origin ?redirectTo=', () => {
+		const { event: e, jar } = event('/login?redirectTo=%2Fshare%2Fabc');
+		rememberRequestedReturnTo(e);
+		expect(jar).toEqual({ [RETURN_TO_COOKIE]: '/share/abc' });
+	});
+
+	it.each(['/login', '/login?redirectTo=', '/login?redirectTo=https%3A%2F%2Fevil.example'])(
+		'stores nothing for %s',
+		(path) => {
+			const { event: e, cookies } = event(path);
+			rememberRequestedReturnTo(e);
+			expect(cookies.set).not.toHaveBeenCalled();
+		}
+	);
 });
 
 describe('takeReturnTo', () => {

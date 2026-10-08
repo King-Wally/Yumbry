@@ -32,6 +32,8 @@
 	$effect(() => {
 		if (data.flash === 'family_joined') {
 			untrack(() => showToast({ title: m.join_family_joined_toast() }));
+		} else if (data.flash === 'recipe_imported') {
+			untrack(() => showToast({ title: m.shared_recipe_imported_toast() }));
 		}
 	});
 </script>

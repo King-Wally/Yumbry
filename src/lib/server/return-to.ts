@@ -33,6 +33,17 @@ export function rememberReturnTo(event: RequestEvent, path?: string): void {
 	});
 }
 
+/** Remembers the page a link to /login or /register asked to come back to (`?redirectTo=`, a
+ * same-origin path only). Explicit links use this, like the public share page's "Log in"; a
+ * protected page sends a bare /login and remembers itself instead (`requireUser`). */
+export function rememberRequestedReturnTo(event: RequestEvent): void {
+	const requested = safeReturnPath(
+		event.url.searchParams.get('redirectTo') ?? undefined,
+		event.url.origin
+	);
+	if (requested !== null) rememberReturnTo(event, requested);
+}
+
 /** The remembered page (forgetting it), or `/`. */
 export function takeReturnTo(event: RequestEvent): string {
 	const raw = event.cookies.get(RETURN_TO_COOKIE);

@@ -91,11 +91,32 @@ export async function saveRecipePhoto(recipeId: number, webp: Uint8Array): Promi
 
 /** The file behind a stored `/uploads/...` path, or null for anything else (a remote URL from an
  * import, or a path that doesn't resolve safely). */
-export function absoluteUploadPath(storedPath: string): string | null {
+export function resolveStoredUpload(storedPath: string): UploadFile | null {
 	if (!storedPath.startsWith(PUBLIC_PREFIX)) return null;
-	return (
-		resolveUploadPath(uploadsRoot(), storedPath.slice(PUBLIC_PREFIX.length))?.absolutePath ?? null
-	);
+	return resolveUploadPath(uploadsRoot(), storedPath.slice(PUBLIC_PREFIX.length));
+}
+
+/** Like `resolveStoredUpload`, the absolute path only. */
+export function absoluteUploadPath(storedPath: string): string | null {
+	return resolveStoredUpload(storedPath)?.absolutePath ?? null;
+}
+
+/** Copies a stored photo to another recipe under a fresh name, keeping its extension, and returns
+ * the copy's stored path. Null when `storedPath` isn't a local upload. Throws if the file can't be
+ * read. */
+export async function copyRecipeUpload(
+	storedPath: string,
+	targetRecipeId: number
+): Promise<string | null> {
+	const source = resolveStoredUpload(storedPath);
+	if (!source) return null;
+
+	const extension = path.extname(source.absolutePath).toLowerCase();
+	const relative = `recipes/${targetRecipeId}/${crypto.randomUUID()}${extension}`;
+	const target = resolveUploadPath(uploadsRoot(), relative);
+	if (!target) return null;
+	await Bun.write(target.absolutePath, Bun.file(source.absolutePath));
+	return PUBLIC_PREFIX + relative;
 }
 
 /** Best-effort removal of a stored photo. A failure only leaves an orphaned file behind. */

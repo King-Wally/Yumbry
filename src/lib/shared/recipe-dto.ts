@@ -62,6 +62,12 @@ export interface RecipeDetail extends RecipeSummary {
 	instructions: Instruction[];
 }
 
+/** A recipe as a public share link shows it: without its own ids or the token, plus the viewer's
+ * family's id for it when that family owns it (so the page can point there instead). */
+export type SharedRecipe = Omit<RecipeDetail, 'id' | 'share_token' | 'category_id'> & {
+	own_recipe_id: number | null;
+};
+
 export interface RecipeInput {
 	title: string;
 	description?: string | null;
