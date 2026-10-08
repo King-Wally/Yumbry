@@ -88,7 +88,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 - [x] 14. Version history
 - [x] 15. Settings
 - [x] 16. Onboarding
-- [ ] 17. Password reset email
+- [x] 17. Password reset email
 - [ ] 18. Families
 - [ ] 19. Public share links
 - [ ] 20. JSON-LD import and export
@@ -1124,6 +1124,27 @@ ResetPasswordPage.tsx.
 Add the green tests to e2e/ported-specs.txt. Tick Step 17 and commit as
 "feat(auth): forgot and reset password via Resend".
 ```
+
+**Outcome.** `/forgot-password` and `/reset-password` are public pages, each with one form action
+over `auth.api.requestPasswordReset` and `auth.api.resetPassword`. Both work without JS. Seams later
+steps build on:
+
+- **Email:** `#lib/server/services/email.ts` holds `isEmailConfigured()` (`RESEND_API_KEY` and
+  `EMAIL_FROM`; `APP_BASE_URL` is gone) and `sendPasswordResetEmail`. The latter builds a `Resend`
+  client per send, with `RESEND_BASE_URL` passed as `baseUrl`. The link is
+  `${ORIGIN}/reset-password?token=…`, as on `main`. better-auth's own `url` is ignored.
+- **`sendResetPassword`** in `auth.ts` returns silently when email isn't configured. better-auth
+  answers unknown emails with the same success, so the "Check your email" confirmation never says
+  whether an account exists.
+- **The token** travels from the link's query into a hidden form field. Without one, the page shows
+  "Invalid link". A bad token shows better-auth's own "Invalid token". Success redirects to `/login`:
+  `revokeSessionsOnPasswordReset` has dropped every session, this browser's included.
+- **The login flag** is `passwordResetEnabled` in the login page's own load, not the layout, since
+  no other page needs it.
+- **Rate limits:** `passwordResetRequestLimiter` (5 per 15 minutes) and `passwordResetLimiter` (10)
+  carry better-auth's `/request-password-reset` and `/reset-password` rules over to the actions.
+- **e2e:** allowlisted `auth.spec.ts:68`. `minimal.spec.ts:61` was already listed and now checks a
+  real flag. Both passed 5 of 5 runs with `--repeat-each=5`.
 
 ### 18. Families
 

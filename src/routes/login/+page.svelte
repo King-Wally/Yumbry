@@ -3,7 +3,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
 
-	let { form }: PageProps = $props();
+	let { data, form }: PageProps = $props();
 
 	let submitting = $state(false);
 </script>
@@ -50,6 +50,13 @@
 	</form>
 	{#if form?.message}
 		<p role="alert" class="text-red-600">{form.message}</p>
+	{/if}
+	{#if data.passwordResetEnabled}
+		<p class="text-sm text-stone-500">
+			<a href="/forgot-password" class="text-clay hover:underline"
+				>{m.auth_login_forgot_password_link()}</a
+			>
+		</p>
 	{/if}
 	<p class="text-sm text-stone-500">
 		{m.auth_login_no_account()}

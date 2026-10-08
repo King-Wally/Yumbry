@@ -126,3 +126,17 @@ export const deleteAccountLimiter = createRateLimiter({
 	limit: 10,
 	message: 'Too many attempts. Try again later.'
 });
+
+// The forgot- and reset-password actions, likewise carrying over better-auth's
+// /request-password-reset and /reset-password rules.
+export const passwordResetRequestLimiter = createRateLimiter({
+	windowMs: FIFTEEN_MINUTES,
+	limit: 5,
+	message: 'Too many attempts. Try again later.'
+});
+
+export const passwordResetLimiter = createRateLimiter({
+	windowMs: FIFTEEN_MINUTES,
+	limit: 10,
+	message: 'Too many attempts. Try again later.'
+});

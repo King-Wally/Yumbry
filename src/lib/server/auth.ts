@@ -7,6 +7,7 @@ import { getRequestEvent } from '$app/server';
 import { db } from '#lib/server/db/index.ts';
 import { accounts, sessions, users, verifications } from '#lib/server/db/schema.ts';
 import { cleanUpFamilyAfterDelete } from '#lib/server/services/account-deletion.ts';
+import { isEmailConfigured, sendPasswordResetEmail } from '#lib/server/services/email.ts';
 import { createFamily } from '#lib/server/services/family.ts';
 import { CLIENT_ADDRESS_HEADER } from '#lib/server/client-address.ts';
 
@@ -34,8 +35,14 @@ export const auth = betterAuth({
 		maxPasswordLength: 72,
 		resetPasswordTokenExpiresIn: ONE_HOUR_SECONDS,
 		// Resetting a password drops the user's session rows outright.
-		revokeSessionsOnPasswordReset: true
-		// sendResetPassword (Resend) returns with the forgot-password page.
+		revokeSessionsOnPasswordReset: true,
+		sendResetPassword: async ({ user, token }) => {
+			// Without email configured this does nothing, so /forgot-password still shows its generic
+			// confirmation rather than an error. better-auth's own `url` is ignored: the email links to
+			// /reset-password?token=…, as main's did.
+			if (!isEmailConfigured()) return;
+			await sendPasswordResetEmail(user.email, token);
+		}
 	},
 
 	user: {

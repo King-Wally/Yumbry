@@ -64,3 +64,7 @@ specs/minimal.spec.ts:53
 # onboarding: the first-run flow, and registration landing on it (step 16)
 specs/onboarding.spec.ts
 specs/auth.spec.ts:5
+
+# forgot and reset password via Resend (step 17). minimal.spec.ts:61, listed with step 12, now checks
+# a real flag.
+specs/auth.spec.ts:68
