@@ -85,3 +85,6 @@ specs/minimal.spec.ts:69
 # AI provider, budget, nutrition (step 22); AI chat and photo import (step 23)
 specs/ai.spec.ts
 specs/ai-budget.spec.ts
+
+# outage cover: the start probe to /api/health, and "Try again" (step 24)
+specs/server-unavailable.spec.ts

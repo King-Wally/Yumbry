@@ -95,7 +95,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 - [x] 21. URL import
 - [x] 22. AI provider, budget, nutrition estimates
 - [x] 23. AI chat (create/improve) and photo import
-- [ ] 24. Server-unavailable screen and PWA
+- [x] 24. Server-unavailable screen and PWA
 
 **Phase D: Finish**
 
@@ -125,6 +125,10 @@ Found during a step but owned by a later one. Remove an entry once the owning st
   if hydration dropped the select-all that `fill` makes. The spec's h1 check matches by substring,
   so it's the later `exact` h3 that fails. Neither a fill before hydration nor 8× CPU throttling
   reproduced it. Look at what `RecipeForm`'s hydration does to the title input's value or selection.
+  Step 24 found a fourth case: the Add recipe menu. Under 7 local workers, the first `Create with AI`
+  tests of `ai.spec.ts` sometimes time out waiting for the menu's `Create with AI` link: the trigger
+  click lands, but the menu never opens. Without the step 24 change it failed the same way (2 of 4
+  allowlist runs, against 2 of 6 with it), so it's not caused by the outage cover.
 
 ---
 
@@ -1584,6 +1588,77 @@ Do the manual legacy-takeover test described in MIGRATION.md and write down how 
 Add server-unavailable.spec.ts to e2e/ported-specs.txt. Tick Step 24 and commit as
 "feat(pwa): service worker, manifest, legacy SW takeover and outage screen".
 ```
+
+**Outcome.** `server-unavailable.spec.ts` is allowlisted and passed 10 of 10 runs with
+`--repeat-each=10`. The full allowlist (120 tests) is green, apart from the pre-existing Add recipe
+menu flake now listed under Open issues. Seams and choices:
+
+- **Outage detection** lives in `#lib/server-status.svelte.ts`, which is main's `server-status.ts`
+  rewritten with runes (`up` / `checking` / `down`). Every suspicion is confirmed by a health ping
+  first. `hooks.client.ts` `init` runs `observeFetch()` and then a start probe (`checkServer()`).
+  - **Why a fetch observer:** it watches every same-origin `window.fetch`, and Kit calls
+    `window.fetch` at request time precisely so it can be wrapped. A rejection, or a non-JSON response
+    that `isServerUnavailableResponse` matches, starts a check. Hooks alone miss cases: a non-ok
+    `__data.json` throws `HandledHttpError`, which skips the client `handleError`, and several
+    enhance callbacks ignore `type: 'error'` results.
+  - **The cover:** `ServerUnavailable.svelte` sits in the root layout, outside the `{#key}`. The shell
+    under it goes `inert`. "Try again" pings, then calls `markServerUp()` and `invalidateAll()`.
+- **Service worker:** `src/service-worker/index.ts`. Kit 3 wants the directory form, with its own
+  `tsconfig.json` extending `$app/tsconfig/service-worker`, so the root tsconfig excludes it and
+  `bun run check` adds a `tsc -p src/service-worker` pass.
+  - It precaches `$app/manifest`'s `immutable` and `assets`, except the manifest itself. It serves
+    `/uploads/*` stale-while-revalidate from an unversioned `uploads` cache, keeping only `200`s and
+    at most 300 entries. Main's 30-day expiry is dropped.
+  - Everything else is left alone: navigations, `/api`, `__data.json` and form posts. It uses
+    `skipWaiting` plus `clients.claim`, and deletes every other cache on activate.
+  - Main's hourly `registration.update()` became `version.pollInterval` (1 h) in `vite.config.ts`.
+- **Intended difference (for step 25's list):** a PWA opened with no network shows the browser's
+  offline page. Main showed its cached shell under the outage cover. The user chose network-only
+  navigations: pages are rendered per user, so there is no shell to cache.
+- **Manifest:** `static/manifest.webmanifest`, main's content verbatim, linked from `app.html`.
+  adapter-node serves it as `application/manifest+json`.
+- **Cache headers:** adapter-node gives only `/_app/immutable/*` a `cache-control`, so
+  `scripts/serve.ts` adds `no-cache` to `/service-worker.js` and `/manifest.webmanifest`. The header
+  survives adapter-node's `writeHead` under Bun.
+- **Legacy takeover:**
+  - `src/routes/sw.js/+server.ts` serves a worker that, once activated, deletes every cache,
+    unregisters itself and navigates its windows to their own URL.
+  - `src/routes/registerSW.js/+server.ts` is a no-op script. Main's build didn't emit one
+    (`injectRegister: false`), but it costs nothing.
+  - Both send `cache-control: no-cache`. The browser's update check fetches `/sw.js` past the HTTP
+    cache anyway (`updateViaCache: 'imports'`); the header stops Cloudflare's edge from keeping a
+    copy.
+- **Offline Worker:** its rules still fit. The app's AI errors stay 503 JSON, and the app returns
+  no 502, 504 or 52x. Only its README changed: the reasons, and the favicon path.
+- **Manual legacy-takeover test**, run on macOS with Playwright's Chromium 1243 (full Chromium,
+  `channel: 'chromium'`, headless). It used one persistent profile on `http://localhost:4100`, and a
+  scratch database and uploads directory shared by both servers. The script was a throwaway in the
+  session scratchpad.
+  1. Built `main` in a git worktree (`npm ci`, then shared, frontend and backend builds). Copied
+     `frontend/dist` to `backend/public`, ran `prisma migrate deploy` on the scratch database, and
+     started `node dist/index.js`.
+  2. Phase 1, against main:
+     - signed up through `/api/auth/sign-up/email`, created a recipe and uploaded a photo through
+       main's API;
+     - opened `/` until Workbox controlled the page (controller `/sw.js`, cache
+       `workbox-precache-v2-…`);
+     - installed it with CDP `PWA.install`. The headless shell lacks the `PWA` domain, hence full
+       Chromium. `Page.getInstallabilityErrors` was `[]`.
+  3. Stopped main and started this build (`bun scripts/serve.ts`) on the same port, database and
+     uploads directory, with main's dev secret as `BETTER_AUTH_SECRET`.
+  4. Phase 2 reopened the installed app with CDP `PWA.launch`. A plain tab navigation in that profile
+     never commits: Chrome captures in-scope navigations into the app window. Results:
+     - **Takeover:** the window first showed main's cached React shell. Its `/api` calls got 404s.
+       Then the legacy worker reloaded it onto the SvelteKit page.
+     - **After the takeover:** the controller and only registration is `/service-worker.js`, the only
+       caches are `cache-<version>` and `uploads`, and the browser console shows no errors.
+     - **Session:** still signed in (`yumbry.session_token` kept), and the recipe page opened.
+     - **Photo:** after a reload of the recipe page, its photo is in `uploads`.
+  5. `curl -I` showed `cache-control: no-cache` on `/sw.js`, `/registerSW.js`,
+     `/service-worker.js` and `/manifest.webmanifest`.
+- **Installability:** Lighthouse 12 dropped its PWA category, so the check used is the one that
+  category reported, Chrome's own installability check. On the new app, `Page.getInstallabilityErrors`
+  returns `[]` and `Page.getAppManifest` reports no errors.
 
 ## Phase D: Finish
 

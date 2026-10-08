@@ -15,7 +15,9 @@
 		UserCircle
 	} from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import ServerUnavailable from '#lib/components/ServerUnavailable.svelte';
 	import Toaster from '#lib/components/Toaster.svelte';
+	import { serverStatus } from '#lib/server-status.svelte.ts';
 	import { showToast } from '#lib/toast.svelte.ts';
 	import { version } from '../../package.json';
 	import type { LayoutProps } from './$types';
@@ -38,7 +40,10 @@
 	});
 </script>
 
-<div class="flex flex-col bg-cream {fullScreen ? 'h-dvh' : 'min-h-screen'}">
+<div
+	class="flex flex-col bg-cream {fullScreen ? 'h-dvh' : 'min-h-screen'}"
+	inert={serverStatus.current === 'down'}
+>
 	{#if fullScreen}
 		<!-- Outside the {#key} below, so a language switch re-renders the page without remounting it
 		     and losing its state. Such a page keys its own markup on data.locale. -->
@@ -144,3 +149,5 @@
 
 	<Toaster />
 </div>
+
+<ServerUnavailable />
