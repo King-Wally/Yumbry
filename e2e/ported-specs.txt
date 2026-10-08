@@ -24,8 +24,8 @@ specs/http-contract.spec.ts:121
 specs/i18n.spec.ts:158
 specs/i18n.spec.ts:166
 
-# login, register, logout and protected routes (step 11)
-specs/auth.spec.ts:18
+# login, register, logout and protected routes (step 11). The taken-email test (:18) now runs as part
+# of the registration describe that step 16 lists.
 specs/auth.spec.ts:43
 specs/auth.spec.ts:52
 specs/auth.spec.ts:61
@@ -60,3 +60,7 @@ specs/settings.spec.ts
 specs/i18n.spec.ts:116
 specs/i18n.spec.ts:146
 specs/minimal.spec.ts:53
+
+# onboarding: the first-run flow, and registration landing on it (step 16)
+specs/onboarding.spec.ts
+specs/auth.spec.ts:5

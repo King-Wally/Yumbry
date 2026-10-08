@@ -3,6 +3,7 @@ import { asc, count, eq, inArray, notExists } from 'drizzle-orm';
 import { db, type DbExecutor } from '#lib/server/db/index.ts';
 import { families, recipes, users } from '#lib/server/db/schema.ts';
 import { deleteRecipeUploadsDir } from '#lib/server/uploads.ts';
+import type { Family } from '#lib/shared/family-dto.ts';
 
 const TOKEN_ATTEMPTS = 3;
 
@@ -32,6 +33,23 @@ export async function createFamily(): Promise<{ id: number }> {
 			if (!isUniqueViolation(err) || attempt >= TOKEN_ATTEMPTS) throw err;
 		}
 	}
+}
+
+/** The family with its members, oldest account first, or null if it doesn't exist. By creation
+ * date, not id: better-auth ids are random strings, so ordering by them would shuffle the list. */
+export async function getFamily(familyId: number): Promise<Family | null> {
+	const [family] = await db
+		.select({ id: families.id, inviteToken: families.inviteToken })
+		.from(families)
+		.where(eq(families.id, familyId));
+	if (!family) return null;
+
+	const members = await db
+		.select({ id: users.id, email: users.email })
+		.from(users)
+		.where(eq(users.familyId, familyId))
+		.orderBy(asc(users.createdAt), asc(users.id));
+	return { id: family.id, invite_token: family.inviteToken, members };
 }
 
 /** Deletes families nobody belongs to and returns how many. The user-create hook in auth.ts writes

@@ -87,7 +87,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 - [x] 13. Create, edit and delete recipes; photo upload
 - [x] 14. Version history
 - [x] 15. Settings
-- [ ] 16. Onboarding
+- [x] 16. Onboarding
 - [ ] 17. Password reset email
 - [ ] 18. Families
 - [ ] 19. Public share links
@@ -682,7 +682,7 @@ pixel-identical to `main` at 1280×800 and 390×844. Seams later steps build on:
   not `AlertDialog`, because the specs look for `role=dialog`.
 - **Toasts:** `showToast({ title, description })` from `#lib/toast.svelte.ts`, rendered by
   `<Toaster />` in the root layout. Main's swipe-to-dismiss was dropped.
-- **Onboarding** still gets the header and footer. Step 16 gives it a full-screen layout.
+- **Onboarding** has a full-screen layout since step 16 (`fullScreen` page data).
 
 ### 11. Auth pages and route protection
 
@@ -1068,6 +1068,31 @@ services from step 15 rather than duplicating them. Replace the step-11 placehol
 green tests to e2e/ported-specs.txt. Tick Step 16 and commit as "feat(onboarding): first-run
 flow".
 ```
+
+**Outcome.** `/onboarding` is one page. The steps are client state, and two form actions do the
+saving. Seams later steps build on:
+
+- **Full-screen pages:** a page whose load returns `fullScreen: true` gets no app header or footer.
+  The root layout reads it from `page.data` and renders the page outside its `{#key data.locale}`,
+  so a language switch doesn't remount it and lose its state. Such a page keys its own markup on
+  `data.locale`.
+- **Language pick:** the buttons submit to `/settings?/preferences`, step 15's action, with
+  `use:enhance`. Then `applyLocale`, then `update({ navigate: false })`. **Kit 3's `enhance`
+  navigates to the action's page** on success when it belongs to another route, as a native submit
+  would, so **step 23**'s unit selects need `navigate: false` too.
+- **Clicks before hydration:** the language buttons are `disabled` until mount, since a full-page
+  POST would land on `/settings`, and Playwright waits for them to be enabled. Next and Back are
+  client state, so the flow needs JS, as on `main`, which rendered nothing without it.
+- **Finishing:** the `?/finish` action redirects to `takeReturnTo(event)`, which is the page a
+  signed-out visitor was headed to before registering, or `/`.
+- **Family:** `getFamily(familyId)` in `services/family.ts` returns the shared `Family` DTO, with
+  members oldest first. **Step 18** reuses it for Settings. The `/join-family/…` link it shows
+  doesn't resolve until then.
+- **Install step:** `detectInstallPlatform(userAgent, maxTouchPoints)` is in
+  `#lib/shared/install-platform.ts`, and `isStandalonePwa()` is in `#lib/install-platform.ts`, both
+  for **step 24**. Both are read on mount. SSR assumes the install step is shown.
+- **e2e:** allowlisted all of `onboarding.spec.ts` and `auth.spec.ts:5` (the `registration`
+  describe, which takes over step 11's `:18`). Both passed 10 of 10 runs with `--repeat-each=10`.
 
 ### 17. Password reset email
 
