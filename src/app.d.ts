@@ -9,7 +9,11 @@ declare global {
 			session?: Session['session'];
 		}
 
-		// interface Error {}
+		interface Error {
+			message: string;
+			/** A domain error's kind (see #lib/server/kinded-errors.ts), for the page to branch on. */
+			kind?: string;
+		}
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}

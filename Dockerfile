@@ -24,13 +24,8 @@ RUN bun install --frozen-lockfile --production --ignore-scripts --omit peer
 
 FROM deps AS build
 COPY . .
-# Fake build-time placeholders, set on this line only so they never reach the runtime image. The
-# build validates src/env.ts (MIGRATION.md, "Open issues"); step 8 removes them.
-RUN bun run prepare \
-	&& DATABASE_URL=postgres://placeholder:placeholder@localhost:5432/placeholder \
-	ORIGIN=http://placeholder.invalid \
-	BETTER_AUTH_SECRET=docker-build-placeholder-not-a-secret \
-	bun run build
+# Needs no environment: src/env.ts only insists on required variables when the server starts.
+RUN bun run prepare && bun run build
 
 # ---- runtime ----
 FROM oven/bun:${BUN_VERSION}-slim AS runtime

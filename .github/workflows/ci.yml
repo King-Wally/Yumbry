@@ -70,12 +70,6 @@ jobs:
       - run: bun run lint
         working-directory: e2e
       - run: bun run e2e:build
-        env:
-          # Fake build-time placeholders, never real secrets. Step 8 makes the build need no env
-          # and removes them. The e2e app servers get their real config from playwright.config.ts.
-          DATABASE_URL: postgres://placeholder:placeholder@localhost:5432/placeholder
-          ORIGIN: http://placeholder.invalid
-          BETTER_AUTH_SECRET: ci-build-placeholder-not-a-secret
       - run: bunx playwright install --with-deps chromium
         working-directory: e2e
       # CloakBrowser's ~200 MB binary, downloaded by the e2e prepare step on a cache miss.

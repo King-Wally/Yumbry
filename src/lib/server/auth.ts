@@ -7,6 +7,7 @@ import { getRequestEvent } from '$app/server';
 import { db } from '#lib/server/db/index.ts';
 import { accounts, sessions, users, verifications } from '#lib/server/db/schema.ts';
 import { createFamily } from '#lib/server/services/family.ts';
+import { CLIENT_ADDRESS_HEADER } from '#lib/server/client-address.ts';
 
 const THIRTY_DAYS_SECONDS = 60 * 60 * 24 * 30;
 const ONE_HOUR_SECONDS = 60 * 60;
@@ -73,7 +74,10 @@ export const auth = betterAuth({
 		// Unchanged from the Express app, so existing session cookies keep working.
 		cookiePrefix: 'yumbry',
 		useSecureCookies: COOKIE_SECURE,
-		defaultCookieAttributes: { sameSite: 'lax', httpOnly: true }
+		defaultCookieAttributes: { sameSite: 'lax', httpOnly: true },
+		// hooks.server.ts puts adapter-node's client address here on every request. Without it the
+		// rate limiter sees no IP behind the tunnel and falls back to one shared bucket per path.
+		ipAddress: { ipAddressHeaders: [CLIENT_ADDRESS_HEADER] }
 	},
 
 	rateLimit: {

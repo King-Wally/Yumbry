@@ -16,7 +16,28 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-			adapter: adapter()
+			adapter: adapter(),
+			// helmet's default policy, as main sent it. The other security headers are set in
+			// hooks.server.ts. Kit adds nonces/hashes for its own inline scripts ('auto').
+			csp: {
+				mode: 'auto',
+				directives: {
+					'default-src': ['self'],
+					'base-uri': ['self'],
+					'font-src': ['self', 'https:', 'data:'],
+					'form-action': ['self'],
+					'frame-ancestors': ['self'],
+					// Wider than helmet's 'self' data:. Recipes imported via JSON-LD or URL keep the
+					// original remote image URL (no re-hosting), and photo import previews the chosen
+					// file as a blob: URL before upload.
+					'img-src': ['self', 'data:', 'blob:', 'https:'],
+					'object-src': ['none'],
+					'script-src': ['self'],
+					'script-src-attr': ['none'],
+					'style-src': ['self', 'https:', 'unsafe-inline'],
+					'upgrade-insecure-requests': true
+				}
+			}
 		}),
 
 		paraglideVitePlugin({

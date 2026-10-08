@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
+import { notExists, eq } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.ts';
-import { families } from '#lib/server/db/schema.ts';
+import { families, users } from '#lib/server/db/schema.ts';
 
 const TOKEN_ATTEMPTS = 3;
 
@@ -30,4 +31,17 @@ export async function createFamily(): Promise<{ id: number }> {
 			if (!isUniqueViolation(err) || attempt >= TOKEN_ATTEMPTS) throw err;
 		}
 	}
+}
+
+/** Deletes families nobody belongs to and returns how many. The user-create hook in auth.ts writes
+ * the family before the user row, so a failed signup (duplicate email) leaves an empty one behind.
+ * Harmless, but they accumulate, so hooks.server.ts clears them once at start-up. */
+export async function sweepOrphanedFamilies(): Promise<number> {
+	const deleted = await db
+		.delete(families)
+		.where(
+			notExists(db.select({ id: users.id }).from(users).where(eq(users.familyId, families.id)))
+		)
+		.returning({ id: families.id });
+	return deleted.length;
 }

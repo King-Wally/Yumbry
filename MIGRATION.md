@@ -76,7 +76,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 
 **Phase B: Platform**
 
-- [ ] 8. Server platform: env, hooks, security headers, rate limits, auth helpers
+- [x] 8. Server platform: env, hooks, security headers, rate limits, auth helpers
 - [ ] 9. i18n with Paraglide
 - [ ] 10. App shell and design system
 - [ ] 11. Auth pages and route protection
@@ -106,20 +106,6 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 ## Open issues
 
 Found during a step but owned by a later one. Remove an entry once the owning step fixes it.
-
-- **better-auth's rate limiter can't see the client IP** (found in step 5, fixed in step 8). With
-  rate limits on, it warns that it falls back to one shared bucket per path. It needs
-  `advanced.ipAddress` set to match the address config step 7 gives adapter-node behind the
-  tunnel: `ADDRESS_HEADER=x-forwarded-for`, `XFF_DEPTH=1` (the rightmost hop, like main's
-  `trust proxy 1`). `scripts/serve.ts` fills a missing `X-Forwarded-For` with the peer address.
-
-- **The build needs runtime secrets** (found in step 1, fixed in step 8). SvelteKit 3 validates
-  the variables declared in `src/env.ts` while it analyses routes at build time. So
-  `bun run build` fails with `env_invalid` unless `DATABASE_URL`, `ORIGIN` and
-  `BETTER_AUTH_SECRET` are set. Locally `.env` supplies them; CI and `docker build` have none.
-  Until step 8, steps 6 and 7 pass placeholders at build time only: the `e2e:build` step in
-  `ci.yml` and the `bun run build` line of the Dockerfile's `build` stage. Step 8 makes the build
-  need no environment at all and removes those placeholders.
 
 - **Production's `POSTGRES_PASSWORD` must be URL-safe** (found in step 7, checked in step 27).
   docker-compose now builds the app's `DATABASE_URL` from `POSTGRES_USER`, `POSTGRES_PASSWORD` and
