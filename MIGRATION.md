@@ -85,7 +85,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 
 - [x] 12. Recipe list and detail (read side, photo serving)
 - [x] 13. Create, edit and delete recipes; photo upload
-- [ ] 14. Version history
+- [x] 14. Version history
 - [ ] 15. Settings
 - [ ] 16. Onboarding
 - [ ] 17. Password reset email
@@ -119,6 +119,12 @@ Found during a step but owned by a later one. Remove an entry once the owning st
   under local load (7 workers) a run occasionally clicks them too early. CI's 2 workers didn't show
   it in five runs. Fix in the app, not the specs: e.g. chips as `?category=` links, the menu as a
   `<details>` or a link to a page.
+  Step 14 found a third case: a `fill` racing hydration on the edit form. In 2 of 70 runs of
+  `versions.spec.ts --repeat-each=10`, each the first test of a cold worker, `editTitle`'s
+  `getByLabel('Title').fill(...)` saved "Tomato SoupRoasted Tomato Soup". The text was appended, as
+  if hydration dropped the select-all that `fill` makes. The spec's h1 check matches by substring,
+  so it's the later `exact` h3 that fails. Neither a fill before hydration nor 8× CPU throttling
+  reproduced it. Look at what `RecipeForm`'s hydration does to the title input's value or selection.
 
 ---
 
@@ -943,6 +949,30 @@ Cancelling leaves the recipe untouched. Match main's accessible names and texts.
 versions.spec.ts to e2e/ported-specs.txt. Tick Step 14 and commit as
 "feat(recipes): version history, compare and revert".
 ```
+
+**Outcome.** `/recipes/[id]/versions` picks its version through `?version=<id>` (the newest when
+it's missing or not this recipe's), as the list does with its filters. The load reads only that one
+snapshot and runs `diffRecipes` on the server, so the page just renders the two `VersionPane`s.
+
+- **Without JS:** the select sits in a GET form with a `<noscript>` Compare button, which needs one
+  new message, `recipe_versions_compare`.
+- **A pick before hydration:** an attachment on the select catches it up.
+- **Dates:** printed in UTC on the server, then in the reader's time zone once hydrated.
+
+Seams later steps build on:
+
+- **Services** (`#lib/server/services/recipe-versions.ts`): `listVersions`, `getVersion` and
+  `revertToVersion`, all scoped by joining `recipes.familyId`. `snapshotToRecipeBody` turns a
+  snapshot back into a save. It never carries `image_path`, so a revert leaves the photo alone.
+- **Revert:** `?/revert` goes through `updateRecipe`, which snapshots the replaced state first, so a
+  revert can itself be reverted. An unknown version answers `fail(404, { revertError })`, shown
+  inline. The "reverted" toast is shown from the enhance callback, so a no-JS revert redirects
+  without it.
+- **List components:** `IngredientList` and `InstructionList` take an optional
+  `line: Snippet<[index]>` that renders a row in place of its plain text (`DiffText`, the
+  highlights).
+- **e2e:** allowlisted all of `versions.spec.ts`, which replaces the old `:110` placeholder entry.
+  See the open issue on the edit form's hydration race.
 
 ### 15. Settings
 

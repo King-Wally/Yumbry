@@ -138,6 +138,7 @@
 	"recipe_versions_title": "Historial de versiones",
 	"recipe_versions_back": "Volver a la receta",
 	"recipe_versions_compare_with": "Comparar con",
+	"recipe_versions_compare": "Comparar",
 	"recipe_versions_selected_version": "Versión seleccionada",
 	"recipe_versions_current_version": "Versión actual",
 	"recipe_versions_differences": [
