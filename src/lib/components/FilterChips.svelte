@@ -15,7 +15,7 @@
 	let { name, items, active, keep }: Props = $props();
 </script>
 
-<!-- A GET form rather than click handlers, so a chip works before (and without) hydration. A chip
+<!-- A GET form rather than click handlers, so a chip works before hydration. A chip
      that clears the filter submits no value for it. -->
 {#if items && items.length > 0}
 	<form

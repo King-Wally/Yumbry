@@ -134,14 +134,6 @@
 						{/each}
 					</select>
 				</label>
-				<noscript>
-					<button
-						type="submit"
-						class="mt-2.5 rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
-					>
-						{m.common_save()}
-					</button>
-				</noscript>
 			</form>
 			{#if form?.saved === 'locale'}
 				<p class="mt-2.5 text-[13px] text-green-700">{m.settings_language_saved()}</p>
@@ -358,7 +350,7 @@
 			</CardHeader>
 
 			<!-- The switch is the form's submit button, carrying the value it switches to, so it also
-			     works before hydration and without JS. -->
+			     works before hydration. -->
 			<form
 				method="POST"
 				action="?/preferences"

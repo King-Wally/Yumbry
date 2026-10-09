@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance, type SubmitFunction } from '$app/forms';
-	import { untrack } from 'svelte';
+	import { tick } from 'svelte';
 	import { ArrowLeft, ClipboardPaste, Upload } from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import Card from '#lib/components/Card.svelte';
@@ -9,9 +9,7 @@
 
 	let { form }: PageProps = $props();
 
-	// Seeded once from a failed submit so the text survives it (with or without JS); later failures
-	// from the upload form carry no text and must not wipe what is pasted.
-	let jsonLd = $state(untrack(() => form?.jsonLd ?? ''));
+	let jsonLd = $state('');
 	let importing = $state(false);
 
 	/** Both forms share one pending state, as main did. Default behaviour otherwise: follow the
@@ -29,6 +27,14 @@
 			}
 		};
 	};
+
+	/** A file picked before hydration fired no change handler; submit it now. After a tick, so the
+	 * form's `use:enhance` is attached and this isn't a full-page POST. */
+	function catchUpEarlyPick(input: HTMLInputElement) {
+		void tick().then(() => {
+			if (input.files?.length) input.form?.requestSubmit();
+		});
+	}
 </script>
 
 <div class="mx-auto max-w-2xl pb-4">
@@ -85,6 +91,7 @@
 					class="block cursor-pointer rounded-lg border border-dashed border-stone-300 px-4 py-8 text-center text-sm text-stone-500 hover:border-clay hover:text-clay"
 				>
 					<input
+						{@attach catchUpEarlyPick}
 						type="file"
 						name="file"
 						accept="application/json,.json"
@@ -96,14 +103,6 @@
 					<Upload size={22} strokeWidth={2} class="mx-auto mb-2 opacity-60" />
 					{m.import_json_upload_json_file()}
 				</label>
-				<noscript>
-					<button
-						type="submit"
-						class="mt-3 rounded-md bg-clay px-4 py-2 text-sm font-medium text-white"
-					>
-						{m.import_json_import_from_text()}
-					</button>
-				</noscript>
 			</form>
 		</Card>
 

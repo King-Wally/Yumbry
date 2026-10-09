@@ -8,8 +8,8 @@ export const SECURITY_HEADERS: Readonly<Record<string, string>> = {
 	'cross-origin-resource-policy': 'same-origin',
 	'origin-agent-cluster': '?1',
 	// Not helmet's `no-referrer`: under that, Chrome sends `Origin: null` on a native form POST, and
-	// SvelteKit's CSRF check refuses it, so every form failed without JavaScript (or before
-	// hydration). `same-origin` still sends nothing to other sites.
+	// SvelteKit's CSRF check refuses it, so every form submitted before hydration failed.
+	// `same-origin` still sends nothing to other sites.
 	'referrer-policy': 'same-origin',
 	'strict-transport-security': 'max-age=31536000; includeSubDomains',
 	'x-content-type-options': 'nosniff',

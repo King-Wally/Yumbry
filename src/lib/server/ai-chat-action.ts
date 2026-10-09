@@ -32,8 +32,7 @@ import { DEFAULT_UNIT_SYSTEM, isUnitSystem } from '#lib/shared/units/unit-system
 // A turn is a plain form action rather than a +server.ts endpoint: the provider answers in one
 // piece, so there is nothing to stream, and an action gets the CSRF check, the auth guard and the
 // kinded-error path every other form uses. The transcript lives on the page and travels with each
-// post (hidden `messages` and `current_draft` fields); the action answers with the whole next state,
-// which is what lets the page work as a plain form POST too.
+// post (hidden `messages` and `current_draft` fields); the action answers with the whole next state.
 
 /** The signed-in user's language and measurement preferences, each checked, with defaults. */
 export function readerPreferences(user: SignedIn['user']): ReaderPreferences {
@@ -80,13 +79,12 @@ export async function chatTurn(event: RequestEvent, { user }: SignedIn, mode: Ai
 		parseJsonField(form.get('current_draft'))
 	);
 	const message = AiChatMessageSchema.safeParse(form.get('message'));
-	if (!transcript.success || !currentDraft.success) {
+	// The page never sends an empty message, so one is as malformed as a broken transcript.
+	if (!transcript.success || !currentDraft.success || !message.success) {
 		return fail(400, { message: m.common_something_went_wrong() });
 	}
 
 	const draft: AiRecipeDraft | null = currentDraft.data;
-	// An empty message changes nothing; the input is `required`, so only a no-JS post gets here.
-	if (!message.success) return { messages: transcript.data, draft };
 
 	// The new message joins the transcript before the call, and stays there if the call fails.
 	const messages: AiTextChatMessage[] = [

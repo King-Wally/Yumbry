@@ -49,15 +49,9 @@ export const actions: Actions = {
 		}
 
 		await updatePreferences(event, user.id, parsed.data);
-		if (!parsed.data.locale) return { saved: 'other' as const };
-
-		// This response's language was settled before the action ran. An enhanced submit re-renders in
-		// the new one on the client (#lib/locale-client.ts); a plain form POST (no JS yet) has to load
-		// the page again to get it, at the cost of the "saved" note.
-		if (!event.request.headers.get('accept')?.includes('application/json')) {
-			redirect(303, '/settings');
-		}
-		return { saved: 'locale' as const };
+		// Every language pick is an enhanced submit, which re-renders in the new language on the
+		// client (#lib/locale-client.ts); the page catches up a pick made before hydration.
+		return { saved: parsed.data.locale ? ('locale' as const) : ('other' as const) };
 	},
 
 	password: async (event) => {
@@ -69,7 +63,7 @@ export const actions: Actions = {
 
 		const limit = limitClient(event, changePasswordLimiter);
 		if (limit.limited) return fail(429, { passwordError: limit.message });
-		// The page flags this before submitting; this covers a submit without JS.
+		// The page flags this before submitting; this covers a submit before hydration.
 		if (newPassword !== confirmNewPassword) {
 			return fail(400, { passwordError: m.settings_password_mismatch() });
 		}

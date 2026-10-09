@@ -3,6 +3,7 @@
 	import { ArrowLeft } from '@lucide/svelte';
 	import { applyAction, enhance, type SubmitFunction } from '$app/forms';
 	import AiErrorBanner from '#lib/components/AiErrorBanner.svelte';
+	import { hydrated } from '#lib/hydrated.svelte.ts';
 	import RecipePreview from '#lib/components/RecipePreview.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { AiQuotaScope } from '#lib/shared/ai-budget.ts';
@@ -15,7 +16,7 @@
 	/**
 	 * The AI assistant's page body, shared by /create-with-ai and /recipes/[id]/ai-improve. The
 	 * transcript and draft live here and travel with every `?/chat` post; the action answers with the
-	 * whole next state, so the page also works as a plain form POST.
+	 * whole next state. The chat is inherently interactive, so its controls wait for hydration.
 	 */
 	type ChatError = {
 		message: string;
@@ -27,15 +28,6 @@
 	/** A transcript turn as the action types it: the server's literal widens `role` to a string. */
 	type ChatMessage = { role: string; content: string };
 
-	type ChatForm = {
-		message?: string;
-		kind?: string;
-		scope?: AiQuotaScope;
-		retryAt?: string | null;
-		messages?: ChatMessage[];
-		draft?: AiRecipeDraft | null;
-	};
-
 	interface Props {
 		mode: 'create' | 'improve';
 		/** Improve: seeded from the saved recipe. */
@@ -45,22 +37,16 @@
 			unitSystem: UnitSystem;
 			smallVolumes: SmallVolumeStyle;
 		};
-		/** The page's `form`: the next state after a no-JS post. */
-		form?: ChatForm | null;
 		backHref: string;
 	}
 
-	let { mode, initialDraft, preferences, form, backHref }: Props = $props();
+	let { mode, initialDraft, preferences, backHref }: Props = $props();
 
-	// Seeded once: after hydration the page owns this state, and a plain POST round trip lands here.
-	const start = untrack(() => ({ form, initialDraft, preferences }));
-	let messages = $state<ChatMessage[]>(start.form?.messages ?? []);
-	let draft = $state<AiRecipeDraft | null>(
-		start.form && 'draft' in start.form ? (start.form.draft ?? null) : start.initialDraft
-	);
-	let error = $state<ChatError | null>(
-		start.form?.message ? { ...start.form, message: start.form.message } : null
-	);
+	// Seeded once: from here on the page owns this state.
+	const start = untrack(() => ({ initialDraft, preferences }));
+	let messages = $state<ChatMessage[]>([]);
+	let draft = $state<AiRecipeDraft | null>(start.initialDraft);
+	let error = $state<ChatError | null>(null);
 	let pending = $state(false);
 	let input = $state('');
 	let unitSystem = $state<UnitSystem>(start.preferences.unitSystem);
@@ -191,12 +177,12 @@
 						placeholder={mode === 'create'
 							? m.ai_chat_cook_placeholder()
 							: m.ai_chat_change_placeholder()}
-						disabled={pending}
+						disabled={!hydrated.current || pending}
 						class="min-w-0 flex-1 rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none disabled:opacity-50"
 					/>
 					<button
 						type="submit"
-						disabled={pending || !input.trim()}
+						disabled={!hydrated.current || pending || !input.trim()}
 						class="rounded-md border border-stone-300 px-4 py-2 text-sm disabled:opacity-50"
 					>
 						{m.ai_chat_send()}
@@ -221,6 +207,7 @@
 					<select
 						bind:value={unitSystem}
 						onchange={(event) => persistPreference('unitSystem', event.currentTarget.value)}
+						disabled={!hydrated.current}
 						class={selectClass}
 					>
 						{#each UNIT_SYSTEMS as key (key)}
@@ -242,7 +229,7 @@
 					<select
 						bind:value={smallVolumes}
 						onchange={(event) => persistPreference('smallVolumes', event.currentTarget.value)}
-						disabled={unitSystem === 'imperial'}
+						disabled={!hydrated.current || unitSystem === 'imperial'}
 						class={selectClass}
 					>
 						{#each SMALL_VOLUME_STYLES as key (key)}

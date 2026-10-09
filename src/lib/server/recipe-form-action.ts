@@ -11,7 +11,7 @@ import {
 export type RecipeFieldErrors = Partial<Record<keyof RecipeBody, string[]>>;
 
 export interface RecipeFormFailure {
-	/** What was submitted, so the form re-renders with it when JavaScript is off. */
+	/** What was submitted, so the form re-renders with it after a submit made before hydration. */
 	values: RecipeFormState;
 	errors: RecipeFieldErrors;
 }

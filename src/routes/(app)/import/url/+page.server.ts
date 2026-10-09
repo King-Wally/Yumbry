@@ -32,7 +32,7 @@ export const actions: Actions = {
 		const url = typeof raw === 'string' ? raw : '';
 
 		const limit = limitClient(event, urlImportLimiter);
-		if (limit.limited) return fail(429, { url, message: limit.message });
+		if (limit.limited) return fail(429, { message: limit.message });
 
 		const parsed = UrlSchema.safeParse(url);
 		if (!parsed.success) {
@@ -42,7 +42,7 @@ export const actions: Actions = {
 				errorKind: 'validation_error',
 				errorMessage: INVALID_URL_MESSAGE
 			});
-			return fail(400, { url, message: INVALID_URL_MESSAGE });
+			return fail(400, { message: INVALID_URL_MESSAGE });
 		}
 
 		const trace: { method?: ImportMethod } = {};
@@ -59,8 +59,7 @@ export const actions: Actions = {
 					? { errorKind: err.kind, errorMessage: err.message }
 					: { errorKind: 'unknown', errorMessage: String(err) })
 			});
-			const failure = failKinded(err);
-			return fail(failure.status, { url, ...failure.data });
+			return failKinded(err);
 		}
 
 		await logImportAttempt({ url: parsed.data, success: true, method: trace.method });

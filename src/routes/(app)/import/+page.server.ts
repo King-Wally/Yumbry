@@ -32,7 +32,6 @@ export const actions: Actions = {
 		if (file instanceof File && file.size > 0) {
 			if (file.size > JSON_IMPORT_LIMIT_MB * 1024 * 1024) {
 				return fail(413, {
-					jsonLd,
 					message: `That file is too large. Please use one under ${JSON_IMPORT_LIMIT_MB} MB.`
 				});
 			}
@@ -40,7 +39,7 @@ export const actions: Actions = {
 		} else if (jsonLd.trim()) {
 			text = jsonLd;
 		} else {
-			return fail(400, { jsonLd, message: 'Provide JSON-LD text or upload a .json file.' });
+			return fail(400, { message: 'Provide JSON-LD text or upload a .json file.' });
 		}
 
 		let id: number;
@@ -49,7 +48,6 @@ export const actions: Actions = {
 		} catch (err) {
 			if (err instanceof z.ZodError) {
 				return fail(400, {
-					jsonLd,
 					message: 'The JSON-LD document must be a JSON object or array.'
 				});
 			}
@@ -57,7 +55,7 @@ export const actions: Actions = {
 				err instanceof SyntaxError ||
 				(err instanceof Error && err.message.includes('No schema.org Recipe'))
 			) {
-				return fail(400, { jsonLd, message: err.message });
+				return fail(400, { message: err.message });
 			}
 			throw err;
 		}

@@ -100,7 +100,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 **Phase D: Finish**
 
 - [x] 25. Full parity pass
-- [ ] 25a. Hydration audit: before-hydration, not no-JS
+- [x] 25a. Hydration audit: before-hydration, not no-JS
 - [ ] 26. Docs and release tooling
 - [ ] 27. Production cutover
 
@@ -1796,6 +1796,49 @@ disabled until `hydrated.current` and need no no-JS fallback.
    any seams), tick Step 25a and commit as
    "refactor: align hydration handling with the before-hydration policy".
 ```
+
+**Outcome.** No `<noscript>` is left in `src/`, and nothing in it exists only for JS-off browsers.
+Every form that rendered enabled still posts natively before hydration. No Open issues entry
+belonged to this step.
+
+| Item                                                                                                                    | Verdict | Reason                                                                                                  |
+| ----------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------- |
+| `hydrated` flag (`#lib/hydrated.svelte.ts`), set by the root layout's `onMount`                                         | keep    | The policy's mechanism.                                                                                 |
+| Dialog triggers, copy-link buttons, servings stepper, tag/category/list/photo/estimate buttons, disabled until hydrated | keep    | Inherently interactive.                                                                                 |
+| Onboarding language buttons disabled until hydrated                                                                     | keep    | An early click would be a full-page POST landing on `/settings`.                                        |
+| `PopoverMenu` native popover, not closed on the `enter` navigation                                                      | keep    | Menus open and navigate before hydration.                                                               |
+| Filter chips as a GET form                                                                                              | keep    | A real GET form.                                                                                        |
+| `defaultValue` on `bind:value` inputs                                                                                   | keep    | Hydration would otherwise wipe or collapse early typing.                                                |
+| `Referrer-Policy: same-origin`                                                                                          | keep    | A native POST must pass Kit's CSRF check.                                                               |
+| Recipe form `fail(400, { values, errors })`                                                                             | keep    | Save renders enabled, so an early submit is a native POST.                                              |
+| Settings password mismatch checked on the server                                                                        | keep    | Same: an early submit skips the client check.                                                           |
+| Settings JSON switch as the submit button                                                                               | keep    | Works before hydration.                                                                                 |
+| Settings language select catch-up attachment                                                                            | keep    | Saves an early pick once enhanced.                                                                      |
+| Settings language `<noscript>` Save button                                                                              | removed | Only JS-off users could reach it.                                                                       |
+| `?/preferences` redirect for a non-enhanced language change                                                             | removed | Only the `<noscript>` button reached it.                                                                |
+| Flash cookie (`#lib/server/flash.ts`)                                                                                   | keep    | Early clicks are native POSTs.                                                                          |
+| Draft hand-off cookie                                                                                                   | keep    | Carries the draft across the redirect either way.                                                       |
+| Versions select catch-up attachment                                                                                     | keep    | An early pick still navigates.                                                                          |
+| Versions `<noscript>` Compare button and its GET form                                                                   | removed | JS-off only; the form is a `div` now, and `recipe_versions_compare` is gone from the messages.          |
+| "Reverted" toast from the enhance callback                                                                              | changed | Now the `recipe_reverted` flash key, so an early revert shows it too.                                   |
+| JSON-LD upload `<noscript>` button                                                                                      | removed | JS-off only.                                                                                            |
+| JSON-LD file input                                                                                                      | changed | A catch-up attachment submits a file picked before hydration.                                           |
+| JSON-LD paste and URL import: text seeded from `form`, echoed by `fail()`                                               | removed | Their buttons render disabled while empty, so no native POST happens; enhanced failures keep the state. |
+| Photo import `<noscript>` button, and the error falling back to `form`                                                  | removed | JS-off only.                                                                                            |
+| Photo import file inputs                                                                                                | changed | A catch-up attachment previews a photo picked before hydration.                                         |
+| AI chat seeded from `form` (the `form` prop)                                                                            | removed | The chat is inherently interactive; Send renders disabled.                                              |
+| AI chat input, Send and unit selects                                                                                    | changed | Disabled until hydrated. "Save and review" stays a form that works early.                               |
+| `chatTurn` with an empty message                                                                                        | changed | `fail(400)`, like a malformed transcript; the page never sends one.                                     |
+| Estimate with AI over `fetch`                                                                                           | keep    | Inherently interactive.                                                                                 |
+| Version dates in UTC, then local after mount                                                                            | keep    | Rendering, not a fallback.                                                                              |
+
+Seams:
+
+- **Catch-up attachments** are the pattern for a control whose change handler does the work (the
+  language select, the version select, the JSON-LD and photo pickers). The attachment runs at
+  hydration and acts on a value the DOM already holds. One that submits waits a `tick()` first, so
+  `use:enhance` is attached; one that sets state does it in `untrack`.
+- **Flash keys** are now `family_joined`, `recipe_imported` and `recipe_reverted`.
 
 ### 26. Docs and release tooling
 

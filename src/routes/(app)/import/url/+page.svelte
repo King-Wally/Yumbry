@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { enhance, type SubmitFunction } from '$app/forms';
-	import { untrack } from 'svelte';
 	import { ArrowLeft, Search } from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import Card from '#lib/components/Card.svelte';
@@ -9,10 +8,7 @@
 
 	let { form }: PageProps = $props();
 
-	// Seeded once from a failed submit so the URL survives it (with or without JS); a plain `value=`
-	// would wipe text typed before hydration.
-	const initialUrl = untrack(() => form?.url ?? '');
-	let url = $state(initialUrl);
+	let url = $state('');
 	let importing = $state(false);
 
 	/** Default behaviour otherwise: follow the redirect to the draft, or show the returned message. */
@@ -55,7 +51,7 @@
 					required
 					placeholder="https://example.com/some-recipe"
 					bind:value={url}
-					defaultValue={initialUrl}
+					defaultValue=""
 					class="w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-clay focus:outline-none"
 				/>
 			</div>

@@ -40,6 +40,8 @@
 			untrack(() => showToast({ title: m.join_family_joined_toast() }));
 		} else if (data.flash === 'recipe_imported') {
 			untrack(() => showToast({ title: m.shared_recipe_imported_toast() }));
+		} else if (data.flash === 'recipe_reverted') {
+			untrack(() => showToast({ title: m.recipe_versions_reverted_toast() }));
 		}
 	});
 </script>

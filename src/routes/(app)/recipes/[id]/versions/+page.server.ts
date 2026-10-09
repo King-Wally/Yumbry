@@ -1,4 +1,5 @@
 import { error, fail, redirect } from '@sveltejs/kit';
+import { setFlash } from '#lib/server/flash.ts';
 import { requireRecipe } from '#lib/server/guards.ts';
 import { parseRecipeId } from '#lib/server/recipe-id.ts';
 import { getVersion, listVersions, revertToVersion } from '#lib/server/services/recipe-versions.ts';
@@ -37,6 +38,7 @@ export const actions: Actions = {
 		if (versionId === null || !(await revertToVersion(recipeId, versionId, familyId))) {
 			return fail(404, { revertError: true });
 		}
+		setFlash(event, 'recipe_reverted');
 		redirect(303, `/recipes/${recipeId}`);
 	}
 };

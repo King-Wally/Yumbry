@@ -1,14 +1,12 @@
 <script lang="ts">
 	import { enhance, type SubmitFunction } from '$app/forms';
+	import { untrack } from 'svelte';
 	import { ArrowLeft, Camera, X } from '@lucide/svelte';
 	import AiErrorBanner from '#lib/components/AiErrorBanner.svelte';
 	import Card from '#lib/components/Card.svelte';
 	import CardHeader from '#lib/components/CardHeader.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { AiQuotaScope } from '#lib/shared/ai-budget.ts';
-	import type { PageProps } from './$types';
-
-	let { form }: PageProps = $props();
 
 	type PhotoError = {
 		message: string;
@@ -22,11 +20,6 @@
 	let photo = $state<{ file: File; url: string } | null>(null);
 	let pending = $state(false);
 	let error = $state<PhotoError | null>(null);
-	// The action's `form` outlives the attempt it reports, so it is dropped once the cook moves on.
-	let formSeen = $state(false);
-
-	// The page's own error after an enhanced submit; the action's `form` after a plain one.
-	const shownError: PhotoError | null = $derived(error ?? (formSeen ? null : (form ?? null)));
 
 	// Revokes the previous URL whenever the photo changes, and the last one on unmount.
 	$effect(() => {
@@ -35,19 +28,23 @@
 		return () => URL.revokeObjectURL(url);
 	});
 
-	function choosePhoto(event: Event & { currentTarget: HTMLInputElement }) {
-		const file = event.currentTarget.files?.[0];
+	function choosePhoto(input: HTMLInputElement) {
+		const file = input.files?.[0];
 		if (file) {
 			photo = { file, url: URL.createObjectURL(file) };
 			error = null;
-			formSeen = true;
 		}
+	}
+
+	/** A photo picked before hydration fired no change handler; show it now. Untracked, so the
+	 * attachment doesn't re-run on the state it sets. */
+	function catchUpEarlyPick(input: HTMLInputElement) {
+		untrack(() => choosePhoto(input));
 	}
 
 	function removePhoto() {
 		photo = null;
 		error = null;
-		formSeen = true;
 	}
 
 	/** Sends the chosen photo (the inputs are gone once one is picked), and keeps it on a failure so
@@ -57,7 +54,6 @@
 		if (photo) formData.set('photo', photo.file);
 		pending = true;
 		error = null;
-		formSeen = true;
 		return async ({ result, update }) => {
 			pending = false;
 			if (result.type === 'failure') error = (result.data as PhotoError | undefined) ?? null;
@@ -95,12 +91,13 @@
 							class="cursor-pointer rounded-md bg-clay px-4 py-2 text-sm font-medium text-white focus-within:ring-2 focus-within:ring-clay/50"
 						>
 							<input
+								{@attach catchUpEarlyPick}
 								type="file"
 								name="photo"
 								accept="image/*"
 								capture="environment"
 								class="sr-only"
-								onchange={choosePhoto}
+								onchange={(event) => choosePhoto(event.currentTarget)}
 							/>
 							{m.import_photo_take_photo()}
 						</label>
@@ -108,25 +105,17 @@
 							class="cursor-pointer rounded-md border border-stone-300 px-4 py-2 text-sm font-medium text-stone-600 focus-within:ring-2 focus-within:ring-clay/50 hover:bg-stone-100"
 						>
 							<input
+								{@attach catchUpEarlyPick}
 								type="file"
 								name="photo"
 								accept="image/*"
 								class="sr-only"
-								onchange={choosePhoto}
+								onchange={(event) => choosePhoto(event.currentTarget)}
 							/>
 							{m.import_photo_upload_photo()}
 						</label>
 					</div>
 					<p class="text-sm text-stone-400">{m.import_photo_hint()}</p>
-					<!-- Without JS the choice never reaches the page's state, so the form posts it as is. -->
-					<noscript>
-						<button
-							type="submit"
-							class="rounded-md bg-clay px-4 py-2 text-sm font-medium text-white"
-						>
-							{m.import_photo_submit()}
-						</button>
-					</noscript>
 				</div>
 			{:else}
 				<div class="space-y-3">
@@ -158,13 +147,13 @@
 			{/if}
 		</form>
 
-		{#if shownError}
+		{#if error}
 			<div class="mt-3">
 				<AiErrorBanner
-					message={shownError.message}
-					kind={shownError.kind}
-					scope={shownError.scope}
-					retryAt={shownError.retryAt}
+					message={error.message}
+					kind={error.kind}
+					scope={error.scope}
+					retryAt={error.retryAt}
 				/>
 			</div>
 		{/if}

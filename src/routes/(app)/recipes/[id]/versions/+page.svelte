@@ -9,7 +9,6 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { NUTRITION_KEYS, TIME_KEYS } from '#lib/shared/recipeDiff.ts';
-	import { showToast } from '#lib/toast.svelte.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -76,8 +75,7 @@
 		</Card>
 	{:else}
 		<Card class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-			<!-- Without JS the select submits through the Compare button; with it, picking navigates. -->
-			<form method="GET" class="flex w-full items-end gap-2 sm:max-w-sm">
+			<div class="flex w-full items-end gap-2 sm:max-w-sm">
 				<label class="flex w-full flex-col gap-1.5">
 					<span class="text-sm font-medium text-stone-900">{m.recipe_versions_compare_with()}</span>
 					<select
@@ -93,15 +91,7 @@
 						{/each}
 					</select>
 				</label>
-				<noscript>
-					<button
-						type="submit"
-						class="rounded-md border border-stone-300 px-3 py-2 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
-					>
-						{m.recipe_versions_compare()}
-					</button>
-				</noscript>
-			</form>
+			</div>
 			<div class="flex items-center gap-2 text-sm text-stone-500">
 				<span class="inline-block h-4 w-4 rounded bg-yellow-300"></span>
 				<span>
@@ -148,11 +138,8 @@
 					action="?/revert"
 					use:enhance={() => {
 						reverting = true;
-						return async ({ result, update }) => {
+						return async ({ update }) => {
 							reverting = false;
-							if (result.type === 'redirect') {
-								showToast({ title: m.recipe_versions_reverted_toast() });
-							}
 							await update();
 						};
 					}}
