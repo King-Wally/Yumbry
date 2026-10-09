@@ -12,6 +12,7 @@ changes.
 docker compose up -d db          # any Postgres works; see E2E_DATABASE_URL below
 bun run e2e:build                # from the repo root: builds the SvelteKit app
 bun run e2e                      # resets the e2e database, starts the servers, runs every spec
+                                 # in both projects (full and minimal app)
 bun run e2e:ui                   # the same, in Playwright's UI mode
 ```
 
@@ -86,16 +87,18 @@ The specs don't know which stack they run against. Everything stack-specific is 
 The app server has to read this configuration from the environment, under these names. It is set
 in `playwright.config.ts`:
 
-- `PORT`, `ORIGIN` (the app's base URL: better-auth, CSRF and links in emails; `main` called it
-  `BETTER_AUTH_URL` and `APP_BASE_URL`), `DATABASE_URL`, `BETTER_AUTH_SECRET`, `COOKIE_SECURE`,
-  `UPLOADS_DIR`
+- `NODE_ENV=production`, `PORT`, `ORIGIN` (the app's base URL: better-auth, CSRF and links in
+  emails; `main` called it `BETTER_AUTH_URL` and `APP_BASE_URL`), `DATABASE_URL`,
+  `BETTER_AUTH_SECRET`, `COOKIE_SECURE`, `UPLOADS_DIR`
 - `BODY_SIZE_LIMIT`: adapter-node's request body cap, large enough for 25 MB photo uploads
 - `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `AI_MODEL_BIG|MEDIUM|SMALL|IMAGE`,
   `AI_MONTHLY_BUDGET_USD`, `AI_USER_DAILY_BUDGET_USD`
 - `RESEND_API_KEY`, `EMAIL_FROM`
+- `BROWSER_CDP_URL` (the CloakBrowser above; empty on the minimal app) and `BROWSER_PROXY_HOST`
+  (where that browser reaches the app's SSRF proxy: `127.0.0.1`)
 - Test-only hooks, unset in production:
   - `OPENROUTER_BASE_URL` / `GEMINI_BASE_URL`: where the LLM clients send requests.
-  - `RESEND_BASE_URL`: read by the Resend SDK itself.
+  - `RESEND_BASE_URL`: where the Resend client sends requests.
   - `E2E_SAFE_FETCH_ALLOW`: exact `host:port` entries that URL import may fetch despite
     resolving to a private address.
   - `DISABLE_RATE_LIMITS=1`: every browser in a run shares 127.0.0.1.

@@ -51,8 +51,8 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 - **The e2e suite.** Since step 25, `bun run e2e` and CI run every spec, in both projects. Until
   then they ran only an allowlist (`e2e/ported-specs.txt`, now deleted) that each feature step
   extended. Every test must stay green.
-- **`CLAUDE.md` still describes `main`'s architecture until step 26.** Use it as a description of
-  behaviour, not of where code goes now. This file wins wherever they disagree.
+- **`CLAUDE.md` describes this branch since step 26.** Before that it still described `main`'s
+  architecture. This file wins wherever they disagree.
 - **Framework-free logic** (scaling, form rules, diffing, units, AI prompt building and parsing)
   goes in `src/lib/shared/` with unit tests. Server-only code goes in `src/lib/server/`.
 - **Every query that touches `recipes`, `tags`, `categories` or `recipe_versions` filters by the
@@ -101,7 +101,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 
 - [x] 25. Full parity pass
 - [x] 25a. Hydration audit: before-hydration, not no-JS
-- [ ] 26. Docs and release tooling
+- [x] 26. Docs and release tooling
 - [ ] 27. Production cutover
 
 ## Open issues
@@ -1869,6 +1869,37 @@ Read MIGRATION.md (all of it), then plan Step 26.
   with bun instead of node. Dry-run it without committing or tagging.
 Tick Step 26 and commit as "docs: describe the SvelteKit + Bun architecture".
 ```
+
+**Outcome.**
+
+- **`CLAUDE.md`** is rewritten for this branch, at `main`'s depth. It covers:
+  - commands, the vitest projects and the `db:*` scripts;
+  - the server platform: env, `ORIGIN` and `serve.ts`, hooks, rate limits, kinded errors;
+  - routes, loads and actions, and the hydration policy;
+  - guards and family scoping, and auth, with what is load-bearing;
+  - Paraglide, Drizzle and the Prisma-era baseline, uploads, share links, URL import, AI and email;
+  - the PWA, including the legacy `/sw.js` takeover;
+  - frontend conventions, `src/lib/shared/`, Docker, and the e2e rules.
+
+  Nothing about Express, React, Prisma, workspaces or `shared/` builds is left.
+
+- **`README.md`** is rewritten for self-hosters: setup with the required variables, an environment
+  table, "Upgrading from 1.x", development on Bun, testing, Drizzle migrations and releasing. The
+  upgrade notes say `ORIGIN` replaces `BETTER_AUTH_URL` and `APP_BASE_URL`, that the database migrates
+  itself on start, and that 1.x can still roll back. Two stale claims were dropped:
+  - "no sharing between accounts" (families and share links exist now);
+  - "ah.nl is refused straight away" (no such list exists, on `main` either).
+- **`e2e/README.md`** lists the env vars `appEnv` actually passes. `NODE_ENV`, `BROWSER_CDP_URL` and
+  `BROWSER_PROXY_HOST` were missing. `RESEND_BASE_URL` is passed by the app, not read by the SDK.
+- **`.env.example`** documents `BROWSER_PROXY_HOST`, and a stale `/api/auth/forget-password` note is
+  gone. The other variables it leaves out are test-only.
+- **`scripts/release.sh [patch|minor|major|<version>] [--dry-run]`** bumps only the root package with
+  `bun pm version` and reads the version with `bun -p`. It refuses a dirty tree, and commits only
+  `package.json`. `--dry-run` prints `Would release vX.Y.Z` and restores `package.json`.
+  - **Dry run:** done in a throwaway clone for patch, minor, major and an explicit version. It left
+    no commit, tag or change behind.
+  - **e2e version:** `e2e/package.json` lost its unused `version`, so a release never touches
+    `bun.lock`.
 
 ### 27. Production cutover
 

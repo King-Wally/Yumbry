@@ -4,303 +4,482 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Yumbry is a self-hosted, multi-user recipe manager: manual/JSON-LD recipe import, tag/category
-filtering, serving-size scaling, photo attachments, and an AI assistant for drafting/improving
-recipes, backed by a single server-wide OpenRouter API key (`OPENROUTER_API_KEY`) — there is no
-per-user AI configuration. Every user's data (recipes, tags, categories) is siloed — no sharing
-between accounts.
+Yumbry is a self-hosted, multi-user recipe manager: manual/JSON-LD/URL/photo recipe import,
+tag/category filtering, serving-size scaling, version history, photo attachments, and an AI
+assistant for drafting/improving recipes, backed by a single server-wide OpenRouter API key
+(`OPENROUTER_API_KEY`) — there is no per-user AI configuration. Data (recipes, tags, categories,
+versions) is siloed per **family**: every user starts in a personal family of one and can join
+another through an invite link. The only way out of a family's silo is a public share link.
 
-npm workspaces monorepo: `backend` (Express + Prisma + Postgres), `frontend` (React + Vite),
-`shared` (types + logic consumed by both).
+One SvelteKit 3 app (Svelte 5 runes), built with `@sveltejs/adapter-node` and run on **Bun**, with
+Drizzle on Postgres and better-auth. The only workspace is `e2e/` (the Playwright suite). The app
+replaced an Express + React + Prisma stack (`main` up to v1.3.1); `MIGRATION.md` records how and
+why, step by step, and is the place to look for the reasoning behind anything surprising below.
 
 ## Commands
 
-Run from `backend/`, `frontend/`, or `shared/` (each has the same script names):
+From the repo root:
 
 ```sh
-npm run dev            # backend: tsx watch; frontend: vite; shared: tsc --watch
-npm run build           # backend: tsc→dist; frontend: tsc --noEmit && vite build; shared: tsc→dist
-npm run typecheck       # tsc --noEmit
-npm run lint            # eslint .
-npm run format          # prettier --write .
-npm run format:check
-npm test                # vitest run
+bun install             # also runs `prepare`: svelte-kit sync + Paraglide compile
+bun run dev             # bun --bun vite dev (http://localhost:5173)
+bun run build           # bun --bun vite build → build/
+bun run start           # bun scripts/serve.ts (the production server; needs ORIGIN)
+bun run check           # svelte-check, plus tsc over src/service-worker
+bun run lint            # prettier --check . && eslint .
+bun run format          # prettier --write .
+bun run test            # every vitest project, once
+bun run test:unit       # bun --bun vitest (watch mode)
 ```
 
-`shared` must be built (`npm run build --workspace=shared`, or `npm run dev --workspace=shared`
-for a watcher) before backend/frontend will pick up changes to it — it's consumed as a compiled
-package (`dist/`), not source-aliased. CI (`.github/workflows/ci.yml`) always builds `shared`
-first for exactly this reason.
+Unit tests run under `bun --bun vitest` in three projects (`vite.config.ts`):
 
-Database (from `backend/`):
+- `client`: `*.svelte.spec.ts`, rendered in Playwright Chromium (browser mode). Install it once
+  with `bunx playwright install chromium`.
+- `server`: every other `*.spec.ts`, on Bun.
+- `server-db`: `*.db.spec.ts`, service tests against a real Postgres at `TEST_DATABASE_URL`, skipped
+  when it is unset. They drop every table (`#lib/server/testing/db.ts`), so never point it at a real
+  database, and they share one database, hence `fileParallelism: false`. A spec swaps the app's
+  client for the test one with `vi.mock('#lib/server/db/index.ts', …)` (see that helper's header).
 
 ```sh
-npm run db:migrate          # prisma migrate deploy — apply pending migrations
-npm run db:migrate:dev      # generate + apply a new migration from schema.prisma changes
-npm run db:migrate:status
+TEST_DATABASE_URL=postgres://chef:changeme@localhost:5432/yumbry_test bun run test
+bun --bun vitest run src/lib/server/uploads.spec.ts   # one file
 ```
 
-Local dev needs `backend/.env` with its own `DATABASE_URL` (pointing at `localhost`, not the
-`db` Docker hostname) and `BETTER_AUTH_SECRET` — see README "Development (without Docker)" for the full
-setup including starting just the `db` service via `docker compose up -d db`.
+Database (Drizzle):
 
-Backend tests (from `backend/`): unit tests (`*.service.test.ts`) always run; integration tests
-(`*.api.test.ts`, e.g. `recipes.api.test.ts`) spin up the real Express app against a real,
-disposable Postgres and are skipped unless `TEST_DATABASE_URL` is set:
+| Script                | What it does                                                                                                                  |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `bun run db:migrate`  | `scripts/migrate.ts`: bring `DATABASE_URL` up to date with `drizzle/`. Idempotent; the Docker image runs it on every start.   |
+| `bun run db:generate` | `drizzle-kit generate`: a new migration from `schema.ts` changes. Reports "No schema changes" while `schema.ts` is untouched. |
+| `bun run db:rehearse` | `scripts/rehearse-migrate.ts`: migrate scratch copies (empty, v1.3.1 Prisma schema, a restored dump) and compare.             |
+| `bun run db:studio`   | `drizzle-kit studio`.                                                                                                         |
 
-```sh
-TEST_DATABASE_URL=postgres://chef:changeme@localhost:5432/recipe_vault_test npm test
-```
+Local dev needs a `.env` with `DATABASE_URL` pointing at `localhost` (start just Postgres with
+`docker compose up -d db`) and `ORIGIN=http://localhost:5173`. `BETTER_AUTH_SECRET` falls back to a
+fixed placeholder outside production. Photos go to `./uploads` (`UPLOADS_DIR`).
 
-Never point `TEST_DATABASE_URL` at a real database — integration tests drop and recreate the
-`public` schema on every run. `vitest.config.ts` sets `fileParallelism: false` because multiple
-`*.api.test.ts` files share/reset that same DB and would race otherwise; it also injects fixed
-dummy `BETTER_AUTH_SECRET`/`BETTER_AUTH_URL`/email env vars. Auth requests from supertest must set
-an `Origin` header matching `BETTER_AUTH_URL` — better-auth rejects state-changing calls without
-one, and browsers send it automatically where supertest does not (see `tests/helpers/auth.ts`). `OPENROUTER_API_KEY` is read lazily (not at import time), so AI chat tests mock
-`chatWithAi` directly instead of needing a dummy key.
+End-to-end: `bun run e2e:build && bun run e2e` (see "End-to-end tests" below and `e2e/README.md`).
 
-To run a single test file: `npx vitest run tests/recipes.api.test.ts` (from `backend/` or
-`frontend/`).
+Releases: `scripts/release.sh [patch|minor|major|<version>] [--dry-run]` bumps the root
+`package.json` with `bun pm version`, commits `Release: vX.Y.Z`, tags and pushes. `--dry-run`
+prints the version and restores `package.json`.
 
-End-to-end (`e2e/` workspace, Playwright): `npm run e2e:build && npm run e2e` from the root. It
-resets `E2E_DATABASE_URL` (default `.../yumbry_e2e`), then starts a fakes server plus two app
-servers (full, and minimal with no AI/email). This suite is the stack-neutral source of truth
-for the app's behaviour, so specs must stay independent of the implementation:
-
-- Seed through `e2e/support/db.ts` (the only file that knows table names).
-- Act and assert through the UI with accessible selectors (no `data-testid`).
-- Never call the app's JSON API. Only `/api/auth/*`, `/api/health` and `/uploads/*` may be
-  called directly.
-
-The full e2e app also gets `BROWSER_CDP_URL` pointing at a local CloakBrowser
-(`e2e/scripts/cdp-browser.ts`; the prepare step downloads its binary into `~/.cloakbrowser`),
-and the fakes serve a JS-challenge site under `/sites/challenge/`. The app honours a few
-test-only env vars for the fakes: `OPENROUTER_BASE_URL`,
-`GEMINI_BASE_URL`, `RESEND_BASE_URL`, `E2E_SAFE_FETCH_ALLOW` and `DISABLE_RATE_LIMITS`. See
-`e2e/README.md`.
-
-Framework-free UI logic lives in `shared/` so a rewrite can reuse it:
-
-- recipe scaling (`recipe-scaling.ts`)
-- recipe-form rules (`recipe-form.ts`)
-- draft rendering (`render-draft.ts`)
-- budget display (`ai-budget-display.ts`)
-
-Keep new logic of that kind there, with unit tests, rather than in components.
+Before committing: `bun run check`, `bun run lint`, `bun run test` and, for behaviour changes,
+`bun run e2e`. CI (`.github/workflows/ci.yml`) runs all of them, then builds the Docker image and
+smoke-tests it against an empty database.
 
 ## Architecture
 
-### Backend layering
+### Server platform
 
-Routes → controllers → services → Prisma, applied loosely rather than strictly enforced —
-`requireAuth` middleware queries Prisma directly, and controllers do their own Zod
-parsing/error-shaping inline rather than through a shared validation middleware. Every
-controller is wrapped in `asyncHandler` at the route so promise rejections reach `next(err)`.
+**Environment.** `src/env.ts` declares every variable with Kit's `defineEnvVars`; code imports them
+from `$app/env/private` (and `$app/env` for `dev`/`building`). Validators run at build time with an
+empty environment and again at start-up, so `bun run build` needs no secrets and a missing required
+variable fails when the server starts. Required: `DATABASE_URL`, `ORIGIN`, and `BETTER_AUTH_SECRET`
+in production. Everything else is optional, and unset and empty mean the same thing (the e2e harness
+passes `''` to switch features off). Numeric budget variables reject garbage at start-up.
 
-`app.ts` builds the Express app; `index.ts` imports it, listens, and sweeps orphaned families
-once at startup. Middleware order: global `/api` rate limiter → better-auth's `toNodeHandler`
-catch-all → `express.json` → static `/uploads` (behind `requireAuth` + `requirePhotoAccess`) →
-health check → `/api/config` → feature routers, each wrapped with `requireAuth` at mount time
-(except `/api/shared`, see below) → SPA static fallback → one generic 4-arg error handler at the very end (logs + generic 500, no
-per-kind mapping). There is no `cookieParser` — better-auth reads cookies off the raw headers.
+**`ORIGIN`** is the one base-URL setting: better-auth's `baseURL`, the origin SvelteKit's CSRF check
+and `event.url` see, and links in emails and invite/share URLs. adapter-node 6 dropped its own
+`ORIGIN` support, so `scripts/serve.ts` wraps `build/index.js`: it points adapter-node's
+`PROTOCOL_HEADER`/`HOST_HEADER` at private headers and fills them from `ORIGIN` on every request,
+overwriting whatever a client sent. It also adds `cache-control: no-cache` to
+`/service-worker.js` and `/manifest.webmanifest`, and fills a missing `X-Forwarded-For` with the
+peer address (adapter-node throws without its `ADDRESS_HEADER`). Always start the server through
+`serve.ts`, never `bun build/index.js`.
 
-Validation: Zod schemas live under `backend/src/schemas/`, called directly as
-`SomeSchema.parse(req.body)` inside each controller's try/catch, with `ZodError` manually mapped
-to `400 { error: issues }`. This pattern repeats near-verbatim across controllers — there is no
-shared "validate" middleware, so match the existing pattern rather than introducing a new one.
+**Hooks** (`src/hooks.server.ts`):
 
-Error handling beyond Zod: domain error classes (`AiProviderError`, a URL-import error type) are
-mapped to HTTP responses via the shared generic helper `sendKindedError`
-(`utils/kinded-error-response.ts`), which type-guards the error class and looks up status by
-`.kind`. Anything unrecognized falls through to the catch-all handler in `app.ts`.
+- `init` sweeps orphaned families once at start-up, without blocking the first request.
+- `handle` is `sequence(handleSecurityHeaders, handleClientAddress, handleBetterAuth, handleParaglide)`.
+  Security headers are helmet's defaults (`#lib/server/security-headers.ts`) except
+  `Referrer-Policy: same-origin`: under helmet's `no-referrer`, Chrome sends `Origin: null` on a
+  native form POST and Kit's CSRF check refuses every form submitted before hydration. The CSP is
+  Kit's own (`csp` in `vite.config.ts`, `mode: 'auto'` for nonces), with `img-src https:` because
+  imported recipes keep remote image URLs.
+- `handleClientAddress` copies `event.getClientAddress()` into a private header better-auth's rate
+  limiter reads, always overwritten so a client can't pick its bucket.
+- `handleBetterAuth` puts `session`/`user` on `locals` (from the database, every request) before
+  better-auth's `svelteKitHandler` answers `/api/auth/*`.
+- `handleError` logs unexpected errors and returns a generic "Internal server error".
+
+**Rate limits.** better-auth limits `/api/auth/*` itself (`auth.ts`). Server-side `auth.api.*` calls
+skip that, so `#lib/server/rate-limit.ts` carries the same rules over to the form actions
+(`signInLimiter`, `signUpLimiter`, `changePasswordLimiter`, `deleteAccountLimiter`,
+`passwordResetRequestLimiter`, `passwordResetLimiter`) and adds the app's own (`urlImportLimiter`,
+`photoImportLimiter`, `familyJoinLimiter`). In-memory fixed windows keyed by client address;
+`DISABLE_RATE_LIMITS=1` turns all of them off. There is deliberately no blanket limiter.
+
+**Domain errors.** `AiProviderError`/`AiQuotaExceededError`, `UrlImportError` and `FamilyError`
+carry a `.kind`; `#lib/server/kinded-errors.ts` is the one place that maps kinds to statuses.
+Actions return `failKinded(err)` (`fail(status, { message, kind, scope?, retryAt? })`), loads and
+endpoints call `throwKinded(err)`. Anything unrecognized is rethrown and becomes a 500 through
+`handleError`. Never map to 502 or 504: behind Cloudflare those are replaced by Cloudflare's own
+error page.
+
+### Routes, loads and actions
+
+Routes live in `src/routes/` (file-based). Protected pages sit in the `(app)` group: `/`, `/recipes/new`,
+`/recipes/[id]` with `edit`, `versions`, `ai-improve` and `export`, `/import` with `url` and `photo`,
+`/create-with-ai`, `/settings`, `/onboarding`. Public pages stay outside it: `/login`, `/register`,
+`/logout` (action only), `/forgot-password`, `/reset-password`, `/join-family/[token]`,
+`/share/[token]`. The page URLs are part of the contract (invite and reset links in inboxes point at
+them).
+
+- **Data flows through `+page.server.ts` loads and form actions** with `use:enhance`. `+server.ts`
+  is only for things that aren't pages: `/api/health`, `/uploads/[...path]`,
+  `/recipes/[id]/export`, `/share/[token]/photo`, and the legacy `/sw.js` and `/registerSW.js`.
+  There is no JSON API and no client-side data cache: every navigation re-runs loads, which read
+  `familyId` fresh, so leaving a family takes effect on the next navigation with nothing to
+  invalidate.
+- Validation is Zod inside the action; a failure is `fail(400, { values, errors })` (recipe form,
+  via `parseRecipeForm` in `#lib/server/recipe-form-action.ts`) or `fail(status, { message })`.
+- **Kit 3's `enhance` navigates** to the action's page on success when the action belongs to
+  another route (posting to `/settings?/preferences` from onboarding or the AI chat), as a native
+  submit would. Pass `update({ navigate: false })` there.
+- **Cookies the app sets:** `yumbry-return-to` (where to go after logging in;
+  `#lib/server/return-to.ts`, same-origin paths only; `/login?redirectTo=` and
+  `/register?redirectTo=` can request it), `yumbry-flash` (one-shot toast keys:
+  `family_joined`, `recipe_imported`, `recipe_reverted`; `#lib/server/flash.ts`), `yumbry-draft`
+  (draft hand-off id, below) and `yumbry-locale`. Protected redirects go to a bare `/login`.
+- **Draft hand-off** (`#lib/server/draft-handoff.ts`): URL import, photo import and AI chat hand a
+  draft to `/recipes/new` (or, with a numeric target, to that recipe's edit form) through
+  `stashDraft`/`takeDraft`. The cookie carries only a random id; the draft waits in memory for 10
+  minutes, bound to the user and taken once.
+- **Full-screen pages** (onboarding) return `fullScreen: true` from their load and get no header.
+
+**Hydration policy.** Forms and links must work **before hydration**: form actions, GET forms (the
+list's filter chips) and real links. Supporting browsers with JS turned off is not a goal, and there
+is no `<noscript>`. Controls that only do something in the browser (dialogs, copy-link, servings
+stepper, list editors, tag/category pickers, AI chat input) are disabled until `hydrated.current`
+(`#lib/hydrated.svelte.ts`, set by the root layout's `onMount`); Playwright waits for them to be
+enabled. Patterns that keep early input:
+
+- `bind:value` text/number inputs that render before hydration also carry a `defaultValue`
+  attribute; otherwise hydration wipes or collapses what was typed.
+- A control whose change handler does the work (language select, version select, file pickers)
+  gets a catch-up attachment that acts on the value the DOM already holds. One that submits waits a
+  `tick()` so `use:enhance` is attached first.
+- Menus are native popovers (`PopoverMenu.svelte`), which open before hydration.
+
+### Guards and family scoping
+
+`#lib/server/guards.ts`:
+
+- `getUser(event)` → `{ user, familyId }` or null; `requireUser(event)` → the same, or remembers the
+  page and redirects 303 to `/login`.
+- `requireRecipe(event, params.id)` → adds a `recipeId` the family owns, or `error(404, 'Recipe not found.')`.
+  A malformed id, a missing recipe and another family's recipe are the same 404.
+
+The `(app)` layout's `requireUser` only covers navigation: page loads run in parallel with it and
+actions never run it. **Every load, action and endpoint calls `requireUser` or `requireRecipe`
+itself.** Every query that touches `recipes`, `tags`, `categories` or `recipe_versions` filters by
+the signed-in user's `familyId` (an integer; user ids are better-auth strings). The one deliberate
+exception is `getRecipeByShareToken` (`services/recipes.ts`), for public share links.
 
 ### Auth
 
 [better-auth](https://better-auth.com) owns identity and sessions. Config lives in
-`backend/src/auth.ts` and is mounted as a catch-all at `/api/auth/*`; every endpoint under that
-prefix (`sign-up/email`, `sign-in/email`, `sign-out`, `request-password-reset`, `reset-password`,
-`change-password`, `delete-user`, `get-session`) is better-auth's, not ours. `BETTER_AUTH_SECRET`
-is required in production only — dev and test fall back to a fixed placeholder, since a secret
-that changed per boot would log everyone out on every restart.
+`src/lib/server/auth.ts` and is mounted at `/api/auth/*` by `svelteKitHandler` in the hooks; every
+endpoint under that prefix is better-auth's, and the e2e suite calls them directly. The pages are
+our own: `/login`, `/register`, `/logout`, `/forgot-password`, `/reset-password` and the settings
+actions call `auth.api.*` server-side with the request headers, and the `sveltekitCookies` plugin
+(which must stay last in `plugins`) sets the cookies. There is no better-auth client in the browser.
+Errors shown are better-auth's own text, through `authRefusal` (`#lib/server/auth-forms.ts`).
 
-Three things about the mount are load-bearing:
+Load-bearing, because production sessions from v1.3.1 must stay valid:
 
-- **`toNodeHandler(auth)` must be registered before `express.json()`.** It consumes the raw
-  request stream itself, and a body a parser already drained makes every auth POST hang. The
-  `/api` rate limiter can sit above it (it never touches the body).
-- **Express 4 wildcard syntax** (`'/api/auth/*'`). On Express 5 this becomes `'/api/auth/*splat'`.
-- **The app's own config endpoint is `/api/config`, not `/api/auth/config`** — the latter would be
-  swallowed by the catch-all.
+- **Cookie names.** `cookiePrefix: 'yumbry'` gives `yumbry.session_token` (`HttpOnly`,
+  `SameSite=Lax`, 30 days), with the `__Secure-` prefix when `COOKIE_SECURE=true`. Pinned by
+  `src/lib/server/auth.spec.ts`. Set `COOKIE_SECURE` only behind HTTPS, or the browser never sends
+  the cookie back.
+- **`BETTER_AUTH_SECRET`** must stay the value v1.3.1 used. Changing it logs everyone out.
+- **`baseURL` is `ORIGIN`.** A wrong origin breaks better-auth's path matching and Kit's CSRF check.
+- **`session.cookieCache` is deliberately off.** It would let `getSession` answer from the cookie,
+  serving a stale `familyId` to someone who just left a family. Session revocation is real row
+  deletion (`revokeSessionsOnPasswordReset`, `revokeOtherSessions` on password change).
 
-`requireAuth` (`middleware/require-auth.ts`) calls `auth.api.getSession`, which reads the session
-and user rows from the database on every request. `session.cookieCache` is deliberately **off**:
-it would serve a stale `familyId`, letting someone who just left a family keep reading its
-recipes. Session revocation is real row deletion now — `revokeSessionsOnPasswordReset` and
-`revokeOtherSessions` replace the old `tokenVersion` counter.
+The app bolts five columns onto better-auth's user table as `additionalFields`: `familyId` plus the
+four preferences (`locale`, `unitSystem`, `smallVolumes`, `jsonImportExportEnabled`). All are
+`input: false`, so neither signup nor better-auth's `updateUser` can write them; preferences go
+through `/settings?/preferences` (`parsePreferences` + `updatePreferences`). `familyId` must be
+declared `required: false` despite its NOT NULL column: better-auth validates required fields
+against the request payload _before_ `databaseHooks` runs. The `user.create.before` hook creates the
+personal family and supplies the id; `deleteUser.afterDelete` (`cleanUpFamilyAfterDelete`) tidies
+the family after an account is deleted.
 
-The app bolts five columns onto better-auth's user table as `additionalFields`: `familyId` plus
-the four preferences. All are `input: false`, so neither signup nor better-auth's `updateUser` can
-write them — preferences go through `PATCH /api/me`, which validates against the shared enums.
-`familyId` must be declared `required: false` despite its NOT NULL column: better-auth validates
-required fields against the request payload _before_ `databaseHooks` runs, so a field the client
-is forbidden to send could never satisfy it. The `user.create.before` hook creates the personal
-family and supplies the id.
+### i18n (Paraglide)
+
+Messages live in `messages/{en,nl,fr,es}.json` (inlang format, `project.inlang/`); the compiled
+runtime is generated into `src/lib/paraglide/` (git-ignored) by the Vite plugin and by `prepare`
+(`scripts/paraglide-compile.ts`). Both read `paraglide.config.ts`, since the CLI can't set
+`cookieName`. Use messages as `m.recipe_form_title()` from `#lib/paraglide/messages.js`. Keys are
+snake_case, plurals are one message with plural variants (`m.recipe_versions_differences({ count })`),
+and lists are numbered messages. `src/lib/i18n-messages.spec.ts` checks all four locales have the
+same keys, so add every new message in all four. English wording is what e2e specs select on.
+
+No locale in URLs. The strategy is `custom-session` → `cookie` (`yumbry-locale`) →
+`preferredLanguage` → `baseLocale` (`en`):
+
+- On the server, `custom-session` is the signed-in user's `users.locale`, handed from
+  `handleBetterAuth` to Paraglide through a `WeakMap` keyed by the request (`#lib/server/locale.ts`).
+  Hence better-auth runs before Paraglide in the sequence. `<html lang>` is set in the SSR output,
+  and a signed-in user's cookie is kept in step with their saved language.
+- On the client, `custom-session` reads `<html lang>`, so hydration always agrees with SSR.
+- Every language switch goes through `saveLocaleChoice(event, locale)` (cookie, plus `users.locale`
+  when signed in). A client-only `setLocale()` would be overruled on the next request. An enhanced
+  form calls `applyLocale` (`#lib/locale-client.ts`) before `update()`, and the root layout wraps the
+  shell in `{#key data.locale}` so it re-renders without a reload.
+- `hooks.client.ts` moves v1.x's `localStorage['yumbry.locale']` into the cookie once.
+
+### Database (Drizzle)
+
+`src/lib/server/db/`: `index.ts` (postgres-js client, `db`, and `DbExecutor` for "the client or a
+transaction"; it ends the pool on adapter-node's `sveltekit:shutdown` so the container stops
+promptly), `schema.ts` (app tables) and `auth.schema.ts` (better-auth's `users`, `sessions`,
+`accounts`, `verifications`).
+
+**Table and column names are part of the contract.** The database was created by v1.3.1's Prisma
+migrations (plural tables, snake_case columns), and `drizzle/0000_baseline.sql` reproduces exactly
+that schema (`bun run db:rehearse` proves it with a `pg_dump --schema-only` diff). Never rename a
+table, column, index or constraint.
+
+`scripts/migrate.ts` (`bun run db:migrate`) runs on every container start and needs no drizzle-kit:
+
+- A Prisma-era database (`users` exists, no Drizzle history) has the baseline recorded as applied
+  instead of run, but only if `_prisma_migrations` ends at v1.3.1's last migration.
+- It aborts if the recorded history holds a hash `drizzle/` doesn't, which means an edited or
+  regenerated migration.
+- Pending migrations run in one transaction, under an advisory lock that serialises concurrent
+  starts.
+- `_prisma_migrations` is left in place so v1.3.1 can still run on the database for a rollback. Drop
+  it later in an ordinary migration, never by hand.
+
+Conventions: change `schema.ts`, run `bun run db:generate`, review and commit the generated SQL and
+`drizzle/meta/`. **Never hand-edit or regenerate a committed migration**, including the baseline;
+fix forward with a new one. Postgres `numeric` columns are read through `decimalString`
+(`#lib/shared/numeric.ts`) so they print like Prisma did (`"4"`, not `"4.000…"`), and Drizzle returns
+`sum()` over numeric as a string.
+
+Services live in `src/lib/server/services/` (recipes, tags-categories, recipe-versions,
+recipe-share, family, account-deletion, user-preferences, email, import-log, url-recipe-import,
+ai-provider, ai-budget). Write paths that span tables run in `db.transaction`, and helpers that
+can join a caller's transaction take a `DbExecutor`. `updateRecipe` writes the `recipe_versions`
+snapshot of the replaced state in the same transaction, which is what makes reverts undoable.
+
+### Uploads
+
+Photos are stored under `UPLOADS_DIR` (image: `/app/uploads`, the `uploads_data` volume; dev:
+`./uploads`) as `recipes/<id>/<uuid>.webp`, and `recipes.image_path` holds `/uploads/recipes/<id>/<file>`.
+`#lib/server/uploads.ts` owns the layout: `checkPhotoFile` (JPEG/PNG/WebP/GIF only, no SVG, 25 MB),
+`saveRecipePhoto` (after sharp re-encodes to WebP in `#lib/server/image-prep.ts`), path resolution
+that only accepts `recipes/<id>/<plain file name>` with an image extension, copy and delete helpers.
+`/uploads/[...path]` answers 401 signed out and 404 for anything that isn't the family's file, with
+`Cache-Control: private` and `nosniff`. `BODY_SIZE_LIMIT=30M` (image and e2e config) leaves room
+for a 25 MB photo plus the rest of the form.
 
 ### Public share links
 
-The one deliberate hole in family scoping. `Recipe.shareToken` (nullable, unique, 32 random bytes
-hex) is minted by `POST /api/recipes/:id/share` (idempotent) and nulled by `DELETE` on the same
-path, which kills the link. `/api/shared/:token` is mounted **without** `requireAuth`:
-`GET /:token` uses `optionalAuth` (never 401s) and returns the recipe minus `id`/`share_token`, plus
-`own_recipe_id` when the viewer's family owns it; `GET /:token/photo` serves the local photo, since
-`/uploads` is family-gated; `POST /:token/import` (route-level `requireAuth`) copies the recipe into
-the caller's family via `createRecipe`, recreating tags/category by name and copying the photo file
-(`copyRecipeUpload`). The frontend page is `/share/:token` (`SharedRecipePage`, not in
-`ProtectedRoute`), and the recipe body is shared with the owner's page through `RecipeDetailView`.
+The one deliberate hole in family scoping (`services/recipe-share.ts`). `recipes.share_token`
+(nullable, unique, 32 random bytes hex) is minted by the recipe page's `?/share` action
+(idempotent and race-safe) and nulled by `?/unshare`, which kills the link; sharing again makes a new
+token. Neither bumps `updated_at`. `/share/[token]` is public: its load uses `getUser` (never
+redirects) and returns the recipe without `id`, `share_token` or `category_id`, plus
+`own_recipe_id` when the viewer's family owns it. A malformed, unknown or stopped token is the same
+404, shown as the dead-link page (`share/[token]/+error.svelte`). `/share/[token]/photo` serves the
+local photo, since `/uploads` is family-gated. `?/import` (requires login; signed-out visitors are
+sent to log in and come back) copies the recipe into the caller's family through `createRecipe`,
+recreating tags and category by name and copying the photo file (best-effort). The recipe body is
+shared with the owner's page through `RecipeDetailView.svelte`.
 
 ### URL import
 
-`scrapeRecipeFromUrl` (`services/url-recipe-import.service.ts`) first fetches with
-`safeFetchHtml` (`utils/safe-fetch.ts`): undici, DNS pinned to addresses checked by
-`assertSafeTarget`, redirects followed by hand and re-checked, and desktop-Chrome headers. If that
-fails with `bot_challenge`, `no_jsonld`, or a 401/402/403/429/503, and `BROWSER_CDP_URL` is set,
-it retries with `headlessFetchHtml` (`utils/headless-fetch.ts`). That connects over CDP
-(`chromium.connectOverCDP`, stock `playwright-core`) to the `browser` compose sidecar: the official
-`cloakhq/cloakbrowser` image running `cloakserve`, always started with the stack. CloakBrowser's
-stealth patches live in the Chromium binary, so the driver needs no special fork or matching
-version. The browser's identity (headful under the image's Xvfb, `BROWSER_TIMEZONE`,
-`BROWSER_LOCALE`) is set by the sidecar's flags, never from the app: context-level UA, viewport,
-locale or timezone overrides are CDP emulation, which is detectable. `cloakserve` keeps one
-long-lived browser, so each fetch opens its own context and closes it; `browser.close()` only
-disconnects. Every browser request goes
-through a per-fetch, authenticated forward proxy in the app (`utils/ssrf-proxy.ts`) that runs
-`assertSafeTarget` on each CONNECT/HTTP hop. `route()` alone would miss redirect targets. The
-browser reaches that proxy at `BROWSER_PROXY_HOST` (compose: `app`). The compose `browser` network is
-`internal`, so that proxy is the sidecar's only way out. If the browser is
-unreachable, the original error is reported. A `UrlImportError` from the browser is reported
-as-is. A page with JSON-LD counts as the real page even if it matches challenge markers
-(`isBlockedPage`): sites like tasteatlas.com embed Turnstile in their own forms.
+`/import/url` is one rate-limited action. `scrapeRecipeFromUrl` (`services/url-recipe-import.ts`)
+fetches the page, logs the attempt (`logImportAttempt`), and hands the recipe to `/recipes/new` as a
+draft; nothing is saved until the cook presses Save. JSON-LD is extracted with Bun's built-in
+`HTMLRewriter` and parsed by `parseRecipeFromJsonLd` (`#lib/server/jsonld-import.ts`).
+
+The network stack (`src/lib/server/`) is written for Bun, and its security properties are not
+negotiable:
+
+- **`safe-fetch.ts`**: `assertSafeTarget` resolves the host and rejects anything that isn't
+  ipaddr.js `unicast`. `pinnedFetch` then calls Bun's `fetch` with the **checked IP** in the URL,
+  the hostname only in `Host` and, for https, `tls.serverName` (so the certificate is still
+  verified). Every redirect hop is parsed, checked and dialled again; cookies carry over in a
+  tough-cookie jar; desktop-Chrome headers. Don't use undici: on Bun its `Agent` is a stub that
+  ignores `connect.lookup` and resolves the hostname itself, a silent SSRF hole
+  (`runtime.spec.ts` has a canary).
+- **`headless-fetch.ts`**: if the plain fetch fails with `bot_challenge`, `no_jsonld`, or a
+  401/402/403/429/503, and `BROWSER_CDP_URL` is set, it retries over CDP
+  (`chromium.connectOverCDP`, stock `playwright-core`) against the `browser` compose sidecar: the
+  official `cloakhq/cloakbrowser` image running `cloakserve`. CloakBrowser's stealth patches live in
+  the binary. The browser's identity (headful under Xvfb, `BROWSER_TIMEZONE`, `BROWSER_LOCALE`) is
+  set by the sidecar's flags, never from the app: context-level UA, viewport, locale or timezone
+  overrides are CDP emulation, which is detectable. One context per fetch, closed afterwards;
+  `browser.close()` only disconnects. If the browser is unreachable, the original error is reported.
+  A page with JSON-LD counts as the real page even if it matches challenge markers.
+- **`ssrf-proxy.ts`**: every browser request goes through a per-fetch, authenticated forward proxy
+  in the app (`node:http`) that runs `assertSafeTarget` on each CONNECT and plain-HTTP hop and dials
+  the checked IP directly (no `lookup` callbacks: Bun calls them with `all: true`). `route()` alone
+  would miss redirect targets. The browser reaches it at `BROWSER_PROXY_HOST` (compose: `app`); the
+  compose `browser` network is `internal`, so that proxy is the sidecar's only way out.
+- `E2E_SAFE_FETCH_ALLOW` is a test-only exact `host:port` allowlist for private addresses.
 
 ### AI provider
 
-`services/ai-provider.service.ts` talks to OpenRouter (`https://openrouter.ai/api/v1`) through
-the `openai` npm SDK client, since OpenRouter exposes an OpenAI-compatible chat-completions endpoint.
-`OPENROUTER_API_KEY` and the per-tier `AI_MODEL_*` vars are read from
-`process.env` lazily, at call time inside `chatWithAi` — not at module import time — so the app
-still boots without them; a missing key throws an `AiProviderError` with kind `not_configured`
-(mapped to HTTP 503), meaning the AI assistant is simply unavailable rather than the whole app
-failing to start. SDK errors are normalized into the same `AiProviderError` (kind: `unreachable` |
-`bad_status` | `malformed_response` | `not_configured`) defined in `shared/src/ai-provider-error.ts`.
+`services/ai-provider.ts`: `chatWithAi(messages, { userId, tier, jsonSchema?, sampling? })` talks to
+OpenRouter through the `openai` SDK (OpenAI-compatible chat completions). Keys and models are read
+at call time, so the app boots without them; a missing key throws `AiProviderError` `not_configured`
+(503), and SDK failures normalise to `unreachable` | `bad_status` | `malformed_response`
+(`#lib/shared/ai-provider-error.ts`). It writes the usage ledger row itself.
 
-Four model tiers: `chatWithAi` takes a `tier` (`'big' | 'medium' | 'small' | 'image'`, default
-`medium`). `ai.controller.ts` asks for `big` only when the chat request's `mode` is `'create'` and
-it's the first turn (`messages.length === 1`) — the one turn written from nothing; every follow-up
-and every `'improve'` turn edits an existing `current_draft` and uses `medium`. Nutrition estimates
-use `small`, photo import uses `image` (must be vision-capable). `mode` comes from the client
-(`AiChatMode` in `shared/src/recipe-dto.ts`, Zod-defaulted to `'improve'`) and never reaches the
-prompt.
+Four tiers, each reading only `AI_MODEL_<TIER>` (defaults in `DEFAULT_MODELS`): `big` only for the
+first turn of a recipe written from scratch (create mode, turn 1, `chatTier`), `medium` for every
+other chat turn, `small` for nutrition, `image` (vision-capable) for photo import. No fallback model
+and no `provider` field are sent; OpenRouter's default routing applies, with no retry loop of ours.
+The `small` tier bypasses OpenRouter and calls Gemini's OpenAI-compatible endpoint with
+`GEMINI_API_KEY` (`TIER_BACKEND`); its model id has no `google/` prefix. `OPENROUTER_BASE_URL` and
+`GEMINI_BASE_URL` are test-only overrides for the e2e fakes.
 
-Each tier `<T>` reads only `AI_MODEL_<T>` (defaults in `DEFAULT_MODELS`). No fallback model and no
-`provider` field are sent — OpenRouter's default provider routing (load balancing plus automatic
-provider fallback) applies, and there is no retry loop of ours.
+Budget (`services/ai-budget.ts`): every call is recorded in the `ai_usage` ledger (OpenRouter's
+`usage.cost`; attempt counts, failed ones included, for Gemini). The OpenRouter pool is
+`AI_MONTHLY_BUDGET_USD × dayOfMonth / daysInMonth − spentThisMonth` (UTC, resets on the 1st), plus a
+per-user UTC-day cap (`AI_USER_DAILY_BUDGET_USD`, `0` turns it off). Gemini is capped at
+`GEMINI_DAILY_REQUEST_LIMIT` requests per Pacific-time day. Guards `assertOpenRouterBudget(userId)`
+and `assertGeminiQuota()` throw `AiQuotaExceededError` (`quota_exceeded`, 429, with `scope` and
+`retryAt`). An AI action calls its guard first, **before `request.formData()`** (the chat turn reads
+its small body first so a refusal can echo the transcript back), and returns `failKinded(err)`,
+which `AiErrorBanner.svelte` renders.
 
-Exception: the `small` tier (nutrition) bypasses OpenRouter and calls Gemini's OpenAI-compatible
-endpoint (`https://generativelanguage.googleapis.com/v1beta/openai/`) with `GEMINI_API_KEY`
-(`TIER_BACKEND` in the service). `AI_MODEL_SMALL` is a Gemini model id with no `google/` prefix,
-and no reasoning field is sent. A missing `GEMINI_API_KEY`
-makes only nutrition return `not_configured`; `/api/config` still keys on `OPENROUTER_API_KEY`.
-There is no per-user provider/API key configuration — one server-wide key serves every user via
-`POST /api/ai/chat`.
+Where it is used:
 
-Budget: every call is written to the `AiUsage` ledger (`services/ai-budget.service.ts`) —
-OpenRouter's `usage.cost` for paid tiers; attempt counts, including failed ones, for Gemini.
-`middleware/require-ai-budget.ts` enforces it on the route, not in `chatWithAi`, so it runs before
-multer and still applies in tests that mock `chatWithAi`. The OpenRouter pool is
-`AI_MONTHLY_BUDGET_USD × dayOfMonth / daysInMonth − spentThisMonth`, so unused days roll forward
-and it resets on the 1st (UTC). There is also a per-user UTC-day cap (`AI_USER_DAILY_BUDGET_USD`,
-where `0` turns it off). Gemini is capped at `GEMINI_DAILY_REQUEST_LIMIT` requests per Pacific-time
-day. Refusals are `429 { kind: 'quota_exceeded', scope: 'shared' | 'user', retryAt }`, and
-`GET /api/ai/status` returns the caller's `AiBudgetStatus`.
+- **Chat** (`/create-with-ai`, `/recipes/[id]/ai-improve`): one `AiChat.svelte` page posting
+  `?/chat` and `?/review` (`#lib/server/ai-chat-action.ts`). `chatWithAi` answers in one piece, so
+  a turn is a form action: the page posts the transcript and current draft as hidden JSON each turn
+  (validated by `ai-chat-schema.ts`) and gets the whole next state back. The mode comes from the
+  route, never from the client. Prompt building and envelope parsing live in
+  `#lib/shared/ai-recipe-draft.ts`. Saving goes through the recipe form via the draft hand-off.
+- **Photo import** (`/import/photo`): rate limit, budget, `checkPhotoFile`, `prepareImageForModel`,
+  `image` tier, draft hand-off.
+- **Nutrition** (`?/estimateNutrition` on the new and edit pages, `#lib/server/nutrition-action.ts`):
+  the "Estimate with AI" button posts the form's data with `fetch` + `deserialize` and merges the
+  result locally.
+- The root layout returns `aiConfigured` (`OPENROUTER_API_KEY`) and `nutritionConfigured`
+  (`GEMINI_API_KEY`), which hide the AI menu entries, "Improve with AI" and the Estimate button.
+  Settings shows the remaining allowance (`#lib/shared/ai-budget-display.ts`).
 
-### Prisma
+### Email
 
-Singleton client in `backend/src/db/prisma.ts` using `@prisma/adapter-pg` explicitly (not
-Prisma's built-in driver). Stashed on `globalThis` outside production to survive `tsx watch`
-hot-reloads without leaking connection pools. Generated client output is customized to
-`backend/src/generated/prisma` (not the default `node_modules/.prisma`) — regenerate with
-`npx prisma generate` after pulling schema changes.
+`services/email.ts`: password-reset emails through the `resend` SDK, configured only when both
+`RESEND_API_KEY` and `EMAIL_FROM` are set (`isEmailConfigured()`; the login page hides "Forgot your
+password?" otherwise, and `sendResetPassword` is a silent no-op). The link is
+`${ORIGIN}/reset-password?token=…`, the same URL v1.x sent, since links in inboxes must keep
+working. `RESEND_BASE_URL` (test-only) is passed as the client's `baseUrl`.
 
-Core models (`backend/prisma/schema.prisma`): better-auth's `User`/`Session`/`Account`/
-`Verification` (regenerate the reference with `npx @better-auth/cli generate` into a scratch file
-and hand-merge — the CLI rewrites `schema.prisma` in place and flattens the `@map` naming), `Recipe`
-(belongs to `User`/`Category`; has `Ingredient[]`/`Instruction[]`/`RecipeTag[]`), `Tag`/`Category`
-(both scoped per-user, unique on `(userId, name)`), `RecipeTag` (join table),
-`Family`.
+### PWA and service worker
 
-Migration conventions: edit `schema.prisma`, run `npm run db:migrate:dev` against local Postgres,
-commit the generated migration folder. Never hand-edit an already-committed migration — write a
-new schema change to fix it forward (Prisma migrations have no down-migration concept). In
-Docker, `docker-entrypoint.sh` runs `prisma migrate deploy` synchronously before starting the
-server, on every container start.
+- **`src/service-worker/index.ts`** (Kit 3's directory form, with its own `tsconfig.json`, so the
+  root tsconfig excludes it and `bun run check` runs `tsc -p src/service-worker`): precaches
+  `$app/manifest`'s immutable files and static assets, serves `/uploads/*` stale-while-revalidate
+  from an `uploads` cache (200s only, at most 300 entries), and leaves navigations, `__data.json`,
+  `/api` and form posts to the network. Pages are rendered per user, so there is no shell to cache:
+  a PWA opened offline shows the browser's offline page. `skipWaiting` + `clients.claim`; old
+  caches are deleted on activate. `version.pollInterval` (1 h, `vite.config.ts`) makes a long-open
+  PWA pick up a deploy on its next navigation.
+- **Manifest:** `static/manifest.webmanifest`, linked from `src/app.html`.
+- **Legacy takeover — keep these routes.** Installs of v1.x run a Workbox worker registered at
+  `/sw.js`, which serves a cached React shell and checks `/sw.js` for updates.
+  `src/routes/sw.js/+server.ts` answers with a worker that deletes every cache, unregisters itself
+  and reloads its windows onto the new app, which then registers `/service-worker.js`.
+  `src/routes/registerSW.js/+server.ts` is a harmless no-op script. Both send `no-cache` so
+  Cloudflare's edge never keeps a copy.
+- **Outage screen:** `#lib/server-status.svelte.ts` (`up`/`checking`/`down`). `hooks.client.ts`
+  observes every same-origin `window.fetch` (which Kit calls at request time precisely so it can be
+  wrapped) and probes `/api/health` on start; any suspicion is confirmed by a health ping before
+  `ServerUnavailable.svelte` covers the page ("Temporarily offline", "Try again" →
+  `invalidateAll()`). `#lib/shared/server-availability.ts` classifies responses.
+- `deploy/offline-worker/` is a Cloudflare Worker that serves an offline page when the origin is
+  unreachable. It skips 503, which the app uses for AI errors.
 
-### Frontend
+### Frontend conventions
 
-Routing is `react-router-dom` (classic `<Routes>/<Route>`, not file-based) — all routes defined
-inline in `App.tsx`; protected routes wrapped individually in `<ProtectedRoute>`.
+- Svelte 5 runes only (forced for the project in `vite.config.ts`). Use the Svelte MCP/skills and
+  the `svelte:svelte-file-editor` agent for `.svelte` files.
+- Components are flat in `src/lib/components/`, one file each. bits-ui is used only for `Dialog`
+  (`Dialog.svelte`, `ConfirmDialog.svelte`, which can post a form action itself). Menus are
+  `PopoverMenu.svelte` (native `popover` with CSS anchor positioning). Icons from `@lucide/svelte`.
+  Toasts: `showToast({ title, description })` from `#lib/toast.svelte.ts`, rendered by
+  `Toaster.svelte`.
+- Tailwind 4 with the design tokens in `src/routes/layout.css`.
+- Accessible names matter: the e2e specs select by role and English text.
+- Imports use the `#lib/*` alias (`package.json` `imports`) with explicit `.ts` extensions
+  (`#lib/server/guards.ts`), plus Kit's `$app/*`.
 
-Server state uses `@tanstack/react-query` (thin wrapper hooks in `frontend/src/hooks/`, query
-keys centralized in `frontend/src/api/queryKeys.ts`) — no Redux/Zustand. The session is _not_ in
-react-query: `frontend/src/lib/auth-client.ts` holds the better-auth client, and
-`hooks/useCurrentUser.ts` wraps its `useSession()` store. Note that `authClient` calls return
-`{ data, error }` rather than throwing, so auth pages handle errors differently from every other
-call in the app — they don't flow through `ApiError` or the global 401 handler. Preferences are
-written through `api/client.ts`'s `updateProfile`, which must be followed by `refreshSession()`
-for the session store to see the change.
+### Framework-free logic
 
-API calls go through one file, `frontend/src/api/client.ts`: one function per backend endpoint,
-all routed through a shared internal `request<T>()` helper (adds `credentials: 'include'` for
-the auth cookie, normalizes error bodies into a typed `ApiError` with a `.kind`, and forces any
-401 to `kind: 'unauthenticated'` client-side regardless of server body). There is no
-`frontend/src/services/` layer — every AI chat call goes through `api/client.ts` to the backend.
+`src/lib/shared/` holds logic with no SvelteKit or Svelte dependency, each module with a `*.spec.ts`
+next to it: recipe scaling (`recipe-scaling.ts`), units (`units/`), the recipe-form rules
+(`recipe-form.ts`), ingredient parsing, ISO durations, diffing (`recipeDiff.ts`,
+`recipe-snapshot.ts`), AI prompt building and parsing (`ai-recipe-draft.ts`, `ai-photo-import.ts`,
+`ai-nutrition.ts`), draft rendering (`render-draft.ts`), budget display, server availability,
+install-platform detection, DTOs (`recipe-dto.ts`, `family-dto.ts`) and `SUPPORTED_LOCALES`
+(`locale.ts`). Keep new logic of that kind there, with unit tests, rather than in components or
+actions. Server-only code goes in `src/lib/server/`, which Kit refuses to import from the client.
 
-i18n is `i18next`/`react-i18next`, locale files under `frontend/src/i18n/locales/{en,nl,fr,es}.json`
-matching `SUPPORTED_LOCALES` from `shared`. Locale resolves from localStorage
-(`yumbry.locale` key) → browser language → `'en'`, read defensively so a broken `localStorage`
-never crashes init; `setActiveLocale()` is the single place that persists and calls
-`i18n.changeLanguage`, invoked once the authenticated user's `locale` column is fetched — locale
-is otherwise anonymous/local-only until login. There is no locale segment in the URL routes.
+Bun quirk: in a module that unit tests load, write `import * as z from 'zod'`; `import { z }` comes
+back undefined under `bun --bun vitest`.
 
-Components and pages are flat directories (`frontend/src/components/`, `frontend/src/pages/`),
-one file each, no subfolders.
+### Docker
 
-### shared/ package
+The `Dockerfile` is multi-stage on `oven/bun:<version>-slim` (Debian, glibc, so sharp's prebuilds
+load; amd64 and arm64, production is arm64). The runtime stage holds production dependencies
+(`--omit peer`), `build/`, `drizzle/`, `scripts/migrate.ts` and `scripts/serve.ts`, runs as the
+`bun` user (uid 1000, the same as v1.x's `node` user, so existing uploads stay writable), and starts
+with `bun scripts/migrate.ts && exec bun scripts/serve.ts`. Only `/app/uploads` is writable. Image
+defaults: `NODE_ENV=production`, `PORT=3000`, `BODY_SIZE_LIMIT=30M`, `UPLOADS_DIR=/app/uploads`,
+`ADDRESS_HEADER=x-forwarded-for` and `XFF_DEPTH=1` (the client IP behind the Cloudflare Tunnel).
+`HEALTHCHECK` fetches `/api/health` with bun.
 
-Real npm workspace package (`yumbry-shared`), built to `dist/` and imported as a compiled
-package by both `backend` and `frontend` (`main`/`types` point at `dist/`) — there is no source
-aliasing, so changes need a rebuild (or the `npm run dev` watcher) to be visible downstream.
-Exports three modules from `shared/src/index.ts`:
+`docker-compose.yml` runs `app`, `db` (Postgres 16) and `browser` (CloakBrowser). The volume names
+`db_data` and `uploads_data` must never change. The app's `DATABASE_URL` is built from
+`POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB`, so the password must be URL-safe; `.env`'s own
+`DATABASE_URL` is for `vite dev` on the host. Compose refuses to start without `ORIGIN`.
 
-- `recipe-dto.ts` — plain DTO interfaces (`Recipe`, `Tag`, `Category`, `Ingredient`,
-  `Instruction`, `RecipeInput`, `AiChatTurnRequest/Response`) shared verbatim between backend
-  responses and frontend consumption.
-- `ai-recipe-draft.ts` — real logic, not just types: `buildChatMessages`/`parseChatEnvelope`
-  plus `SUPPORTED_LOCALES`, the single source of truth for prompt building and response parsing.
-- `ai-provider-error.ts` — the `AiProviderErrorKind` type, the `AiProviderError` class, and
-  canned error-message builders.
+## End-to-end tests
 
-In the Docker image, `backend/node_modules/yumbry-shared` (a symlink from the workspace install)
-is deliberately replaced with a real copied directory (`package.json` + `dist/`) since `shared/`
-source isn't present in the runtime stage — see the Dockerfile's `shared-build` stage.
+`e2e/` (a Bun workspace, but Playwright, the fakes and its scripts run on **Node**, the only runtime
+Playwright supports). `bun run e2e:build && bun run e2e` builds the app, drops and recreates
+`E2E_DATABASE_URL` (default `.../yumbry_e2e`), migrates it with `bun run db:migrate`, then starts a
+fakes server (OpenRouter, Gemini, Resend, recipe sites, a JS-challenge site), a local CloakBrowser
+over CDP (`e2e/scripts/cdp-browser.ts`; the binary is downloaded into `~/.cloakbrowser`), and two
+app servers via `scripts/serve.ts`: full, and minimal with no AI, email or browser. Every spec runs
+in both projects.
+
+This suite is the stack-neutral source of truth for the app's behaviour:
+
+- **Never edit `e2e/specs/*` to fit the app.** A failing spec means the app is wrong.
+- Seed through `e2e/support/db.ts` (the only file that knows table names).
+- Act and assert through the UI with accessible selectors (no `data-testid`).
+- Never call the app's internals. Only `/api/auth/*`, `/api/health` and `/uploads/*` may be called
+  directly.
+- Everything stack-specific is an env var in `e2e/support/env.ts`; the app config each server gets
+  is `appEnv` in `e2e/playwright.config.ts`. The test-only variables the app honours are
+  `OPENROUTER_BASE_URL`, `GEMINI_BASE_URL`, `RESEND_BASE_URL`, `E2E_SAFE_FETCH_ALLOW` and
+  `DISABLE_RATE_LIMITS`.
+
+See `e2e/README.md` for the contract table and how to run single specs.
 
 ## Notes for changes
 
-- Prefer matching the existing per-controller Zod validation pattern over introducing a new
-  validation abstraction, unless asked to refactor it.
-- AI chat prompt/response behavior lives in `shared/src/ai-recipe-draft.ts`
-  (`buildChatMessages`/`parseChatEnvelope`), consumed only by
-  `backend/src/services/ai-provider.service.ts` — there's a single consumer now, not two.
-- `Recipe`, `Tag`, and `Category` are all scoped per-family — new queries/mutations must filter by
-  the authenticated `familyId`, matching the existing access-check middleware
-  (`requireRecipeAccess`, `requirePhotoAccess`). `familyId` is an `Int`; user ids are `String`
-  (better-auth generates them).
+- New queries and mutations on recipes, tags, categories or versions filter by the signed-in
+  `familyId`; every load, action and endpoint calls `requireUser`/`requireRecipe` itself.
+- Prefer a load or a form action over a `+server.ts`; make forms work before hydration, and disable
+  JS-only controls until `hydrated.current`.
+- Map new domain errors through `kinded-errors.ts`, not ad hoc statuses.
+- Add every new message to all four locale files.
+- Schema changes: edit `schema.ts`, `bun run db:generate`, commit the migration. Never touch the
+  baseline or a committed migration, and never rename existing tables or columns.
+- Keep cookie names, page URLs, `/api/auth/*`, `/api/health`, `/uploads/*` and the legacy `/sw.js`
+  stable: existing sessions, links in inboxes and installed PWAs depend on them.
