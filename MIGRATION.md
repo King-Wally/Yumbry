@@ -108,11 +108,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 
 Found during a step but owned by a later one. Remove an entry once the owning step fixes it.
 
-- **Production's `POSTGRES_PASSWORD` must be URL-safe** (found in step 7, checked in step 27).
-  docker-compose now builds the app's `DATABASE_URL` from `POSTGRES_USER`, `POSTGRES_PASSWORD` and
-  `POSTGRES_DB` and points it at `db`, so `.env`'s `DATABASE_URL` can stay on `localhost` for
-  `vite dev`. A password with `@`, `/`, `:` or `%` would break that URL. Coolify's own
-  `DATABASE_URL` setting becomes unused.
+None.
 
 ---
 
@@ -1941,6 +1937,131 @@ Prepare and walk me through the cutover:
    - When it's safe to drop _prisma_migrations: in a later, normal migration, not now.
 Then run the checklist with me step by step. Tick Step 27 when production is verified.
 ```
+
+**Rehearsal** (2026-10-09, local Docker on arm64, project `yumbry-cutover`, a throwaway
+`BETTER_AUTH_SECRET` shared by both images, `COOKIE_SECURE=true` as in production).
+
+- **Data:** a fresh production dump (`yumbry-prod-20261009.dump`) and uploads archive
+  (`yumbry-uploads-20261009.tgz`, 16 files, uid 1000). Every local `recipes.image_path` (16) had
+  its file.
+- **`bun run db:rehearse --dump backups/yumbry-prod-20261009.dump`:** 11 of 11 checks passed. That
+  covers no schema drift and row counts unchanged over two runs (30 recipes, 5 users, 12 sessions,
+  …).
+- **Forward:**
+  - v1.3.1 (`yumbry:v1.3.1`, built from the tag) ran first on the restored copy. It issued a
+    `__Secure-yumbry.session_token` and installed its PWA in a Chromium profile (Workbox `/sw.js`,
+    `workbox-precache-v2-…`).
+  - Then v2 (`yumbry:v2-rc`) adopted the database. Row counts were unchanged.
+  - The v1 cookie was accepted (`/` 200, `get-session` returns the user), and all 16 photos
+    answered `200 image/*`.
+  - The installed PWA, relaunched with `PWA.launch`, showed the old shell for about 3 s. During
+    that time it logged 404s for `/api/*`. It then ended up on `/service-worker.js`, with only the
+    `cache-…` and `uploads` caches, still signed in, with the photo rendered and no errors after
+    that.
+  - **Test pitfall:** a cookie injected without `expires` is a session cookie, and closing the
+    profile drops it. The browser must sign in itself.
+- **Rollback:**
+  - v1.3.1 started on the migrated database: "No pending migrations to apply".
+  - It accepted both the v1-issued and the v2-issued session.
+  - It read everything v2 had written: an edited title and its version snapshot, a new `.webp`
+    photo, and a share link (API and `/share/…` page).
+  - Rolling forward again logged "Database is up to date".
+
+#### Cutover checklist
+
+Production is the Coolify Docker Compose resource `y7el9ogongnyv8r9mh3gp46b` (origin
+`https://yumbry.com`, deployed manually from `main`). Staging is `i54awsfi2cpps9d4xlp2thi9`, built
+from `dev`. Coolify names the volumes `<resource>_db-data` and `<resource>_uploads-data`, from the
+compose keys `db_data` and `uploads_data`, which v2 keeps. Container names end in a per-deploy
+suffix, so the commands look them up by prefix. Docker on the server needs `sudo`.
+
+```sh
+P=y7el9ogongnyv8r9mh3gp46b          # production; use i54awsfi2cpps9d4xlp2thi9 for staging
+DB=$(sudo docker ps -qf name=db-$P)
+APP=$(sudo docker ps -qf name=app-$P)
+```
+
+1. **Coolify env, before deploying.** Do this on staging first, then production.
+   - Set `ORIGIN` to the resource's URL, e.g. `https://yumbry.com`, the value `BETTER_AUTH_URL`
+     holds.
+   - Keep `BETTER_AUTH_SECRET` and `COOKIE_SECURE=true` unchanged. A new secret logs everyone out.
+   - `POSTGRES_PASSWORD` is URL-safe (checked). Compose now builds the app's `DATABASE_URL` from it.
+   - Leave `BETTER_AUTH_URL`, `APP_BASE_URL` and `DATABASE_URL` in place: v2 ignores them, and a
+     rollback to v1.3.1 needs them. Remove them once the rollback window is closed (step 8).
+2. **Volumes and build.**
+   - The volumes keep their names. Photos move from `/app/backend/uploads` to `/app/uploads`, which
+     the compose file handles.
+   - Coolify builds on the server, so the image is natively arm64. CI also builds arm64 on `main`.
+   - Keep v1.3.1's image (`y7el9ogongnyv8r9mh3gp46b_app:8c5ff79…`) during the rollback window:
+     no `docker image prune` on the server.
+3. **Backup, right before deploying** (in your home directory on the server):
+
+   ```sh
+   D=$(date +%Y%m%d-%H%M)
+   sudo docker exec $DB sh -c 'pg_dump -U "$POSTGRES_USER" -Fc "$POSTGRES_DB"' > yumbry-$P-$D.dump
+   sudo docker run --rm -v ${P}_uploads-data:/data:ro -v "$PWD":/b alpine \
+     tar czf /b/yumbry-$P-uploads-$D.tgz --numeric-owner -C /data .
+   sudo chown "$USER": yumbry-$P-uploads-$D.tgz
+   sudo docker exec $DB sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "
+     select (select count(*) from users), (select count(*) from recipes),
+            (select count(*) from ingredients), (select count(*) from recipe_versions),
+            (select count(*) from sessions), (select count(*) from families)"' | tee counts-$D.txt
+   ```
+
+4. **Deploy.**
+   1. Merge `svelte` into `dev` and push. Wait for green CI.
+   2. **Staging dress rehearsal:** set `ORIGIN` on the staging resource, back it up (step 3), and
+      deploy it. Run the smoke checks (step 5) on the staging URL. This is the first run behind
+      Cloudflare and HTTPS, with Coolify's volume handling.
+   3. Merge `dev` into `main` and push. Wait for green CI, including the arm64 image.
+   4. On `main`: `scripts/release.sh major`, which makes v2.0.0 (commit, tag, push).
+   5. Production: back up (step 3), then press Deploy in Coolify. Watch the deploy log for
+      "Adopted Prisma-era database: recorded … (baseline) as applied." and the container turning
+      healthy.
+5. **Smoke checks.**
+   - `curl -s https://yumbry.com/api/health` returns `{"status":"ok"}`.
+   - `curl -sI https://yumbry.com/sw.js` shows `cache-control: no-cache`, and
+     `curl -sI https://yumbry.com/` shows the security headers.
+   - Run `sudo docker inspect -f '{{range .Mounts}}{{.Name}} -> {{.Destination}} {{end}}' $APP`. It
+     shows `${P}_uploads-data -> /app/uploads`.
+   - The same row-count query as step 3 matches `counts-$D.txt`. Sessions may only go up.
+   - A browser that was signed in before the deploy is still signed in, with no new login.
+   - Recipes with photos show their photos.
+   - An existing share link opens in a private window.
+   - A URL import of a known recipe site works.
+   - One AI chat turn works ("Create with AI").
+   - The installed PWA on a phone, reopened, swaps itself to the new app and stays signed in.
+6. **Rollback** (any smoke check fails and can't be fixed forward).
+   1. In Coolify, open the resource, then Configuration → Git Source. Set the commit SHA to
+      `8c5ff79` (v1.3.1) and press Deploy. v1.3.1's entrypoint runs `prisma migrate deploy`, which
+      finds nothing pending. The `drizzle` schema it ignores, and the rehearsal showed v1.3.1 reads
+      what v2 wrote.
+   2. Afterwards, set the commit SHA back to `HEAD` so later deploys follow `main` again.
+   3. Restore data only if v2 damaged it. Stop the app first, then:
+
+      ```sh
+      sudo docker stop $APP
+      sudo docker exec -i $DB sh -c \
+        'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner' \
+        < yumbry-$P-<D>.dump
+      sudo docker run --rm -v ${P}_uploads-data:/data -v "$PWD":/b alpine \
+        sh -c 'rm -rf /data/* && tar xzf /b/yumbry-$P-uploads-<D>.tgz --numeric-owner -C /data'
+      ```
+
+      Then deploy again, as in 6.1.
+7. **After a successful deploy.**
+   - Remove `svelte` from CI's push triggers (done in this step's commit). The `svelte` branch can
+     go once `main` has it.
+   - Keep `scripts/rehearse-migrate.ts` and `backups/` (git-ignored) for future schema changes.
+8. **Closing the rollback window** (later, not in this step). Once v2 has run for a few weeks and
+   going back to 1.x is no longer wanted:
+   - remove `BETTER_AUTH_URL`, `APP_BASE_URL` and `DATABASE_URL` from both Coolify resources;
+   - drop `_prisma_migrations` in an ordinary migration
+     (`bunx drizzle-kit generate --custom`, containing `DROP TABLE IF EXISTS "_prisma_migrations";`).
+
+   Never drop it by hand, and never in the baseline. A 1.x database upgrading straight past that
+   release is still adopted first, because `migrate.ts` checks `_prisma_migrations` before pending
+   migrations run. After that it can no longer roll back to 1.x.
 
 ---
 

@@ -2,8 +2,7 @@ name: CI
 
 on:
   push:
-    # svelte: only while the SvelteKit migration runs (MIGRATION.md). Drop it at the cutover.
-    branches: [main, dev, svelte]
+    branches: [main, dev]
     tags: ['v*']
   pull_request:
     branches: [main, dev]
