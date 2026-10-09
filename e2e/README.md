@@ -2,9 +2,8 @@
 
 Playwright specs that describe Yumbry's behaviour from the outside: through the browser, page
 URLs, the database and a fake for every external service. They are the **source of truth for how
-the app behaves**, independent of how it is built: the specs don't know about SvelteKit (or the
-Express and React app they were written against), so they keep working if the implementation
-changes.
+the app behaves**, independent of how it is built: the specs don't know about SvelteKit, so they
+keep working if the implementation changes.
 
 ## Running
 
@@ -36,8 +35,8 @@ and ESLint, with this package's own config).
 
 ## What runs
 
-`scripts/prepare.ts` recreates and migrates the database, copies a built SPA into
-`.server/public` if `E2E_PUBLIC_DIR` names one, and downloads the CloakBrowser binary on first run (~200 MB, cached in `~/.cloakbrowser`).
+`scripts/prepare.ts` recreates and migrates the database, copies static assets into
+`.server/public` if `E2E_PUBLIC_DIR` names a directory, and downloads the CloakBrowser binary on first run (~200 MB, cached in `~/.cloakbrowser`).
 Playwright then starts four processes:
 
 | Process     | Port | What it is                                                               |
@@ -52,8 +51,7 @@ data and run in parallel without any cleanup between them.
 
 ## Writing specs
 
-- **Behaviour through pages, never through the app's JSON API.** `/api/recipes` and friends are
-  implementation details, not part of the contract. Seed data with
+- **Behaviour through pages, never through the app's internals.** Seed data with
   `support/db.ts`, act through the UI, and assert on the UI or, where the UI can't show it, on the
   database. The only HTTP endpoints specs may call are the ones that are part of the contract:
   better-auth's `/api/auth/*`, `/api/health` and `/uploads/*` (see `http-contract.spec.ts`).
@@ -73,22 +71,19 @@ data and run in parallel without any cleanup between them.
 The specs don't know which stack they run against. Everything stack-specific is an env var in
 `support/env.ts`:
 
-| Variable           | Default today                                        | For another build                     |
-| ------------------ | ---------------------------------------------------- | ------------------------------------- |
-| `E2E_SERVER_CMD`   | `bun <repo>/scripts/serve.ts` (cwd `.server/`)       | its start command                     |
-| `E2E_MIGRATE_CMD`  | `bun run db:migrate` (cwd: repo root)                | its migrate command                   |
-| `E2E_PUBLIC_DIR`   | `''`: SvelteKit serves its own assets                | built SPA to copy to `.server/public` |
-| `E2E_READY_PATH`   | `/api/health`                                        | keep `/api/health`                    |
-| `E2E_DATABASE_URL` | `postgres://chef:changeme@localhost:5432/yumbry_e2e` | unchanged                             |
-
-`main`'s Express build ran with `node backend/dist/index.js`,
-`npm run db:migrate --workspace=backend` and `E2E_PUBLIC_DIR=frontend/dist`.
+| Variable           | Default today                                        | For another build                         |
+| ------------------ | ---------------------------------------------------- | ----------------------------------------- |
+| `E2E_SERVER_CMD`   | `bun <repo>/scripts/serve.ts` (cwd `.server/`)       | its start command                         |
+| `E2E_MIGRATE_CMD`  | `bun run db:migrate` (cwd: repo root)                | its migrate command                       |
+| `E2E_PUBLIC_DIR`   | `''`: SvelteKit serves its own assets                | static assets to copy to `.server/public` |
+| `E2E_READY_PATH`   | `/api/health`                                        | keep `/api/health`                        |
+| `E2E_DATABASE_URL` | `postgres://chef:changeme@localhost:5432/yumbry_e2e` | unchanged                                 |
 
 The app server has to read this configuration from the environment, under these names. It is set
 in `playwright.config.ts`:
 
 - `NODE_ENV=production`, `PORT`, `ORIGIN` (the app's base URL: better-auth, CSRF and links in
-  emails; `main` called it `BETTER_AUTH_URL` and `APP_BASE_URL`), `DATABASE_URL`,
+  emails), `DATABASE_URL`,
   `BETTER_AUTH_SECRET`, `COOKIE_SECURE`, `UPLOADS_DIR`
 - `BODY_SIZE_LIMIT`: adapter-node's request body cap, large enough for 25 MB photo uploads
 - `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `AI_MODEL_BIG|MEDIUM|SMALL|IMAGE`,

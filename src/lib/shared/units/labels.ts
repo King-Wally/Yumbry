@@ -3,7 +3,7 @@ import { SUPPORTED_LOCALES } from '#lib/shared/i18n/locale.ts';
 import type { UnitCode } from '#lib/shared/units/unit-model.ts';
 
 /** A unit word. Metric symbols and abbreviations never inflect in any of the four languages. */
-export type UnitLabel = string | { one: string; other: string };
+type UnitLabel = string | { one: string; other: string };
 
 /**
  * Metric symbols are locale-invariant; only the imperial and spoon words translate. Several cells
@@ -18,7 +18,7 @@ export type UnitLabel = string | { one: string; other: string };
  *   where the language genuinely has no native form.
  * - nl `duim` (inch) is archaic in cooking; Dutch recipes write `inch`.
  */
-export const UNIT_LABELS: Record<SupportedLocale, Record<UnitCode, UnitLabel>> = {
+const UNIT_LABELS: Record<SupportedLocale, Record<UnitCode, UnitLabel>> = {
 	en: {
 		g: 'g',
 		kg: 'kg',
@@ -173,7 +173,7 @@ const UNIT_SYNONYM_ENTRIES: SynonymEntry[] = [
  * there is nothing to convert, so they are deliberately absent from the model's enum: the model
  * writes "2 teentjes look" with the noun already in the reader's language, for free.
  */
-export const CULINARY_UNIT_WORDS: string[] = [
+const CULINARY_UNIT_WORDS: string[] = [
 	'mg',
 	'clove',
 	'cloves',

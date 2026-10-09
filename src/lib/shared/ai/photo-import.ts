@@ -9,22 +9,16 @@ import {
 import { DEFAULT_LOCALE, LANGUAGE_NAMES, type SupportedLocale } from '#lib/shared/i18n/locale.ts';
 
 /**
- * The prompt for reading a recipe off a photograph — a handwritten card, a cookbook page, a
+ * The prompt for reading a recipe off a photograph: a handwritten card, a cookbook page, a
  * screenshot.
  *
- * It shares the field contract, the hard requirements and the worked example with the chat prompt
- * (`buildChatSystemPrompt`), because the shape of a recipe object does not depend on how the model
- * arrived at it. Everything else is different, and deliberately so: this is a transcription task,
- * not a drafting one, and the two failure modes are opposites. The chat prompt's sixth requirement
- * tells the model to always produce a complete recipe and never refuse — exactly the instruction
- * that would make this one hallucinate a plausible recipe over an illegible photo. Here, refusing
- * is a valid answer and inventing is the one thing that must not happen.
+ * It shares the field contract, the hard requirements and the worked example with the chat prompt,
+ * but this is transcription, not drafting, and the failure modes are opposites: the chat prompt's
+ * "always produce a complete recipe, never refuse" would make this one invent a plausible recipe
+ * over an illegible photo. Here refusing is a valid answer and inventing is not.
  *
- * The unit rule also lands differently. Everywhere else in the app the model writes canonical
- * metric and `parseChatEnvelope` converts for the reader, so unit compliance is a property of the
- * code. A photo can carry cups and Fahrenheit in the source, which makes this the one place where
- * the model itself has to convert — so it is stated outright rather than left to the general
- * "everything is metric" requirement.
+ * It is also the one prompt where the model itself must convert units, since a photo can carry
+ * cups and Fahrenheit, so that is stated outright.
  */
 function buildPhotoImportSystemPrompt(locale: SupportedLocale): AiChatMessage {
 	const language = LANGUAGE_NAMES[locale];

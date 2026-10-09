@@ -1,5 +1,5 @@
 import { fail, type RequestEvent } from '@sveltejs/kit';
-import { z } from 'zod';
+import * as z from 'zod';
 import { m } from '#lib/paraglide/messages.js';
 import { requireUser } from '#lib/server/auth/guards.ts';
 import { failKinded } from '#lib/server/http/kinded-errors.ts';
@@ -11,7 +11,7 @@ import {
 	NUTRITION_SAMPLING,
 	parseNutritionEstimate
 } from '#lib/shared/ai/nutrition.ts';
-import { AiProviderError } from '#lib/server/ai/errors.ts';
+import { parseModelAnswer } from '#lib/server/ai/errors.ts';
 import { formStateFromFormData, nutritionRequestFromForm } from '#lib/shared/recipe/form.ts';
 
 /**
@@ -52,18 +52,8 @@ export async function estimateNutrition(event: RequestEvent) {
 			// which is exactly the case the small model exists for.
 			tier: 'small'
 		});
-		return { estimate: parseEstimate(raw) };
+		return { estimate: parseModelAnswer(() => parseNutritionEstimate(raw)) };
 	} catch (err) {
 		return failKinded(err);
-	}
-}
-
-// The parser throws plain "The AI response …" errors; they are a malformed answer like any other.
-function parseEstimate(raw: string) {
-	try {
-		return parseNutritionEstimate(raw);
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new AiProviderError(message, 'malformed_response', err);
 	}
 }

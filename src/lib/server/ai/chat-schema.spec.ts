@@ -9,6 +9,10 @@ const draft = {
 	cook_time_minutes: 20,
 	total_time_minutes: 30,
 	servings: 4,
+	calories: null,
+	fat_content: null,
+	carbohydrate_content: null,
+	protein_content: null,
 	ingredients: ['800 g tomatoes'],
 	instructions: [{ step_number: 1, text: 'Simmer.' }],
 	tags: ['soup'],
@@ -16,10 +20,8 @@ const draft = {
 };
 
 describe('AiRecipeDraftSchema', () => {
-	it('accepts a draft from before the nutrition fields, defaulting them to null', () => {
-		const parsed = AiRecipeDraftSchema.parse(draft);
-		expect(parsed.calories).toBeNull();
-		expect(parsed.protein_content).toBeNull();
+	it('accepts a draft without structured ingredients, as improve mode seeds it', () => {
+		expect(AiRecipeDraftSchema.parse(draft)).toEqual(draft);
 	});
 
 	it('turns an unknown density key into none rather than refusing the draft', () => {

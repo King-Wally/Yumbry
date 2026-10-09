@@ -8,8 +8,7 @@ import { isEmailConfigured } from '#lib/server/auth/email.ts';
 import { rememberRequestedReturnTo, takeReturnTo } from '#lib/server/auth/return-to.ts';
 import type { Actions, PageServerLoad } from './$types';
 
-// A link may ask to come back to its page afterwards (the share page's "Log in"). Already signed
-// in: go where they were headed instead.
+// Already signed in: go straight where the visitor was headed.
 export const load: PageServerLoad = (event) => {
 	rememberRequestedReturnTo(event);
 	if (getUser(event)) redirect(303, takeReturnTo(event));

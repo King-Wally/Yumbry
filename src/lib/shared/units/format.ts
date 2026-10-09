@@ -55,7 +55,7 @@ export interface RenderContext {
 	smallVolumes?: SmallVolumeStyle;
 }
 
-export interface RenderedMeasurement {
+interface RenderedMeasurement {
 	value: number;
 	unit: UnitCode;
 }
@@ -77,7 +77,7 @@ const FRACTION_PARTS: [number, string][] = [
 
 const EPSILON = 1e-6;
 
-export function formatDecimal(value: number, locale: SupportedLocale): string {
+function formatDecimal(value: number, locale: SupportedLocale): string {
 	const rounded = clean(Math.round(value * 1000) / 1000);
 	return String(rounded).replace('.', decimalSeparator(locale));
 }
@@ -86,7 +86,7 @@ export function formatDecimal(value: number, locale: SupportedLocale): string {
  * ASCII fractions ("1 1/2"), not vulgar ones ("1 1/2" as a single glyph): the recipe form is a
  * plain text input people edit by hand, and `QUANTITY_TOKEN_PATTERN` reads mixed numbers natively.
  */
-export function formatFractional(value: number, locale: SupportedLocale): string {
+function formatFractional(value: number, locale: SupportedLocale): string {
 	if (value < 0) return formatDecimal(value, locale);
 
 	const whole = Math.floor(value + EPSILON);
@@ -99,11 +99,7 @@ export function formatFractional(value: number, locale: SupportedLocale): string
 	return whole === 0 ? part[1] : `${whole} ${part[1]}`;
 }
 
-export function formatQuantity(
-	value: number,
-	unit: UnitCode | null,
-	locale: SupportedLocale
-): string {
+function formatQuantity(value: number, unit: UnitCode | null, locale: SupportedLocale): string {
 	const fractional = unit === null || FRACTIONAL_UNITS.has(unit);
 	return fractional ? formatFractional(value, locale) : formatDecimal(value, locale);
 }
@@ -233,10 +229,8 @@ export function formatMeasurement(
  * whatever units it was written in.
  *
  * It deliberately does NOT convert: this is the stored-recipe path, and a saved recipe keeps the
- * units it was saved with. Only the number is made measurable again — a third of a cup should read
- * "1/3", and 200 g scaled by a third should read "65 g", where the old formatter printed
- * "0,375 cup" and "66,625 g". Both of those are what you get from rounding every unit to eighths
- * and then printing the result as a decimal, which is neither a fraction nor a round number.
+ * units it was saved with. Only the number is made measurable again: a third of a cup reads "1/3",
+ * and 200 g scaled by a third reads "65 g".
  *
  * Because the rounding tables are idempotent, snapping here — on every render, never written back
  * — cannot make a value drift.
@@ -272,8 +266,7 @@ export function formatScaledAmount(
 /**
  * The single place a structured ingredient becomes the line the reader sees and the database
  * stores. Everything it emits has to survive `parseIngredientLine` with a non-null amount and
- * unit — that round trip is asserted by a cross-package test, because it is exactly the seam where
- * the old converter's table and the parser's word list drifted apart.
+ * unit, which `parse.spec.ts` asserts: the renderer's labels and the parser's word list must agree.
  */
 export function renderIngredientLine(ingredient: AiIngredient, context: RenderContext): string {
 	const { quantity, unit, item, note } = ingredient;

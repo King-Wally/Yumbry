@@ -3,14 +3,9 @@ node_modules/
 /uploads/
 *.log
 .DS_Store
-coverage/
-/temp/
 backups/
 
 # Output
-.output
-.vercel
-.netlify
 .wrangler
 /.svelte-kit
 /build
@@ -21,7 +16,6 @@ Thumbs.db
 # Env
 .env.*
 !.env.example
-!.env.test
 
 # Vite
 vite.config.js.timestamp-*

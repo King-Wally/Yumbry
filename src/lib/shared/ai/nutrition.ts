@@ -6,10 +6,7 @@ import type {
 } from '#lib/shared/ai/recipe-draft.ts';
 import { normalizeDecimalComma } from '#lib/shared/units/quantity.ts';
 
-/**
- * The single source of truth for the four values. The JSON schema, the prompt's field list and the
- * parser all read this array, so a field cannot exist in one and be missing from another.
- */
+/** The four values. The JSON schema and the parser both read this list. */
 export const NUTRITION_FIELDS = [
 	'calories',
 	'fat_content',
@@ -17,7 +14,7 @@ export const NUTRITION_FIELDS = [
 	'protein_content'
 ] as const;
 
-export type NutritionField = (typeof NUTRITION_FIELDS)[number];
+type NutritionField = (typeof NUTRITION_FIELDS)[number];
 
 /**
  * Per single serving. `calories` in kcal, the other three in grams. Null means the value could not
@@ -46,11 +43,8 @@ export const NUTRITION_SAMPLING: AiSamplingParams = {
 	topP: 0.9
 };
 
-/**
- * A flat object with no enums and no nesting — nothing here is at risk from Gemini's OpenAPI-subset
- * translation, unlike the recipe envelope. Same `strict: true` rules: every property in `required`,
- * `additionalProperties: false`, optionality expressed as a nullable type.
- */
+/** Flat, with no enums, so nothing in it is at risk from Gemini's compat layer. Same `strict: true`
+ * rules as the recipe envelope. */
 export const AI_NUTRITION_JSON_SCHEMA: AiJsonSchemaFormat = {
 	name: 'recipe_nutrition_estimate',
 	strict: true,
@@ -75,8 +69,7 @@ function coerce(raw: unknown, max: number, decimals: number): number | null {
 	if (typeof raw === 'number') {
 		value = raw;
 	} else if (typeof raw === 'string') {
-		// "320 kcal", "12,5 g", "~18" — the schema-free rung of the provider's downgrade ladder sends
-		// these a meaningful fraction of the time, and a unit suffix is the most common form.
+		// "320 kcal", "12,5 g", "~18": what a model sends without a schema.
 		const match = /-?\d+(?:\.\d+)?/.exec(normalizeDecimalComma(raw));
 		value = match ? Number(match[0]) : null;
 	}
@@ -94,15 +87,9 @@ export function toNutritionValue(
 }
 
 /**
- * Atwater factors — the energy each macronutrient carries, in kcal per gram.
- *
- * Printed into the prompt from this object rather than written out in prose, the same way the unit
- * and density lists are, so the numbers the model is told cannot drift from the numbers a test
- * checks the worked examples against.
- *
- * Alcohol has no field of its own: it is listed because it is why a recipe with wine or spirits in
- * it carries calories the three stored macros do not account for. Without that line a model tends
- * to force the total back down to 4/4/9 and lose the alcohol entirely.
+ * Atwater factors, in kcal per gram, printed into the prompts from here so the model is told the
+ * same numbers the tests check the worked examples against. Alcohol has no field of its own; it is
+ * listed so a model doesn't force a dish with wine back down to the three macros' total.
  */
 export const ATWATER_FACTORS = {
 	protein: 4,
@@ -125,10 +112,8 @@ export function nutritionMacroTable(indent = '  '): string {
 }
 
 /**
- * The identity the prompt asks for. Not used to validate what the model sends back: a total that
- * disagrees with its own macros is still a usable estimate the cook can correct, and throwing it
- * away would be worse than showing it. It exists so the tests can police the worked examples,
- * which are generated from fixtures we control.
+ * The identity the prompt asks for, used by the tests to check the worked examples. Answers are not
+ * held to it: a total that disagrees with its macros is still an estimate the cook can correct.
  */
 export function caloriesFromMacros(macros: {
 	fat_content: number | null;
@@ -142,8 +127,7 @@ export function caloriesFromMacros(macros: {
 	);
 }
 
-// The model is not asked to write anything a human reads, so unlike the recipe prompt this one
-// takes no locale and is byte-identical for every reader. A test asserts that.
+// Nothing in the answer is read by a human, so the prompt is the same in every locale.
 const NUTRITION_SYSTEM_PROMPT = `You are a nutritionist. You estimate the nutrition of one serving of a recipe.
 
 # Output contract
@@ -195,11 +179,7 @@ Note how its calories follow from its macros: 21.5 × ${ATWATER_FACTORS.fat} + 5
 
 {"calories": 522, "fat_content": 21.5, "carbohydrate_content": 58.2, "protein_content": 24}`;
 
-/**
- * The recipe is wrapped the way user turns are in the chat prompt, and a closing tag planted in a
- * title or an ingredient line is stripped — the request schema accepts any string, so a cook (or
- * an imported recipe) could otherwise close the tag and write below it.
- */
+/** Wrapped the way the chat prompt wraps user turns, with any planted closing tag stripped. */
 function wrapRecipe(content: string): string {
 	const safe = content.replace(/<\/?\s*recipe\s*>/gi, '');
 	return `<recipe>\n${safe}\n</recipe>`;
@@ -222,22 +202,16 @@ export function buildNutritionMessages(input: AiNutritionRequest): AiChatMessage
 	return [
 		{ role: 'system', content: NUTRITION_SYSTEM_PROMPT },
 		{
-			// The reminder rides inside the final user message rather than a trailing system message:
-			// the compat layer would hoist a trailing system message to the front, destroying the
-			// recency it exists to exploit.
+			// In the user message, not a trailing system message, which the compat layer would hoist
+			// to the front.
 			role: 'user',
 			content: `${wrapRecipe(body)}\n\nReminder: one JSON object only, four number-or-null keys, every value per serving. "calories" in kcal, the rest in grams.`
 		}
 	];
 }
 
-/**
- * Tolerant of the lower rungs of the provider's downgrade ladder, which send no schema at all: a
- * `{"nutrition": {...}}` wrapper and the short key aliases both show up there regularly.
- *
- * Every throw message starts with "The AI response" so the controller's existing envelope-parse
- * guard maps it to a 502 without needing to know about nutrition.
- */
+/** Tolerates what a model sends without a schema: a `{"nutrition": {...}}` wrapper and short key
+ * aliases. Throws when there is nothing usable. */
 export function parseNutritionEstimate(rawContent: string): AiNutritionEstimate {
 	let parsed: unknown;
 	try {

@@ -1,13 +1,12 @@
 import { DISABLE_RATE_LIMITS } from '$app/env/private';
 import type { RequestEvent } from '@sveltejs/kit';
+import { m } from '#lib/paraglide/messages.js';
 
 // The app's own limits for its expensive actions. better-auth limits /api/auth/* itself (better-auth.ts).
 //
-// There is no blanket limiter: main's 300/min on /api cushioned a JSON API that no longer exists.
-// What is left under /api is better-auth (limited by better-auth), the health check (must never be
-// limited: Docker and the tunnel probe it) and a few authenticated file endpoints. Page loads and
-// form actions replace the JSON API, and a per-IP cap on all page traffic would mostly hit
-// households sharing one NAT address.
+// There is deliberately no blanket limiter. Under /api there is only better-auth (limited by
+// better-auth) and the health check (must never be limited: Docker and the tunnel probe it), and a
+// per-IP cap on all page traffic would mostly hit households sharing one NAT address.
 
 export type RateLimitResult =
 	{ limited: false } | { limited: true; retryAfterSeconds: number; message: string };
@@ -19,8 +18,8 @@ export interface RateLimiter {
 interface RateLimiterOptions {
 	windowMs: number;
 	limit: number;
-	/** What the user is told once limited. */
-	message: string;
+	/** What the user is told once limited, in the request's language. */
+	message: () => string;
 	now?: () => number;
 	/** Read per hit, so DISABLE_RATE_LIMITS stays the single switch. */
 	disabled?: () => boolean;
@@ -63,7 +62,7 @@ export function createRateLimiter({
 			return {
 				limited: true,
 				retryAfterSeconds: Math.ceil((window.resetAt - time) / 1000),
-				message
+				message: message()
 			};
 		}
 	};
@@ -80,7 +79,7 @@ const FIFTEEN_MINUTES = 15 * 60 * 1000;
 export const urlImportLimiter = createRateLimiter({
 	windowMs: FIFTEEN_MINUTES,
 	limit: 20,
-	message: 'Too many import attempts. Try again later.'
+	message: m.error_too_many_imports
 });
 
 // Half the URL-import allowance: every call spends a full image through the vision model, by some
@@ -88,14 +87,14 @@ export const urlImportLimiter = createRateLimiter({
 export const photoImportLimiter = createRateLimiter({
 	windowMs: FIFTEEN_MINUTES,
 	limit: 10,
-	message: 'Too many import attempts. Try again later.'
+	message: m.error_too_many_imports
 });
 
 // Invite tokens are guessable only by brute force; this keeps that out of reach.
 export const familyJoinLimiter = createRateLimiter({
 	windowMs: FIFTEEN_MINUTES,
 	limit: 10,
-	message: 'Too many attempts. Try again later.'
+	message: m.error_too_many_attempts
 });
 
 // The login and register form actions call auth.api.* directly, and better-auth only rate-limits
@@ -104,13 +103,13 @@ export const familyJoinLimiter = createRateLimiter({
 export const signInLimiter = createRateLimiter({
 	windowMs: FIFTEEN_MINUTES,
 	limit: 10,
-	message: 'Too many attempts. Try again later.'
+	message: m.error_too_many_attempts
 });
 
 export const signUpLimiter = createRateLimiter({
 	windowMs: FIFTEEN_MINUTES,
 	limit: 10,
-	message: 'Too many attempts. Try again later.'
+	message: m.error_too_many_attempts
 });
 
 // Settings' change-password and delete-account actions, likewise carrying over better-auth's
@@ -118,13 +117,13 @@ export const signUpLimiter = createRateLimiter({
 export const changePasswordLimiter = createRateLimiter({
 	windowMs: FIFTEEN_MINUTES,
 	limit: 10,
-	message: 'Too many attempts. Try again later.'
+	message: m.error_too_many_attempts
 });
 
 export const deleteAccountLimiter = createRateLimiter({
 	windowMs: FIFTEEN_MINUTES,
 	limit: 10,
-	message: 'Too many attempts. Try again later.'
+	message: m.error_too_many_attempts
 });
 
 // The forgot- and reset-password actions, likewise carrying over better-auth's
@@ -132,11 +131,11 @@ export const deleteAccountLimiter = createRateLimiter({
 export const passwordResetRequestLimiter = createRateLimiter({
 	windowMs: FIFTEEN_MINUTES,
 	limit: 5,
-	message: 'Too many attempts. Try again later.'
+	message: m.error_too_many_attempts
 });
 
 export const passwordResetLimiter = createRateLimiter({
 	windowMs: FIFTEEN_MINUTES,
 	limit: 10,
-	message: 'Too many attempts. Try again later.'
+	message: m.error_too_many_attempts
 });

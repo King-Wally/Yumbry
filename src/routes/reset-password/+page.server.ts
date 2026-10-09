@@ -2,17 +2,18 @@ import { fail, redirect } from '@sveltejs/kit';
 import { m } from '#lib/paraglide/messages.js';
 import { auth } from '#lib/server/auth/better-auth.ts';
 import { authRefusal } from '#lib/server/auth/forms.ts';
+import { formString } from '#lib/server/http/form.ts';
 import { limitClient, passwordResetLimiter } from '#lib/server/http/rate-limit.ts';
 import type { Actions, PageServerLoad } from './$types';
 
-// The emailed link is /reset-password?token=…, the URL main sent.
+// The reset email links here as /reset-password?token=…; links in inboxes depend on that URL.
 export const load: PageServerLoad = ({ url }) => ({ token: url.searchParams.get('token') ?? '' });
 
 export const actions: Actions = {
 	default: async (event) => {
 		const data = await event.request.formData();
-		const token = String(data.get('token') ?? '');
-		const newPassword = String(data.get('newPassword') ?? '');
+		const token = formString(data, 'token');
+		const newPassword = formString(data, 'newPassword');
 
 		const limit = limitClient(event, passwordResetLimiter);
 		if (limit.limited) return fail(429, { message: limit.message });

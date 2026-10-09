@@ -7,7 +7,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 
 export const FLASH_COOKIE = 'yumbry-flash';
 const FLASH_KEYS = ['family_joined', 'recipe_imported', 'recipe_reverted'] as const;
-export type FlashKey = (typeof FLASH_KEYS)[number];
+type FlashKey = (typeof FLASH_KEYS)[number];
 
 export function setFlash(event: RequestEvent, key: FlashKey): void {
 	event.cookies.set(FLASH_COOKIE, key, {

@@ -1,5 +1,5 @@
 import { fail, type ActionFailure } from '@sveltejs/kit';
-import { z } from 'zod';
+import * as z from 'zod';
 import { RecipeBodySchema, type RecipeBody } from '#lib/server/recipes/body-schema.ts';
 import {
 	formStateFromFormData,
@@ -8,9 +8,9 @@ import {
 } from '#lib/shared/recipe/form.ts';
 
 /** Field name → messages, for the fields a refused save got wrong. */
-export type RecipeFieldErrors = Partial<Record<keyof RecipeBody, string[]>>;
+type RecipeFieldErrors = Partial<Record<keyof RecipeBody, string[]>>;
 
-export interface RecipeFormFailure {
+interface RecipeFormFailure {
 	/** What was submitted, so the form re-renders with it after a submit made before hydration. */
 	values: RecipeFormState;
 	errors: RecipeFieldErrors;

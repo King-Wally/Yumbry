@@ -7,7 +7,7 @@ import type { RecipeInput } from '#lib/shared/recipe/dto.ts';
 // reuse them unchanged. The form holds every number as a string, so an empty input stays empty
 // rather than turning into 0 — an absent nutrition value is not a measured zero.
 
-export interface RecipeFormInstruction {
+interface RecipeFormInstruction {
 	id?: number;
 	text: string;
 }

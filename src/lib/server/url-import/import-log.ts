@@ -4,7 +4,7 @@ import type { ImportMethod, UrlImportErrorKind } from '#lib/server/url-import/er
 
 const MAX_ERROR_MESSAGE_LENGTH = 500;
 
-export type LogImportAttemptInput =
+type LogImportAttemptInput =
 	| { url: string; success: true; method?: ImportMethod }
 	| {
 			url: string;

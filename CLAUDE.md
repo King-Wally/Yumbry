@@ -12,9 +12,7 @@ versions) is siloed per **family**: every user starts in a personal family of on
 another through an invite link. The only way out of a family's silo is a public share link.
 
 One SvelteKit 3 app (Svelte 5 runes), built with `@sveltejs/adapter-node` and run on **Bun**, with
-Drizzle on Postgres and better-auth. The only workspace is `e2e/` (the Playwright suite). The app
-replaced an Express + React + Prisma stack (`main` up to v1.3.1); `MIGRATION.md` records how and
-why, step by step, and is the place to look for the reasoning behind anything surprising below.
+Drizzle on Postgres and better-auth. The only workspace is `e2e/` (the Playwright suite).
 
 ## Commands
 
@@ -53,7 +51,7 @@ Database (Drizzle):
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `bun run db:migrate`  | `scripts/migrate.ts`: bring `DATABASE_URL` up to date with `drizzle/`. Idempotent; the Docker image runs it on every start.   |
 | `bun run db:generate` | `drizzle-kit generate`: a new migration from `schema.ts` changes. Reports "No schema changes" while `schema.ts` is untouched. |
-| `bun run db:rehearse` | `scripts/rehearse-migrate.ts`: migrate scratch copies (empty, v1.3.1 Prisma schema, a restored dump) and compare.             |
+| `bun run db:rehearse` | `scripts/rehearse-migrate.ts`: migrate scratch copies (empty, the pre-Drizzle schema, a restored dump) and compare.           |
 | `bun run db:studio`   | `drizzle-kit studio`.                                                                                                         |
 
 Local dev needs a `.env` with `DATABASE_URL` pointing at `localhost` (start just Postgres with
@@ -144,12 +142,13 @@ skip that, so `#lib/server/http/rate-limit.ts` carries the same rules over to th
 `photoImportLimiter`, `familyJoinLimiter`). In-memory fixed windows keyed by client address;
 `DISABLE_RATE_LIMITS=1` turns all of them off. There is deliberately no blanket limiter.
 
-**Domain errors.** `AiProviderError`/`AiQuotaExceededError`, `UrlImportError` and `FamilyError`
-carry a `.kind`; `#lib/server/http/kinded-errors.ts` is the one place that maps kinds to statuses.
-Actions return `failKinded(err)` (`fail(status, { message, kind, scope?, retryAt? })`), loads and
-endpoints call `throwKinded(err)`. Anything unrecognized is rethrown and becomes a 500 through
+**Domain errors.** `AiProviderError`/`AiQuotaExceededError`, `UrlImportError`, `JsonLdImportError`
+and `FamilyError` carry a `.kind`; `#lib/server/http/kinded-errors.ts` is the one place that maps a
+kind to a status and to the translated message the user reads (the error's own message is English,
+for the logs). Actions return `failKinded(err)` (`fail(status, KindedErrorData)`, the shape in
+`#lib/shared/kinded-error.ts`). Anything unrecognized is rethrown and becomes a 500 through
 `handleError`. Never map to 502 or 504: behind Cloudflare those are replaced by Cloudflare's own
-error page.
+error page. Rate-limit messages are translated per request too.
 
 ### Routes, loads and actions
 
@@ -221,13 +220,13 @@ actions call `auth.api.*` server-side with the request headers, and the `sveltek
 (which must stay last in `plugins`) sets the cookies. There is no better-auth client in the browser.
 Errors shown are better-auth's own text, through `authRefusal` (`#lib/server/auth/forms.ts`).
 
-Load-bearing, because production sessions from v1.3.1 must stay valid:
+Load-bearing, because existing sessions must stay valid:
 
 - **Cookie names.** `cookiePrefix: 'yumbry'` gives `yumbry.session_token` (`HttpOnly`,
   `SameSite=Lax`, 30 days), with the `__Secure-` prefix when `COOKIE_SECURE=true`. Pinned by
   `src/lib/server/auth/better-auth.spec.ts`. Set `COOKIE_SECURE` only behind HTTPS, or the browser never sends
   the cookie back.
-- **`BETTER_AUTH_SECRET`** must stay the value v1.3.1 used. Changing it logs everyone out.
+- **`BETTER_AUTH_SECRET`** must never change. Changing it logs everyone out.
 - **`baseURL` is `ORIGIN`.** A wrong origin breaks better-auth's path matching and Kit's CSRF check.
 - **`session.cookieCache` is deliberately off.** It would let `getSession` answer from the cookie,
   serving a stale `familyId` to someone who just left a family. Session revocation is real row
@@ -264,7 +263,8 @@ No locale in URLs. The strategy is `custom-session` → `cookie` (`yumbry-locale
   when signed in). A client-only `setLocale()` would be overruled on the next request. An enhanced
   form calls `applyLocale` (`#lib/client/locale.ts`) before `update()`, and the root layout wraps the
   shell in `{#key data.locale}` so it re-renders without a reload.
-- `hooks.client.ts` moves v1.x's `localStorage['yumbry.locale']` into the cookie once.
+- `hooks.client.ts` moves a locale left in `localStorage['yumbry.locale']` into the cookie once
+  (`#lib/client/legacy-locale.ts`, transitional).
 
 ### Database (Drizzle)
 
@@ -273,26 +273,27 @@ transaction"; it ends the pool on adapter-node's `sveltekit:shutdown` so the con
 promptly), `schema.ts` (app tables) and `auth.schema.ts` (better-auth's `users`, `sessions`,
 `accounts`, `verifications`).
 
-**Table and column names are part of the contract.** The database was created by v1.3.1's Prisma
-migrations (plural tables, snake_case columns), and `drizzle/0000_baseline.sql` reproduces exactly
-that schema (`bun run db:rehearse` proves it with a `pg_dump --schema-only` diff). Never rename a
-table, column, index or constraint.
+**Table and column names are part of the contract.** The production database predates Drizzle
+(plural tables, snake_case columns), and `drizzle/0000_baseline.sql` reproduces exactly that schema
+(`bun run db:rehearse` proves it with a `pg_dump --schema-only` diff). Never rename a table,
+column, index or constraint.
 
 `scripts/migrate.ts` (`bun run db:migrate`) runs on every container start and needs no drizzle-kit:
 
-- A Prisma-era database (`users` exists, no Drizzle history) has the baseline recorded as applied
-  instead of run, but only if `_prisma_migrations` ends at v1.3.1's last migration.
+- A pre-Drizzle database (`users` exists, no Drizzle history) has the baseline recorded as applied
+  instead of run, but only if its `_prisma_migrations` table ends at the expected last migration.
+  Transitional: remove once production has been migrated.
 - It aborts if the recorded history holds a hash `drizzle/` doesn't, which means an edited or
   regenerated migration.
 - Pending migrations run in one transaction, under an advisory lock that serialises concurrent
   starts.
-- `_prisma_migrations` is left in place so v1.3.1 can still run on the database for a rollback. Drop
-  it later in an ordinary migration, never by hand.
+- `_prisma_migrations` is left in place for a rollback. Drop it later in an ordinary migration,
+  never by hand.
 
 Conventions: change `schema.ts`, run `bun run db:generate`, review and commit the generated SQL and
 `drizzle/meta/`. **Never hand-edit or regenerate a committed migration**, including the baseline;
 fix forward with a new one. Postgres `numeric` columns are read through `decimalString`
-(`#lib/shared/recipe/numeric.ts`) so they print like Prisma did (`"4"`, not `"4.000…"`), and Drizzle returns
+(`#lib/shared/recipe/numeric.ts`) so they print as `"4"`, not `"4.000…"`, and Drizzle returns
 `sum()` over numeric as a string.
 
 Services live in the feature folders under `src/lib/server/` (see "Source layout"). Write paths that span tables run in `db.transaction`, and helpers that
@@ -368,7 +369,9 @@ at call time, so the app boots without them; a missing key throws `AiProviderErr
 Four tiers, each reading only `AI_MODEL_<TIER>` (defaults in `DEFAULT_MODELS`): `big` only for the
 first turn of a recipe written from scratch (create mode, turn 1, `chatTier`), `medium` for every
 other chat turn, `small` for nutrition, `image` (vision-capable) for photo import. No fallback model
-and no `provider` field are sent; OpenRouter's default routing applies, with no retry loop of ours.
+and no `provider` field are sent; OpenRouter's default routing applies. When an endpoint rejects the
+request shape (400/422), `requestCompletion` retries with less asked of it: `json_schema` →
+`json_object` → `json_object` without sampling.
 The `small` tier bypasses OpenRouter and calls Gemini's OpenAI-compatible endpoint with
 `GEMINI_API_KEY` (`TIER_BACKEND`); its model id has no `google/` prefix. `OPENROUTER_BASE_URL` and
 `GEMINI_BASE_URL` are test-only overrides for the e2e fakes.
@@ -405,8 +408,7 @@ Where it is used:
 `#lib/server/auth/email.ts`: password-reset emails through the `resend` SDK, configured only when both
 `RESEND_API_KEY` and `EMAIL_FROM` are set (`isEmailConfigured()`; the login page hides "Forgot your
 password?" otherwise, and `sendResetPassword` is a silent no-op). The link is
-`${ORIGIN}/reset-password?token=…`, the same URL v1.x sent, since links in inboxes must keep
-working. `RESEND_BASE_URL` (test-only) is passed as the client's `baseUrl`.
+`${ORIGIN}/reset-password?token=…`; never change it, since links in inboxes must keep working. `RESEND_BASE_URL` (test-only) is passed as the client's `baseUrl`.
 
 ### PWA and service worker
 
@@ -419,10 +421,10 @@ working. `RESEND_BASE_URL` (test-only) is passed as the client's `baseUrl`.
   caches are deleted on activate. `version.pollInterval` (1 h, `vite.config.ts`) makes a long-open
   PWA pick up a deploy on its next navigation.
 - **Manifest:** `static/manifest.webmanifest`, linked from `src/app.html`.
-- **Legacy takeover — keep these routes.** Installs of v1.x run a Workbox worker registered at
-  `/sw.js`, which serves a cached React shell and checks `/sw.js` for updates.
+- **Worker takeover — keep these routes (transitional).** Older installs run a service worker
+  registered at `/sw.js` that serves a cached app shell and checks `/sw.js` for updates.
   `src/routes/sw.js/+server.ts` answers with a worker that deletes every cache, unregisters itself
-  and reloads its windows onto the new app, which then registers `/service-worker.js`.
+  and reloads its windows onto the current app, which then registers `/service-worker.js`.
   `src/routes/registerSW.js/+server.ts` is a harmless no-op script. Both send `no-cache` so
   Cloudflare's edge never keeps a copy.
 - **Outage screen:** `#lib/client/server-status.svelte.ts` (`up`/`checking`/`down`). `hooks.client.ts`
@@ -453,8 +455,8 @@ working. `RESEND_BASE_URL` (test-only) is passed as the client's `baseUrl`.
 
 ### Framework-free logic
 
-`src/lib/shared/` holds logic with no SvelteKit or Svelte dependency, each module with a `*.spec.ts`
-next to it: `recipe/` (scaling, the recipe-form rules, ingredient parsing, ISO durations,
+`src/lib/shared/` holds logic with no SvelteKit or Svelte dependency, with `*.spec.ts` files next to
+the modules that hold logic: `recipe/` (scaling, the recipe-form rules, ingredient parsing, ISO durations,
 numeric columns, diffing, snapshots, the recipe DTOs), `units/` (measurement parsing, conversion
 and formatting), `ai/` (prompt building and parsing for chat, photo import and nutrition, draft
 rendering, budget types and display) and `i18n/` (`SUPPORTED_LOCALES`). Keep new logic of that
@@ -470,7 +472,7 @@ back undefined under `bun --bun vitest`.
 The `Dockerfile` is multi-stage on `oven/bun:<version>-slim` (Debian, glibc, so sharp's prebuilds
 load; amd64 and arm64, production is arm64). The runtime stage holds production dependencies
 (`--omit peer`), `build/`, `drizzle/`, `scripts/migrate.ts` and `scripts/serve.ts`, runs as the
-`bun` user (uid 1000, the same as v1.x's `node` user, so existing uploads stay writable), and starts
+`bun` user (uid 1000, the owner of existing uploads, so they stay writable), and starts
 with `bun scripts/migrate.ts && exec bun scripts/serve.ts`. Only `/app/uploads` is writable. Image
 defaults: `NODE_ENV=production`, `PORT=3000`, `BODY_SIZE_LIMIT=30M`, `UPLOADS_DIR=/app/uploads`,
 `ADDRESS_HEADER=x-forwarded-for` and `XFF_DEPTH=1` (the client IP behind the Cloudflare Tunnel).
@@ -491,7 +493,7 @@ over CDP (`e2e/scripts/cdp-browser.ts`; the binary is downloaded into `~/.cloakb
 app servers via `scripts/serve.ts`: full, and minimal with no AI, email or browser. Every spec runs
 in both projects.
 
-This suite is the stack-neutral source of truth for the app's behaviour:
+This suite is the source of truth for the app's behaviour:
 
 - **Never edit `e2e/specs/*` to fit the app.** A failing spec means the app is wrong.
 - Seed through `e2e/support/db.ts` (the only file that knows table names).

@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { ArrowLeft } from '@lucide/svelte';
 	import { onMount, untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import Card from '#lib/components/ui/Card.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import VersionPane from '#lib/components/versions/VersionPane.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
@@ -58,16 +58,11 @@
 </script>
 
 <article class="space-y-6 pb-24">
-	<div class="flex items-center gap-3">
-		<a
-			href="/recipes/{data.recipeId}"
-			aria-label={m.recipe_versions_back()}
-			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-300 text-stone-600 hover:bg-stone-100"
-		>
-			<ArrowLeft size={18} />
-		</a>
-		<h1 class="font-serif text-3xl text-stone-900">{m.recipe_versions_title()}</h1>
-	</div>
+	<PageHeader
+		backHref="/recipes/{data.recipeId}"
+		backLabel={m.recipe_versions_back()}
+		title={m.recipe_versions_title()}
+	/>
 
 	{#if !data.selected || !data.diff}
 		<Card>

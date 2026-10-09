@@ -1,15 +1,10 @@
 /**
  * Culinary rounding: band tables and ladders, not raw arithmetic.
  *
- * THE INVARIANT, which everything here is built to preserve:
- *
- *   Within a dimension and system, every band's step divides the next coarser band's step.
- *
- * That is what makes `snap(snap(x)) === snap(x)` hold even when a value snaps *up* across a band
- * boundary — the snapped value is already on the coarser grid, so the second pass is a no-op. It
- * lets us snap once when a draft is written and again when the reader scales the servings, without
- * the amount drifting a little further each time. `bandStepsDivide` checks it, and a test asserts
- * it over the tables themselves rather than over samples.
+ * Invariant: within a dimension and system, every band's step divides the next coarser band's
+ * step. That keeps snapping idempotent even when a value snaps up across a band boundary, so an
+ * amount snapped when a draft is written and again when servings are scaled never drifts.
+ * `bandStepsDivide` checks it, and the spec asserts it over every table.
  */
 
 /** Kills the residue that division and multiplication leave behind (0.1 + 0.2, 5 * 0.15, ...). */
@@ -27,9 +22,8 @@ export interface Band {
 	step: number;
 }
 
-// Metric bands apply only to CONVERTED values. A metric amount the model wrote itself is already
-// culinary and is passed through untouched — re-rounding it would turn a correct 125 g of flour
-// into 130 g and break the ratio the recipe depends on.
+// Metric bands apply only to converted values: re-rounding an amount the model wrote in metric
+// would turn a correct 125 g of flour into 130 g.
 export const METRIC_MASS_BANDS: Band[] = [
 	{ below: 1, step: 0.1 },
 	{ below: 10, step: 0.5 },
@@ -111,19 +105,14 @@ export const SPOON_LADDER: number[] = [
 	8
 ];
 
-/**
- * Metric cooking uses spoons too, but only in the counts a metric recipe actually prints: quarters
- * and halves at the small end, then whole and half spoons. Thirds are an imperial-measure habit —
- * "1 1/3 el" is not something a Flemish recipe says, so 20 ml is better left as 20 ml.
- */
+/** Spoon counts a metric recipe actually prints. No thirds: "1 1/3 el" is not something a Flemish
+ * recipe says, so 20 ml stays 20 ml. */
 export const METRIC_SPOON_LADDER: number[] = [0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 3.5, 4];
 
 /**
- * Pounds get bands rather than a ladder. A ladder coarse enough to look like a cookbook (1, 1 1/4,
- * 1 1/2, ...) puts 500 g at "1 lb", a 10% error, and the honest alternative — "1 lb 2 oz" — is a
- * compound amount that `parseIngredientLine` cannot read back (it takes the first quantity only)
- * and that servings scaling cannot multiply. Eighths of a pound are exactly ounces, so these bands
- * stay both accurate and readable: 500 g is "1 1/8 lb".
+ * Pounds get bands rather than a ladder: a cookbook ladder puts 500 g at "1 lb", a 10% error, and
+ * "1 lb 2 oz" is a compound amount `parseIngredientLine` can't read back or scaling multiply.
+ * Eighths of a pound are whole ounces, so 500 g reads "1 1/8 lb".
  */
 export const IMPERIAL_POUND_BANDS: Band[] = [
 	{ below: 2, step: 0.125 },
@@ -131,11 +120,8 @@ export const IMPERIAL_POUND_BANDS: Band[] = [
 	{ below: Infinity, step: 0.5 }
 ];
 
-/**
- * Nearest rung by absolute distance. Ties keep the earlier (smaller) rung, so a value exactly
- * between 1/3 and 1/2 reads as 1/3 — the smaller-denominator, more-commonly-owned measure.
- * Ladder snapping is idempotent by construction: every rung is distance 0 from itself.
- */
+/** Nearest rung by absolute distance; a tie keeps the smaller rung. Idempotent, since every rung
+ * is its own nearest. */
 export function snapLadder(value: number, ladder: number[]): number {
 	let best = ladder[0];
 	let bestDistance = Math.abs(value - best);

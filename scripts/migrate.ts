@@ -1,17 +1,19 @@
 // Brings DATABASE_URL up to date with ./drizzle. Run on every start (`bun run db:migrate`), and safe
 // to: it is idempotent and needs only runtime dependencies, never drizzle-kit.
 //
-// A database built by the old Prisma app (v1.3.1) already has exactly the schema of
-// drizzle/0000_baseline.sql (scripts/rehearse-migrate.ts proves it), so the baseline is recorded as
-// applied instead of run. _prisma_migrations is left alone, so v1.3.1 can still run on the database
-// for a rollback. An empty database runs the baseline like any other migration.
+// An empty database runs the baseline like any other migration.
+//
+// Transitional (Prisma adoption): a v1.x database (`users` exists, no Drizzle history) already has
+// exactly the schema of drizzle/0000_baseline.sql, so the baseline is recorded as applied instead
+// of run. _prisma_migrations is left alone for a rollback. Remove the adoption branch, and
+// LAST_PRISMA_MIGRATION, once every production database has its baseline recorded.
 import { fileURLToPath } from 'node:url';
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
 
-// The last Prisma migration on main. A Prisma-era database is only adopted at exactly this state.
+// A Prisma-era database is only adopted at exactly this migration.
 const LAST_PRISMA_MIGRATION = '20260930120000_add_import_attempt_method';
 // Arbitrary, fixed: serialises concurrent starts against the same database.
 const LOCK_KEY = 7_291_684_201;

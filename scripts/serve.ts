@@ -1,12 +1,9 @@
-// Production entry point: runs adapter-node's server with its origin taken from ORIGIN at runtime.
+// Production entry point: adapter-node's server, with its origin taken from ORIGIN at runtime.
 //
-// adapter-node 6 (SvelteKit 3) dropped the ORIGIN env var. Without a build-time `paths.origin`, it
-// derives the origin from the Host header and assumes https, so a plain-HTTP server (the e2e suite,
-// local `bun run start`) sees https URLs and better-auth's path matching and SvelteKit's CSRF check
-// both fail. One build has to serve any origin (e2e runs it on two ports, production behind the
-// Cloudflare Tunnel), so the origin stays a runtime setting: we point adapter-node's
-// PROTOCOL_HEADER/HOST_HEADER at private headers and fill them from ORIGIN on every request,
-// overwriting whatever a client sent under those names.
+// adapter-node 6 has no ORIGIN setting: it derives the origin from the Host header and assumes
+// https, which breaks better-auth's path matching and Kit's CSRF check on plain HTTP. One build
+// serves any origin, so PROTOCOL_HEADER/HOST_HEADER point at private headers that are filled from
+// ORIGIN on every request, overwriting whatever a client sent under those names.
 import type { Server } from 'node:http';
 
 const PROTOCOL_HEADER = 'x-yumbry-origin-protocol';
@@ -29,13 +26,13 @@ const build: { server: Server } = await import(new URL('../build/index.js', impo
 // starts accepting once this module's import has finished evaluating.
 build.server.prependListener('request', (req, res) => {
 	// adapter-node gives only /_app/immutable/* a cache-control header. Without one, Cloudflare's edge
-	// would keep a copy of these, delaying worker and manifest updates (main sent no-cache too).
+	// would keep a copy of these, delaying worker and manifest updates.
 	const pathname = req.url?.split('?')[0];
 	if (pathname && NO_CACHE_FILES.has(pathname)) res.setHeader('cache-control', 'no-cache');
 	req.headers[PROTOCOL_HEADER] = protocol;
 	req.headers[HOST_HEADER] = origin.host;
-	// adapter-node throws on a missing ADDRESS_HEADER; fall back to the peer, as Express's
-	// `trust proxy` did, so the image also works without a proxy in front (LAN, healthcheck).
+	// adapter-node throws on a missing ADDRESS_HEADER; fall back to the peer, so the image also
+	// works without a proxy in front (LAN, healthcheck).
 	if (forwardedFor && !req.headers['x-forwarded-for'] && req.socket.remoteAddress) {
 		req.headers['x-forwarded-for'] = req.socket.remoteAddress;
 	}

@@ -1,7 +1,6 @@
-// Mirrors the database the Prisma app created (see drizzle/0000_baseline.sql): every table,
-// column, index and foreign-key name here matches the existing one, so the baseline never has to
-// run against an existing database. Change the schema by adding a new migration, never by editing
-// names here to something the database doesn't have.
+// The app's tables, as drizzle/0000_baseline.sql creates them. Production databases carry exactly
+// these table, column, index and foreign-key names, so never rename one; change the schema with a
+// new migration.
 import { relations, sql } from 'drizzle-orm';
 import {
 	boolean,

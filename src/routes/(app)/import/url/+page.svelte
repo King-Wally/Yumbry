@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { enhance, type SubmitFunction } from '$app/forms';
-	import { ArrowLeft, Search } from '@lucide/svelte';
+	import { Search } from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import { hydrated } from '#lib/client/hydrated.svelte.ts';
 	import Card from '#lib/components/ui/Card.svelte';
 	import CardHeader from '#lib/components/ui/CardHeader.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import type { PageProps } from './$types';
 
 	let { form }: PageProps = $props();
@@ -22,16 +24,7 @@
 </script>
 
 <div class="mx-auto max-w-2xl pb-4">
-	<div class="mb-4 flex items-center gap-3">
-		<a
-			href="/"
-			aria-label={m.common_back()}
-			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-300 text-stone-600 hover:bg-stone-100"
-		>
-			<ArrowLeft size={18} />
-		</a>
-		<h1 class="font-serif text-2xl font-bold text-stone-900">{m.import_url_title()}</h1>
-	</div>
+	<PageHeader backHref="/" title={m.import_url_title()} class="mb-4" />
 
 	<Card>
 		<CardHeader title={m.import_url_card_title()} description={m.import_url_card_description()}>
@@ -57,7 +50,7 @@
 			</div>
 			<button
 				type="submit"
-				disabled={!url.trim() || importing}
+				disabled={importing || (hydrated.current && !url.trim())}
 				class="rounded-md bg-clay px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
 			>
 				{importing ? m.import_url_fetching() : m.import_url_import_from_url()}

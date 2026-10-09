@@ -1,6 +1,6 @@
-// Guards for the Node-specific pieces of main's backend that the port relies on Bun to run. Each
-// block pins down a behaviour a later step builds on (see "Bun runtime notes" in MIGRATION.md), so
-// a Bun or dependency upgrade that breaks one fails here rather than in production. Everything is
+// Guards for the Node APIs and dependencies the server relies on Bun to run. Each block pins down a
+// behaviour the app builds on, so a Bun or dependency upgrade that breaks one fails here rather
+// than in production. Everything is
 // hermetic: local servers on 127.0.0.1 and `.invalid` hostnames, which never resolve (RFC 6761), so
 // a request that succeeds against one cannot have gone through DNS.
 import { execFileSync } from 'node:child_process';
@@ -93,7 +93,7 @@ function echo(req: http.IncomingMessage, res: http.ServerResponse) {
 	);
 }
 
-/** The pinning recipe from MIGRATION.md: dial the checked address, and carry the hostname in the
+/** The pinning recipe safe-fetch.ts uses: dial the checked address, and carry the hostname in the
  * Host header and (for https) in SNI, where Bun also verifies the certificate against it. */
 function pinnedFetch(url: URL, address: string, init: RequestInit & { ca?: Buffer } = {}) {
 	const { ca, ...rest } = init;
@@ -159,9 +159,9 @@ describe('sharp', () => {
 
 describe('DNS pinning', () => {
 	it("canary: Bun's built-in undici ignores a custom connect.lookup", async () => {
-		// main pinned DNS with undici's Agent. On Bun, `undici` is a built-in shim that wins even
-		// over an installed npm copy, and its Agent is an empty stub: the request resolves the
-		// hostname itself. If this ever starts passing the lookup through, revisit the decision.
+		// On Bun, `undici` is a built-in shim that wins even over an installed npm copy, and its
+		// Agent is an empty stub: the request resolves the hostname itself, so an Agent can't pin
+		// DNS. If this ever starts passing the lookup through, an Agent becomes an option.
 		const specifier = 'undici';
 		const undici = await import(/* @vite-ignore */ specifier);
 		let lookupCalled = false;
@@ -234,8 +234,8 @@ describe('DNS pinning', () => {
 
 const PROXY_AUTH = `Basic ${Buffer.from('yumbry:secret').toString('base64')}`;
 
-/** The shape of main's ssrf-proxy, dialling by IP. A `lookup` callback is no use here: Bun's
- * node:http calls it with `all: true` and fails on the (address, family) form main used. */
+/** The shape of ssrf-proxy.ts, dialling by IP. A `lookup` callback is no use here: Bun's node:http
+ * calls it with `all: true`, so one answering a single (address, family) pair fails. */
 function startProxy(seen: string[]): http.Server {
 	const proxy = http.createServer((req, res) => {
 		seen.push(`${req.method} ${req.url}`);

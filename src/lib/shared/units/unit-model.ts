@@ -23,7 +23,7 @@ export type UnitCode =
 	| 'cm'
 	| 'in';
 
-export interface UnitMeta {
+interface UnitMeta {
 	dimension: Dimension;
 	/** How many base units one of this unit is. Base units: g (mass), ml (volume), cm (length). */
 	base: number;
@@ -32,16 +32,11 @@ export interface UnitMeta {
 }
 
 /**
- * Two regimes, deliberately.
+ * Volume uses the culinary set, an integer-millilitre ladder (3 tsp = 1 tbsp, 2 tbsp = 1 fl oz,
+ * 8 fl oz = 1 cup = 240 ml): US customary's 236.588 ml/cup prints numbers no cookbook uses.
  *
- * Volume uses the legal/culinary set, which is an exact integer-millilitre ladder with no internal
- * contradiction: 3 tsp = 1 tbsp, 2 tbsp = 1 fl oz, 8 fl oz = 16 tbsp = 48 tsp = 1 cup. US customary
- * (236.588 ml/cup) is equally self-consistent but prints numbers no cookbook uses, and a metric
- * reader's entire experience of this table is the metric number on screen.
- *
- * Mass and length use the exact definitions. The friendly round numbers people expect come out of
- * the rounding bands anyway — 1 lb x 453.59237 = 453.6 g snaps to 450 g — so approximating the
- * factor buys nothing and makes the error compound across larger amounts.
+ * Mass and length use the exact definitions. The rounding bands produce the round numbers anyway
+ * (1 lb = 453.6 g snaps to 450 g), and an approximated factor would compound on larger amounts.
  */
 export const UNIT_META: Record<UnitCode, UnitMeta> = {
 	g: { dimension: 'mass', base: 1, system: 'metric' },
@@ -79,15 +74,12 @@ export function fromBase(base: number, unit: UnitCode): number {
 }
 
 /**
- * The only unit values the AI model may emit. Four values, and none of them a choice the model is
- * better placed to make than we are: laddering g->kg and ml->tsp/tbsp/l, picking cups over ounces,
- * and spelling the unit in the reader's language all depend on the target system, which the model
- * is deliberately never told. `''` covers anything counted whole ("2 eggs"), where the plural noun
- * in `item` already carries the unit in the right language for free.
+ * The only unit values the AI model may emit. Choosing kg over g, spoons or cups, and spelling the
+ * unit in the reader's language all depend on the reader's unit system, which the model is never
+ * told; we do that when rendering. `''` covers anything counted whole ("2 eggs").
  *
- * `''` rather than `null`: OpenAI strict mode expresses nullability as a type union, and
- * `{"type": ["string","null"], "enum": [..., null]}` is the construct most likely to be mangled by
- * Gemini's OpenAI-compat translation into its own OpenAPI-subset schema.
+ * `''` rather than `null`: a nullable enum is a type union in strict JSON Schema, which Gemini's
+ * OpenAI-compatible endpoint is the most likely to mangle.
  */
 export const MODEL_UNIT_ENUM = ['g', 'ml', 'cm', ''] as const;
 

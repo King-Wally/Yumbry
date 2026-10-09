@@ -1,20 +1,14 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { tick, untrack } from 'svelte';
-	import {
-		ArrowLeft,
-		FileBraces,
-		Globe,
-		Lock,
-		Sparkles,
-		TriangleAlert,
-		Users
-	} from '@lucide/svelte';
+	import { FileBraces, Globe, Lock, Sparkles, TriangleAlert, Users } from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import Card from '#lib/components/ui/Card.svelte';
 	import CardHeader from '#lib/components/ui/CardHeader.svelte';
+	import CopyLinkField from '#lib/components/ui/CopyLinkField.svelte';
 	import Dialog from '#lib/components/ui/Dialog.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import { submitEarlyPick } from '#lib/client/catch-up.ts';
 	import { hydrated } from '#lib/client/hydrated.svelte.ts';
 	import { applyLocale } from '#lib/client/locale.ts';
 	import {
@@ -31,19 +25,8 @@
 	const input =
 		'mt-1.5 w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-clay focus:outline-none';
 
-	// Language
 	let savingLocale = $state(false);
 
-	/** A language picked before hydration fired no change handler; send it now. After a tick, so the
-	 * form's `use:enhance` is attached and this isn't a full-page POST. */
-	function catchUpEarlyPick(select: HTMLSelectElement) {
-		const saved = untrack(() => data.preferences.locale);
-		void tick().then(() => {
-			if (select.value !== saved) select.form?.requestSubmit();
-		});
-	}
-
-	// Password
 	let currentPassword = $state('');
 	let newPassword = $state('');
 	let confirmNewPassword = $state('');
@@ -52,23 +35,14 @@
 		newPassword.length > 0 && confirmNewPassword.length > 0 && newPassword !== confirmNewPassword
 	);
 
-	// JSON import/export. Not flipped optimistically: the switch shows what is saved, as on main, so
-	// it only moves once the reloaded data says so.
+	// Not flipped optimistically: the switch shows what is saved, so it only moves once the reloaded
+	// data says so.
 	const jsonEnabled = $derived(data.preferences.jsonImportExportEnabled);
 	let savingJson = $state(false);
 
-	// Family
-	let copied = $state(false);
 	let leaveOpen = $state(false);
 	let leaving = $state(false);
 
-	async function copyInvite() {
-		await navigator.clipboard.writeText(data.family.inviteUrl);
-		copied = true;
-		setTimeout(() => (copied = false), 2000);
-	}
-
-	// AI usage
 	const userLeftPercent = $derived(data.aiBudget ? userAllowancePercentLeft(data.aiBudget) : null);
 	const sharedDaysLeft = $derived(
 		data.aiBudget
@@ -78,23 +52,13 @@
 			: ''
 	);
 
-	// Delete account
 	let deleteOpen = $state(false);
 	let deletePassword = $state('');
 	let deleting = $state(false);
 </script>
 
 <div class="mx-auto max-w-settings">
-	<div class="mb-4 flex items-center gap-3">
-		<a
-			href="/"
-			aria-label={m.common_back()}
-			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-300 text-stone-600 hover:bg-stone-100"
-		>
-			<ArrowLeft size={18} />
-		</a>
-		<h1 class="font-serif text-2xl font-bold text-stone-900">{m.settings_title()}</h1>
-	</div>
+	<PageHeader backHref="/" title={m.settings_title()} class="mb-4" />
 
 	<div class="flex flex-col gap-6">
 		<Card>
@@ -121,7 +85,7 @@
 				<label class="block text-sm font-medium text-stone-700">
 					{m.settings_language_label()}
 					<select
-						{@attach catchUpEarlyPick}
+						{@attach submitEarlyPick((select) => select.value !== data.preferences.locale)}
 						name="locale"
 						onchange={(event) => event.currentTarget.form?.requestSubmit()}
 						disabled={savingLocale}
@@ -250,24 +214,12 @@
 				<label class="mb-1.5 block text-sm font-medium text-stone-700" for="invite-link">
 					{m.settings_family_invite_label()}
 				</label>
-				<div class="flex gap-2">
-					<input
-						id="invite-link"
-						type="text"
-						readonly
-						value={data.family.inviteUrl}
-						onfocus={(event) => event.currentTarget.select()}
-						class="w-full rounded-md border border-stone-300 bg-stone-50 px-3 py-2 text-[13px] text-stone-600 focus:border-clay focus:outline-none"
-					/>
-					<button
-						type="button"
-						onclick={copyInvite}
-						disabled={!hydrated.current}
-						class="shrink-0 rounded-md bg-clay px-4 py-2 text-[13px] text-white"
-					>
-						{copied ? m.settings_family_copied() : m.settings_family_copy_link()}
-					</button>
-				</div>
+				<CopyLinkField
+					id="invite-link"
+					url={data.family.inviteUrl}
+					copyLabel={m.settings_family_copy_link()}
+					copiedLabel={m.settings_family_copied()}
+				/>
 				<p class="mt-2 text-xs text-stone-500">{m.settings_family_invite_hint()}</p>
 			</div>
 

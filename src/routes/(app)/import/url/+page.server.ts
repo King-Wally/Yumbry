@@ -2,6 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import * as z from 'zod';
 import { stashDraft } from '#lib/server/recipes/draft-handoff.ts';
 import { requireUser } from '#lib/server/auth/guards.ts';
+import { formString } from '#lib/server/http/form.ts';
 import { failKinded } from '#lib/server/http/kinded-errors.ts';
 import { limitClient, urlImportLimiter } from '#lib/server/http/rate-limit.ts';
 import { logImportAttempt } from '#lib/server/url-import/import-log.ts';
@@ -16,20 +17,16 @@ const UrlSchema = z
 	.min(1)
 	.pipe(z.url({ protocol: /^https?$/ }));
 
-const INVALID_URL_MESSAGE = 'Provide a valid recipe page URL.';
-
 export const load: PageServerLoad = (event) => {
 	requireUser(event);
 };
 
 export const actions: Actions = {
 	// Fetches the page and hands its recipe to /recipes/new as a draft for review: nothing is saved
-	// until the cook confirms it there. Errors are main's English messages, as main showed the
-	// server's text. Every attempt is logged for site-level import analytics.
+	// until the cook confirms it there. Every attempt is logged for site-level import analytics.
 	default: async (event) => {
 		const { user } = requireUser(event);
-		const raw = (await event.request.formData()).get('url');
-		const url = typeof raw === 'string' ? raw : '';
+		const url = formString(await event.request.formData(), 'url');
 
 		const limit = limitClient(event, urlImportLimiter);
 		if (limit.limited) return fail(429, { message: limit.message });
@@ -40,9 +37,9 @@ export const actions: Actions = {
 				url: url || '(invalid request body)',
 				success: false,
 				errorKind: 'validation_error',
-				errorMessage: INVALID_URL_MESSAGE
+				errorMessage: 'Invalid URL.'
 			});
-			return fail(400, { message: INVALID_URL_MESSAGE });
+			return failKinded(new UrlImportError('Invalid URL.', 'invalid_url'));
 		}
 
 		const trace: { method?: ImportMethod } = {};

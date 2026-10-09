@@ -1,36 +1,30 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.ts';
+import { randomToken } from '#lib/server/http/token.ts';
 import { recipes } from '#lib/server/db/schema.ts';
-import type { RecipeBody } from '#lib/server/recipes/body-schema.ts';
 import {
 	createRecipe,
 	getRecipeByShareToken,
 	setRecipePhoto
 } from '#lib/server/recipes/recipes.ts';
+import { snapshotToRecipeBody } from '#lib/server/recipes/versions.ts';
 import {
 	copyRecipeUpload,
 	resolveStoredUpload,
 	type UploadFile
 } from '#lib/server/uploads/storage.ts';
-import { toNullableNumber, toNumber } from '#lib/shared/recipe/numeric.ts';
 import type { RecipeDetail, SharedRecipe } from '#lib/shared/recipe/dto.ts';
+import { toRecipeSnapshot } from '#lib/shared/recipe/snapshot.ts';
 
 // Public share links: the one deliberate hole in family scoping. A recipe's `share_token` is the
 // credential for reading it, and stopping sharing nulls it, which kills the link.
 
-const TOKEN_BYTES = 32;
 const TOKEN_PATTERN = /^[0-9a-f]{64}$/;
 
 /** Whether `raw` has the shape of a share token. Anything else is answered like an unknown token,
  * so the response says nothing about what a valid one looks like. */
 export function isShareToken(raw: string): boolean {
 	return TOKEN_PATTERN.test(raw);
-}
-
-/** Stored raw, like the family invite token: the owner's dialog shows the same link again, and 256
- * random bits leave nothing to guess. */
-function generateShareToken(): string {
-	return Buffer.from(crypto.getRandomValues(new Uint8Array(TOKEN_BYTES))).toString('hex');
 }
 
 // Sharing isn't an edit, so `updated_at` is set to itself: the schema's `$onUpdate` would bump it.
@@ -50,7 +44,7 @@ export async function enableShare(recipeId: number, familyId: number): Promise<s
 
 	// Only while the token is still null, so two concurrent "Create link" clicks can't mint two
 	// links, the first one shown silently dead. The loser reads the winner's.
-	const token = generateShareToken();
+	const token = randomToken();
 	const updated = await db
 		.update(recipes)
 		.set({ shareToken: token, ...KEEP_UPDATED_AT })
@@ -72,7 +66,7 @@ export async function disableShare(recipeId: number, familyId: number): Promise<
 
 /** Where a shared recipe's uploaded photo is served from. `/uploads` is family-gated, so a visitor
  * can't load the stored path. */
-export function sharedPhotoPath(token: string): string {
+function sharedPhotoPath(token: string): string {
 	return `/share/${token}/photo`;
 }
 
@@ -117,29 +111,6 @@ export async function sharedPhotoFile(token: string): Promise<UploadFile | null>
 	return row?.imagePath ? resolveStoredUpload(row.imagePath) : null;
 }
 
-/** A shared recipe as a save. Tags and the category travel by name, so `createRecipe` recreates
- * them in the importer's family. Ingredients go as their lines and are parsed again, as on every
- * save. */
-export function toRecipeBody(recipe: RecipeDetail): RecipeBody {
-	return {
-		title: recipe.title,
-		description: recipe.description,
-		image_path: recipe.image_path,
-		prep_time_minutes: recipe.prep_time_minutes,
-		cook_time_minutes: recipe.cook_time_minutes,
-		total_time_minutes: recipe.total_time_minutes,
-		servings: toNumber(recipe.servings, 1),
-		calories: toNullableNumber(recipe.calories),
-		fat_content: toNullableNumber(recipe.fat_content),
-		carbohydrate_content: toNullableNumber(recipe.carbohydrate_content),
-		protein_content: toNullableNumber(recipe.protein_content),
-		ingredients: recipe.ingredients.map((ingredient) => ingredient.raw_text),
-		instructions: recipe.instructions.map(({ step_number, text }) => ({ step_number, text })),
-		tags: recipe.tags.map((tag) => tag.name),
-		category: recipe.category?.name ?? null
-	};
-}
-
 /** Saves an independent copy of a shared recipe, photo included, in the importer's family and
  * returns its id. Null for an unknown or stopped link. */
 export async function importSharedRecipe(
@@ -150,9 +121,11 @@ export async function importSharedRecipe(
 	if (!found) return null;
 	const source = found.recipe;
 
-	// createRecipe keeps a remote image URL and drops an /uploads path, so a local photo is copied
-	// on its own below.
-	const id = await createRecipe(toRecipeBody(source), importer);
+	// Tags and the category travel by name, so createRecipe recreates them in the importer's family.
+	// It keeps a remote image URL and drops an /uploads path, so a local photo is copied on its own
+	// below.
+	const body = { ...snapshotToRecipeBody(toRecipeSnapshot(source)), image_path: source.image_path };
+	const id = await createRecipe(body, importer);
 	if (!source.image_path) return id;
 
 	// Best-effort: a missing or unreadable photo still leaves the copied recipe.

@@ -35,7 +35,7 @@ export interface DiffPane {
 	instructions: Segment[][];
 }
 
-export interface RecipeDiff {
+interface RecipeDiff {
 	old: DiffPane;
 	current: DiffPane;
 	/** Changed fields, plus one per added/removed tag and per differing ingredient/step row. */
@@ -43,7 +43,7 @@ export interface RecipeDiff {
 }
 
 /** Index pairs of a longest common subsequence of `a` and `b`, in order. */
-export function lcs<T>(a: T[], b: T[]): [number, number][] {
+function lcs<T>(a: T[], b: T[]): [number, number][] {
 	const m = a.length;
 	const n = b.length;
 	const dp = Array.from({ length: m + 1 }, () => new Array<number>(n + 1).fill(0));
@@ -92,7 +92,7 @@ function toSegments(tokens: string[], kept: Set<number>): Segment[] {
 }
 
 /** Word-level diff: the words of each side that are not part of the common subsequence. */
-export function wordDiff(
+function wordDiff(
 	a: string | null | undefined,
 	b: string | null | undefined
 ): [Segment[], Segment[]] {
@@ -111,7 +111,7 @@ function hasChange(segments: Segment[]): boolean {
 
 /** Line-level diff: identical lines are aligned first, then the lines between two anchors are
  * paired up by position and word-diffed. A line with no partner is highlighted whole. */
-export function listDiff(a: string[], b: string[]): [Segment[][], Segment[][], number] {
+function listDiff(a: string[], b: string[]): [Segment[][], Segment[][], number] {
 	const left: Segment[][] = [];
 	const right: Segment[][] = [];
 	let changes = 0;

@@ -6,7 +6,7 @@ import { UNIT_SYSTEMS } from '#lib/shared/units/unit-system.ts';
 // Every field optional: the settings page and the AI chat page each post only the preference they
 // change, and requiring the others would make a form write back whatever stale value it rendered.
 // The refine keeps an empty submission a 400 rather than a silent no-op.
-export const PreferencesSchema = z
+const PreferencesSchema = z
 	.object({
 		locale: z.enum(SUPPORTED_LOCALES).optional(),
 		unitSystem: z.enum(UNIT_SYSTEMS).optional(),

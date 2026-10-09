@@ -1,22 +1,8 @@
-import sharp from 'sharp';
+import sharp, { type Sharp } from 'sharp';
 
-/**
- * Longest edge of the prepared image, in pixels. Well above what the model needs to read a
- * handwritten card, and far below what a modern phone camera produces.
- */
+/** Longest edge, in pixels, of every prepared image: enough for the model to read a handwritten
+ * card and for a sharp full-width photo at 2x, a fraction of what a phone camera writes. */
 const MAX_EDGE = 1600;
-
-/** High enough that faint pencil survives, low enough to keep the request small. */
-const QUALITY = 85;
-
-/**
- * Longest edge of a stored recipe photo. Comfortably sharp on the detail page's full-width hero at
- * 2x density, and a fraction of what a phone camera writes.
- */
-const PHOTO_MAX_EDGE = 1600;
-
-/** WebP at 80 is visually indistinguishable from the original for food photos at this size. */
-const PHOTO_QUALITY = 80;
 
 /** Thrown when the upload is not an image any decoder here understands. */
 export class UnreadableImageError extends Error {
@@ -28,59 +14,31 @@ export class UnreadableImageError extends Error {
 }
 
 /**
- * Normalizes an uploaded photo before it is sent to the model.
- *
- * Three things happen here, and only the second is about size:
- *
- * `rotate()` with no argument applies the EXIF orientation tag and clears it. A phone held in
- * portrait usually writes a landscape frame plus "rotate me 90°", and a model reading the raw
- * pixels sees the recipe on its side. This is the step that matters most for accuracy and the one
- * a browser canvas is least reliable about.
- *
- * The resize bounds the longest edge, `withoutEnlargement` so a small screenshot is never blown up
- * into a blurry larger one. Re-encoding as JPEG then bounds the request: the buffer is base64'd
- * into the Gemini call, where every extra megabyte is latency and tokens spent on detail no OCR
- * needs.
+ * Straightens and bounds an upload, then encodes it. `rotate()` applies the EXIF orientation and
+ * clears the tag, so a portrait phone photo is upright in the pixels; the resize never enlarges.
+ * sharp writes no metadata unless asked, so EXIF (a phone's GPS position included) is dropped, and
+ * an animated GIF keeps its first frame.
  */
-export async function prepareImageForModel(input: Buffer): Promise<Buffer> {
+async function normalize(input: Buffer, encode: (image: Sharp) => Sharp): Promise<Buffer> {
 	try {
-		return await sharp(input)
+		const bounded = sharp(input)
 			.rotate()
-			.resize({ width: MAX_EDGE, height: MAX_EDGE, fit: 'inside', withoutEnlargement: true })
-			.jpeg({ quality: QUALITY })
-			.toBuffer();
+			.resize({ width: MAX_EDGE, height: MAX_EDGE, fit: 'inside', withoutEnlargement: true });
+		return await encode(bounded).toBuffer();
 	} catch (err) {
-		// The upload check only read the declared type, so this is the first point at which anything
-		// actually looks at the bytes — a renamed file, a truncated upload or a format libvips was not
-		// built with all land here.
+		// The upload check only read the declared type: this is the first look at the bytes.
 		console.error('[image-prep] could not process uploaded photo:', err);
 		throw new UnreadableImageError(err);
 	}
 }
 
-/**
- * Normalizes a recipe photo before it is written to disk, so a full-resolution camera original
- * never lands under uploads/ or gets served to every card that shows it.
- *
- * Same straighten-then-bound steps as prepareImageForModel, but encoded as WebP: this file is kept
- * and served to browsers, so the smaller format pays off on every view. sharp writes no metadata
- * unless asked, so EXIF — including a phone's GPS position — is dropped along the way. An animated
- * GIF keeps only its first frame, which is all a cover photo shows anyway.
- */
-export async function optimizeRecipePhoto(input: Buffer): Promise<Buffer> {
-	try {
-		return await sharp(input)
-			.rotate()
-			.resize({
-				width: PHOTO_MAX_EDGE,
-				height: PHOTO_MAX_EDGE,
-				fit: 'inside',
-				withoutEnlargement: true
-			})
-			.webp({ quality: PHOTO_QUALITY })
-			.toBuffer();
-	} catch (err) {
-		console.error('[image-prep] could not process uploaded recipe photo:', err);
-		throw new UnreadableImageError(err);
-	}
+/** A photo for the vision model, as JPEG at 85: faint pencil survives, the request stays small. */
+export function prepareImageForModel(input: Buffer): Promise<Buffer> {
+	return normalize(input, (image) => image.jpeg({ quality: 85 }));
+}
+
+/** A recipe photo to store and serve, as WebP at 80: indistinguishable from the original for food
+ * photos at this size. */
+export function optimizeRecipePhoto(input: Buffer): Promise<Buffer> {
+	return normalize(input, (image) => image.webp({ quality: 80 }));
 }

@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
 
 # Debian slim (glibc): sharp's linux-x64/linux-arm64 prebuilds load as is, and the image is
-# published for both architectures (production is arm64). Its `bun` user is uid/gid 1000, the
-# same as the `node` user that wrote existing uploads on v1.3.1.
+# published for both architectures (production is arm64). Its `bun` user is uid/gid 1000, which
+# owns the existing uploads volume.
 ARG BUN_VERSION=1.4.2
 
 # ---- all dependencies, for the build ----
@@ -32,8 +32,8 @@ FROM oven/bun:${BUN_VERSION}-slim AS runtime
 WORKDIR /app
 
 # BODY_SIZE_LIMIT leaves room for a 25 MB photo plus the rest of the multipart form.
-# ADDRESS_HEADER/XFF_DEPTH take the client IP from the rightmost X-Forwarded-For entry, like
-# v1.3.1's `trust proxy 1` behind the Cloudflare Tunnel. scripts/serve.ts owns the protocol and
+# ADDRESS_HEADER/XFF_DEPTH take the client IP from the rightmost X-Forwarded-For entry: the hop
+# the Cloudflare Tunnel adds. scripts/serve.ts owns the protocol and
 # host (from ORIGIN), so PROTOCOL_HEADER and HOST_HEADER stay unset.
 ENV NODE_ENV=production \
 	PORT=3000 \

@@ -5,6 +5,18 @@ import { isoDurationToMinutes } from '#lib/shared/recipe/iso-duration.ts';
 
 type JsonLdNode = Record<string, unknown>;
 
+export type JsonLdImportErrorKind = 'invalid_json' | 'not_a_document' | 'no_recipe';
+
+export class JsonLdImportError extends Error {
+	readonly kind: JsonLdImportErrorKind;
+
+	constructor(message: string, kind: JsonLdImportErrorKind, cause?: unknown) {
+		super(message, cause !== undefined ? { cause } : undefined);
+		this.name = 'JsonLdImportError';
+		this.kind = kind;
+	}
+}
+
 const JsonLdDocumentSchema: z.ZodType<JsonLdNode | unknown[]> = z.union([
 	z.record(z.string(), z.unknown()),
 	z.array(z.unknown())
@@ -204,18 +216,23 @@ function escapeControlCharsInStrings(text: string): string {
 
 /**
  * The schema.org Recipe in a JSON-LD document, as a save body. Ingredients stay plain lines:
- * createRecipe parses them on save, as it does for every recipe.
- *
- * Throws a SyntaxError for malformed JSON, a ZodError when the document isn't an object or array,
- * and a plain Error when it holds no Recipe.
+ * createRecipe parses them on save, as it does for every recipe. Throws a JsonLdImportError when
+ * the text isn't JSON, isn't an object or array, or holds no Recipe.
  */
 export function parseRecipeFromJsonLd(rawJsonLdText: string): RecipeBody {
-	const rawParsed: unknown = JSON.parse(escapeControlCharsInStrings(rawJsonLdText));
-	const parsed = JsonLdDocumentSchema.parse(rawParsed);
-	const node = findRecipeNode(parsed);
-
+	let rawParsed: unknown;
+	try {
+		rawParsed = JSON.parse(escapeControlCharsInStrings(rawJsonLdText));
+	} catch (err) {
+		throw new JsonLdImportError('Not valid JSON.', 'invalid_json', err);
+	}
+	const parsed = JsonLdDocumentSchema.safeParse(rawParsed);
+	if (!parsed.success) {
+		throw new JsonLdImportError('Not a JSON object or array.', 'not_a_document');
+	}
+	const node = findRecipeNode(parsed.data);
 	if (!node) {
-		throw new Error('No schema.org Recipe found in the provided JSON-LD.');
+		throw new JsonLdImportError('No schema.org Recipe found.', 'no_recipe');
 	}
 
 	const prepTimeMinutes = isoDurationToMinutes(node.prepTime);

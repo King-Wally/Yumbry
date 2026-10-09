@@ -25,6 +25,7 @@ function hasLocaleCookie(): boolean {
 	return document.cookie.split(/;\s*/).some((part) => part.startsWith(`${cookieName}=`));
 }
 
+// Transitional, with #lib/client/legacy-locale.ts; remove the two together.
 function migrateLegacyLocale(): void {
 	let stored: string | null;
 	try {

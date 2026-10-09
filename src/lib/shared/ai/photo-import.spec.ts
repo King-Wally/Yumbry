@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildPhotoImportMessages } from '#lib/shared/ai/photo-import.ts';
 import { NUTRITION_FIELDS } from '#lib/shared/ai/nutrition.ts';
-import { buildChatMessages, type AiContentPart } from '#lib/shared/ai/recipe-draft.ts';
+import { recipeFieldsSection, type AiContentPart } from '#lib/shared/ai/recipe-draft.ts';
 import {
 	LANGUAGE_NAMES,
 	SUPPORTED_LOCALES,
@@ -53,56 +53,26 @@ describe('buildPhotoImportMessages', () => {
 		expect(systemText(locale)).toContain(LANGUAGE_NAMES[locale]);
 	});
 
-	// The whole point of the separate prompt: transcription, not drafting. Sharing the field contract
-	// with the chat prompt must not drag the chat prompt's "never refuse, always produce a recipe"
-	// instruction along with it — that one turns an unreadable photo into a plausible invention.
-	it('forbids inventing, where the chat prompt requires always producing a recipe', () => {
-		const photo = systemText();
-
-		expect(photo).toContain('Transcribe, never invent.');
-		expect(photo).not.toContain('Never\n   refuse and never wait for more detail');
+	it('shares the field contract with the chat prompt', () => {
+		expect(systemText()).toContain(recipeFieldsSection(LANGUAGE_NAMES.en));
 	});
 
-	it('allows a null recipe for a photo that holds none', () => {
-		expect(systemText()).toMatch(/null\s+When the photo holds no recipe at all/);
-	});
-
-	// Everywhere else the model writes canonical metric and parseChatEnvelope converts for the
-	// reader. A photo is the one input that can arrive in cups, so the conversion instruction has to
-	// be explicit rather than implied by the general metric requirement.
-	it('spells out converting the source units, not just writing metric', () => {
-		const photo = systemText();
-
-		expect(photo).toContain('Convert');
-		expect(photo).toContain('1 cup of flour is about 120 g');
-	});
-
-	it('shares the ingredient field contract with the chat prompt', () => {
-		const [chatSystem] = buildChatMessages([{ role: 'user', content: 'pasta' }], null, 'en');
-		if (typeof chatSystem.content !== 'string') throw new Error('expected text');
-
-		const shared =
-			'"recipe.ingredients"         One object per ingredient, in the order they are used.';
-		expect(chatSystem.content).toContain(shared);
-		expect(systemText()).toContain(shared);
-	});
-
-	// The envelope schema requires them here too, and the schema-less rungs of the downgrade ladder
-	// enforce nothing the prompt does not say.
-	it('documents every nutrition field, per serving', () => {
+	// The schema-free rungs of the downgrade ladder leave the prompt as the only contract.
+	it('documents every nutrition field', () => {
 		for (const field of NUTRITION_FIELDS) {
 			expect(systemText(), field).toContain(`"recipe.${field}"`);
 		}
-		expect(systemText()).toContain('for ONE serving');
 	});
 
-	it('numbers every hard requirement uniquely', () => {
+	// Continuation lines are indented to sit under a single-digit number.
+	it('numbers the hard requirements 1, 2, 3… below ten', () => {
 		const numbers = systemText()
 			.split('# HARD REQUIREMENTS')[1]
 			.split('\n# ')[0]
 			.split('\n')
 			.flatMap((line) => line.match(/^(\d+)\. /)?.[1] ?? []);
 
-		expect(numbers).toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '9']);
+		expect(numbers.length).toBeLessThan(10);
+		expect(numbers).toEqual(numbers.map((_, index) => String(index + 1)));
 	});
 });

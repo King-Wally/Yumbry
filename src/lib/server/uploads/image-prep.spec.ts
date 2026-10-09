@@ -15,90 +15,32 @@ function landscape(width = 2400, height = 1200): Promise<Buffer> {
 		.toBuffer();
 }
 
-describe('prepareImageForModel', () => {
+describe.each([
+	{ name: 'prepareImageForModel', prepare: prepareImageForModel, format: 'jpeg' },
+	{ name: 'optimizeRecipePhoto', prepare: optimizeRecipePhoto, format: 'webp' }
+])('$name', ({ prepare, format }) => {
 	it('bounds the longest edge at 1600px, keeping the aspect ratio', async () => {
-		const meta = await sharp(await prepareImageForModel(await landscape(2400, 1200))).metadata();
+		const meta = await sharp(await prepare(await landscape(2400, 1200))).metadata();
 
 		expect(meta.width).toBe(1600);
 		expect(meta.height).toBe(800);
 	});
 
 	it('bounds the long edge whichever way round the photo is', async () => {
-		const meta = await sharp(await prepareImageForModel(await landscape(1200, 2400))).metadata();
+		const meta = await sharp(await prepare(await landscape(1200, 2400))).metadata();
 
 		expect(meta.width).toBe(800);
 		expect(meta.height).toBe(1600);
 	});
 
-	// A phone held in portrait writes a landscape frame plus an "orientation: 6" tag. Sending those
-	// raw pixels puts the recipe on its side, which is the single most likely way a perfectly good
-	// photo reads badly — so this is the assertion that justifies doing the work server-side.
-	it('applies EXIF orientation so a portrait photo is upright in the pixels', async () => {
+	// A phone held in portrait writes a landscape frame plus an "orientation: 6" tag; the raw pixels
+	// would show the recipe on its side.
+	it('applies EXIF orientation and strips the metadata', async () => {
 		const rotated = await sharp(await landscape(2400, 1200))
 			.withMetadata({ orientation: 6 }) // 6 = rotate 90° clockwise on display
 			.toBuffer();
 
-		const meta = await sharp(await prepareImageForModel(rotated)).metadata();
-
-		// The stored frame is 2:1 landscape; honouring the tag makes it 1:2 portrait.
-		expect(meta.width).toBe(800);
-		expect(meta.height).toBe(1600);
-		// And the tag is cleared, so nothing downstream rotates it a second time.
-		expect(meta.orientation).toBeUndefined();
-	});
-
-	it('never enlarges an image that is already small', async () => {
-		const meta = await sharp(await prepareImageForModel(await landscape(400, 300))).metadata();
-
-		expect(meta.width).toBe(400);
-		expect(meta.height).toBe(300);
-	});
-
-	it('always produces a JPEG, whatever arrived', async () => {
-		const png = await sharp({
-			create: { width: 100, height: 100, channels: 3, background: '#fff' }
-		})
-			.png()
-			.toBuffer();
-
-		expect((await sharp(await prepareImageForModel(png)).metadata()).format).toBe('jpeg');
-	});
-
-	it('shrinks a large photo to a fraction of its original size', async () => {
-		const original = await landscape(4000, 3000);
-		const prepared = await prepareImageForModel(original);
-
-		expect(prepared.byteLength).toBeLessThan(original.byteLength);
-	});
-
-	// The upload check only reads the declared type, so this is the first code that looks at the bytes.
-	it('throws UnreadableImageError for something that is not an image', async () => {
-		await expect(prepareImageForModel(Buffer.from('not an image at all'))).rejects.toThrow(
-			UnreadableImageError
-		);
-	});
-
-	it('throws UnreadableImageError for a truncated image', async () => {
-		const truncated = (await landscape()).subarray(0, 64);
-
-		await expect(prepareImageForModel(truncated)).rejects.toThrow(UnreadableImageError);
-	});
-});
-
-describe('optimizeRecipePhoto', () => {
-	it('bounds the longest edge at 1600px, keeping the aspect ratio', async () => {
-		const meta = await sharp(await optimizeRecipePhoto(await landscape(3200, 2400))).metadata();
-
-		expect(meta.width).toBe(1600);
-		expect(meta.height).toBe(1200);
-	});
-
-	it('applies EXIF orientation and strips the metadata', async () => {
-		const rotated = await sharp(await landscape(2400, 1200))
-			.withMetadata({ orientation: 6 })
-			.toBuffer();
-
-		const meta = await sharp(await optimizeRecipePhoto(rotated)).metadata();
+		const meta = await sharp(await prepare(rotated)).metadata();
 
 		expect(meta.width).toBe(800);
 		expect(meta.height).toBe(1600);
@@ -107,31 +49,35 @@ describe('optimizeRecipePhoto', () => {
 	});
 
 	it('never enlarges an image that is already small', async () => {
-		const meta = await sharp(await optimizeRecipePhoto(await landscape(400, 300))).metadata();
+		const meta = await sharp(await prepare(await landscape(400, 300))).metadata();
 
 		expect(meta.width).toBe(400);
 		expect(meta.height).toBe(300);
 	});
 
-	it('always produces a WebP, whatever arrived', async () => {
+	it(`always produces ${format}, whatever arrived`, async () => {
 		const png = await sharp({
 			create: { width: 100, height: 100, channels: 3, background: '#fff' }
 		})
 			.png()
 			.toBuffer();
 
-		expect((await sharp(await optimizeRecipePhoto(png)).metadata()).format).toBe('webp');
+		expect((await sharp(await prepare(png)).metadata()).format).toBe(format);
 	});
 
 	it('shrinks a large photo to a fraction of its original size', async () => {
 		const original = await landscape(4000, 3000);
 
-		expect((await optimizeRecipePhoto(original)).byteLength).toBeLessThan(original.byteLength);
+		expect((await prepare(original)).byteLength).toBeLessThan(original.byteLength);
 	});
 
 	it('throws UnreadableImageError for something that is not an image', async () => {
-		await expect(optimizeRecipePhoto(Buffer.from('not an image at all'))).rejects.toThrow(
-			UnreadableImageError
-		);
+		await expect(prepare(Buffer.from('not an image at all'))).rejects.toThrow(UnreadableImageError);
+	});
+
+	it('throws UnreadableImageError for a truncated image', async () => {
+		const truncated = (await landscape()).subarray(0, 64);
+
+		await expect(prepare(truncated)).rejects.toThrow(UnreadableImageError);
 	});
 });

@@ -1,15 +1,8 @@
 <script lang="ts">
-	import {
-		ArrowLeft,
-		FileDown,
-		Pencil,
-		RotateCcwClock,
-		Share2,
-		Sparkles,
-		Trash
-	} from '@lucide/svelte';
+	import { FileDown, Pencil, RotateCcwClock, Share2, Sparkles, Trash } from '@lucide/svelte';
 	import CollapsibleActions from '#lib/components/ui/CollapsibleActions.svelte';
 	import ConfirmDialog from '#lib/components/ui/ConfirmDialog.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import RecipeDetailView from '#lib/components/recipe/RecipeDetailView.svelte';
 	import ShareRecipeDialog from '#lib/components/recipe/ShareRecipeDialog.svelte';
 	import { hydrated } from '#lib/client/hydrated.svelte.ts';
@@ -60,14 +53,7 @@
 </script>
 
 <article class="space-y-4">
-	<div class="flex items-center justify-between gap-2">
-		<a
-			href="/"
-			aria-label={m.common_back()}
-			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-300 text-stone-600 hover:bg-stone-100"
-		>
-			<ArrowLeft size={18} />
-		</a>
+	<PageHeader backHref="/">
 		<CollapsibleActions>
 			{#snippet pinned()}
 				<a
@@ -124,7 +110,7 @@
 				{m.common_delete()}
 			</button>
 		</CollapsibleActions>
-	</div>
+	</PageHeader>
 
 	<ConfirmDialog
 		bind:open={confirmDeleteOpen}

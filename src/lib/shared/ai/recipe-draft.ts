@@ -24,28 +24,18 @@ import { convertTextUnits } from '#lib/shared/units/text.ts';
 import { isUnitCode, MODEL_UNIT_ENUM, type UnitCode } from '#lib/shared/units/unit-model.ts';
 import { DEFAULT_UNIT_SYSTEM, type UnitSystem } from '#lib/shared/units/unit-system.ts';
 
-/**
- * OpenAI's multimodal content-part shape, which Gemini's OpenAI-compat endpoint accepts as-is.
- * `image_url.url` carries a `data:` URL rather than an http one — the image is read into memory,
- * sent, and dropped; nothing about it is ever hosted.
- */
+/** OpenAI's multimodal content part. `image_url.url` is a `data:` URL: the photo is sent inline
+ * and never hosted. */
 export type AiContentPart =
 	{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } };
 
 export interface AiChatMessage {
 	role: 'system' | 'user' | 'assistant';
-	/**
-	 * A plain string for every text turn — the chat path only ever produces these. The array form
-	 * exists for the photo import prompt, the one place an image rides along with the text.
-	 */
+	/** The array form is for the photo import prompt, where an image rides along with the text. */
 	content: string | AiContentPart[];
 }
 
-/**
- * A turn in a chat conversation, which is always plain text — `AiTranscriptSchema` accepts
- * nothing else, so a conversation can be rendered, stored and echoed back without narrowing.
- * `AiChatMessage` is the wider prompt-level type the provider is actually handed.
- */
+/** A turn of the cook's conversation with the assistant: always plain text. */
 export interface AiTextChatMessage {
 	role: 'user' | 'assistant';
 	content: string;
@@ -67,11 +57,10 @@ export interface AiRecipeDraft {
 	/** Rendered lines, in the reader's units and language — what the app displays and stores. */
 	ingredients: string[];
 	/**
-	 * The same ingredients in canonical metric, returned to the client and echoed back on the next
-	 * turn so the prompt can show the model exactly what it produced. Re-parsing the rendered lines
-	 * instead would drift, since a cup value converted back through the density table does not
-	 * return the original grams. Optional, so a client holding an older draft still validates — the
-	 * server falls back to re-parsing `ingredients`. Never persisted.
+	 * The same ingredients in canonical metric, as the model wrote them, echoed back each turn so
+	 * the prompt shows the model exactly what it produced: re-parsing the rendered lines would
+	 * drift, since cups converted back through the density table don't return the original grams.
+	 * Absent on a draft seeded from a saved recipe. Never persisted.
 	 */
 	ingredients_structured?: AiIngredient[];
 	instructions: { step_number: number; text: string }[];
@@ -96,32 +85,22 @@ export interface AiSamplingParams {
 	topP?: number;
 }
 
-/**
- * Sampling tuned for constrained JSON recipe drafting: low variance, since the failure mode we're
- * guarding against is invented quantities and dropped keys, not repetitive prose.
- */
+/** Low variance: the failure to guard against is invented quantities and dropped keys, not
+ * repetitive prose. */
 export const RECIPE_SAMPLING: AiSamplingParams = {
 	temperature: 0.4,
 	topP: 0.95
 };
 
 /**
- * Sent as `response_format: { type: 'json_schema', json_schema: ... }` so models that support
- * constrained decoding make an invalid response structurally impossible rather than merely
- * discouraged.
+ * The chat turn's `response_format` schema, shaped for OpenAI's `strict: true` rules: every property
+ * in `required`, `additionalProperties: false`, optionality as a nullable type (hence
+ * `"recipe": null` for a chat-only turn).
  *
- * Shaped for OpenAI's `strict: true` rules: every property listed in `required`,
- * `additionalProperties: false` everywhere, and optionality expressed as a nullable type — hence
- * `"recipe": null` for a chat-only turn instead of an absent key.
- *
- * `unit` and `density_key` are required, non-nullable string enums carrying their own "nothing
- * here" member (`""` and `"none"`). An enum combined with a nullable type is the construct most
- * likely to be mangled when Gemini's OpenAI-compat layer translates this into its own
- * OpenAPI-subset schema, and a small model emits a positive token more reliably than a null it has
- * to decide to withhold.
- *
- * `image_path` is deliberately absent: the model can't produce one, and parseChatEnvelope carries
- * it forward from the current draft.
+ * `unit` and `density_key` are non-nullable enums with their own "nothing here" member (`""`,
+ * `"none"`): an enum combined with null is what Gemini's compat layer most often mangles, and a
+ * small model emits a positive token more reliably than a withheld null. `image_path` is absent:
+ * the model can't produce one, and `parseChatEnvelope` carries it over from the current draft.
  */
 export const AI_ENVELOPE_JSON_SCHEMA: AiJsonSchemaFormat = {
 	name: 'recipe_chat_turn',
@@ -186,23 +165,14 @@ export const AI_ENVELOPE_JSON_SCHEMA: AiJsonSchemaFormat = {
 	}
 };
 
-// Printed in the prompt from the same arrays the schema uses, because rungs two and three of the
-// provider's downgrade ladder send no schema at all. The operating rule is that no constraint may
-// live in the schema unless it is also stated in the prompt; a test asserts the two never drift.
-function unitList(): string {
-	return MODEL_UNIT_ENUM.map((unit) => `"${unit}"`).join(', ');
+// The prompt lists the schema's own enums: the schema-free rungs of the downgrade ladder
+// (#lib/server/ai/provider.ts) leave the prompt as the only place they are stated.
+function quotedList(values: readonly string[]): string {
+	return values.map((value) => `"${value}"`).join(', ');
 }
 
-function densityList(): string {
-	return DENSITY_KEYS.map((key) => `"${key}"`).join(', ');
-}
-
-/**
- * The per-field contract, `title` through `instructions`. Shared verbatim with the photo import
- * prompt: what a recipe object must carry, and how units and density keys are spelled, does not
- * depend on whether the model is inventing the recipe or reading it off a page. Only the wrapper
- * sections around it differ between the two — what `null` means, and what "reply" is for.
- */
+/** The per-field contract, `title` through `instructions`, shared with the photo import prompt:
+ * a recipe object has the same shape whether the model invents it or reads it off a page. */
 export function recipeFieldsSection(language: string): string {
 	return `"recipe.title"               The dish, in a few words. No amounts, no "recipe" suffix.
 "recipe.description"         One sentence, or null.
@@ -226,11 +196,11 @@ export function recipeFieldsSection(language: string): string {
                    preparation. For anything counted whole, use the plural noun the cook would say:
                    "eggs", "garlic cloves", "spring onions".
     "quantity"     A JSON number, or null when no amount makes sense, as for salt to taste.
-    "unit"         Exactly one of: ${unitList()}
+    "unit"         Exactly one of: ${quotedList(MODEL_UNIT_ENUM)}
                    Use "g" for anything weighed, "ml" for anything poured or spooned, "cm" for a
                    size, and "" for anything counted whole.
     "note"         How it is prepared, or null: "finely chopped", "at room temperature".
-    "density_key"  Exactly one of: ${densityList()}
+    "density_key"  Exactly one of: ${quotedList(DENSITY_KEYS)}
                    When "unit" is "g" and the ingredient is one a cook could also measure by the
                    cupful, pick the closest match. Otherwise "none".
 
@@ -240,11 +210,7 @@ export function recipeFieldsSection(language: string): string {
                              °C. Do not repeat exact amounts here — name the ingredient instead.`;
 }
 
-/**
- * Nutrition per serving. The envelope schema requires these four fields, but the provider's
- * downgrade ladder can drop the schema, so the prompt has to name them too. Separate from
- * `recipeFieldsSection` only so it reads as its own block; both recipe prompts include it.
- */
+/** The four per-serving nutrition fields, as their own block of the field contract. */
 export function nutritionFieldsSection(): string {
 	return `Nutrition, for ONE serving — not for the whole recipe. Work out the total, then divide it by
 "recipe.servings". Estimate from standard food composition values; a rough estimate beats null.
@@ -267,12 +233,10 @@ ${nutritionMacroTable('                               ')}
 }
 
 /**
- * The five requirements that hold however the recipe was arrived at — language, key casing, metric,
- * number shape, ingredient completeness — followed by whatever the calling prompt adds. They are
- * numbered so each is an addressable object rather than prose, and each carries a concrete
- * negative: "no English words" without "never ounces, never cups" is an abstraction a small model
- * cannot ground. Continuation lines are indented three spaces to line up under a single-digit
- * number, so keep the total under ten.
+ * The requirements that hold however the recipe was arrived at, then whatever the calling prompt
+ * adds. Numbered so each is addressable, and each carries a concrete negative: "no English words"
+ * without "never ounces, never cups" is an abstraction a small model cannot ground. Continuation
+ * lines are indented to sit under a single-digit number, so keep the total under ten.
  */
 export function hardRequirements(language: string, extra: string[] = []): string {
 	const requirements = [
@@ -316,21 +280,12 @@ that field.`;
 }
 
 /**
- * Section order here is load-bearing, not stylistic.
- *
- * The output contract comes before any content rule because a shape failure is total — the turn
- * ends as a 502 — while a content failure is partial, so the total failure is guarded first. Within
- * the envelope `recipe` precedes `reply`: `reply` is a summary OF `recipe`, and asking for the
- * summary first makes the model commit before it has decided, after which either the recipe drifts
- * to match the promise or the reply misdescribes the recipe. Inside an ingredient `item` precedes
- * `quantity` and `unit` for the same reason — a unit can only be chosen once the thing is settled,
- * and asking for the unit first invites `unit: "", item: "cloves garlic"`, which breaks both the
- * amount and the translation.
- *
- * The hard requirements are numbered so each is an addressable object rather than prose, and each
- * carries a concrete negative: "no English words" without "never ounces, never cups" is an
- * abstraction a small model cannot ground. The worked example sits last inside the system message,
- * closest to generation, because it is the most-copied artefact in the whole prompt.
+ * Section order is load-bearing. The output contract comes first because a shape failure loses the
+ * whole turn while a content failure loses part of it. `recipe` precedes `reply` because the reply
+ * summarises the recipe, and asking for the summary first makes the model commit before it has
+ * decided; `item` precedes `unit` for the same reason (a unit first invites
+ * `unit: "", item: "cloves garlic"`). The worked example sits last, closest to generation, because
+ * it is the most-copied part of the prompt.
  */
 function buildChatSystemPrompt(locale: SupportedLocale, currentRecipe: string): AiChatMessage {
 	const language = LANGUAGE_NAMES[locale];
@@ -400,8 +355,7 @@ export function reminder(locale: SupportedLocale): string {
 /**
  * Every user turn is wrapped, not only the latest: an injection planted on turn one is still in
  * context on turn five, and mixing wrapped with unwrapped turns teaches the model the tag is
- * decorative. The request schema accepts any string, so a client could otherwise close the tag
- * itself and write below it.
+ * decorative. A closing tag in the text is stripped so a cook can't close it and write below it.
  */
 function wrapUserTurn(content: string): string {
 	const safe = content.replace(/<\/?\s*user_request\s*>/gi, '');
@@ -410,9 +364,8 @@ function wrapUserTurn(content: string): string {
 
 function structuredIngredients(draft: AiRecipeDraft): AiIngredient[] {
 	if (draft.ingredients_structured?.length) return draft.ingredients_structured;
-	// No side-channel: the draft was seeded from a saved recipe, or came from a client that predates
-	// the field. Recover what we can from the rendered lines — the model re-emits fully structured
-	// objects on its next turn either way.
+	// A draft seeded from a saved recipe has only its rendered lines; the model's next answer
+	// brings structured ones.
 	return draft.ingredients.map((line) => toCanonicalIngredient(line));
 }
 
@@ -442,24 +395,17 @@ function toPromptRecipe(draft: AiRecipeDraft, locale: SupportedLocale): Record<s
 			note: ingredient.note,
 			density_key: ingredient.density_key
 		})),
-		// Normalised back to metric before the model sees them. Instruction prose is stored converted
-		// for the reader, so an imperial reader's draft would otherwise show the model "400 °F" on the
-		// next turn, directly contradicting the rule it was just given. The oven table is a bijection
-		// and tin sizes round-trip exactly, so this is lossless for the cases that actually occur —
-		// and it also cleans up an improve-mode draft seeded from an imperial recipe.
+		// Steps are stored converted for the reader, so an imperial reader's draft would show the model
+		// "400 °F", contradicting its own rules. Oven temperatures and tin sizes round-trip exactly.
 		instructions: draft.instructions.map((step) => convertTextUnits(step.text, 'metric', locale))
 	};
 }
 
 /**
- * Assistant turns are stored client-side as the bare `reply` text, but sending them back that way
- * makes every previous assistant message an in-context example of the WRONG output format — and
- * models weigh recent examples far above system instructions.
- *
- * A turn carrying no draft is serialized as `{"recipe": null, ...}` rather than omitting the key.
- * `recipe` is `required` in our own schema, so an omitted key would make every multi-turn
- * conversation demonstrate a schema-violating response in the highest-recency position; and it
- * shows the model the chat-only turn the contract otherwise only describes.
+ * The transcript keeps only each assistant turn's `reply`, but sending that back bare would make
+ * every earlier assistant message an example of the wrong output format, and models weigh recent
+ * examples above instructions. So each is re-wrapped as an envelope, with `"recipe": null` where it
+ * carries no draft, never an omitted key.
  */
 function serializeAssistantTurn(
 	content: string,
@@ -472,7 +418,10 @@ function serializeAssistantTurn(
 	});
 }
 
-function lastIndexOfRole(conversation: AiChatMessage[], role: AiChatMessage['role']): number {
+function lastIndexOfRole(
+	conversation: AiTextChatMessage[],
+	role: AiTextChatMessage['role']
+): number {
 	for (let i = conversation.length - 1; i >= 0; i -= 1) {
 		if (conversation[i].role === role) return i;
 	}
@@ -480,13 +429,11 @@ function lastIndexOfRole(conversation: AiChatMessage[], role: AiChatMessage['rol
 }
 
 /**
- * Note the absent `unitSystem` parameter. The model is never told which units the reader wants; it
- * has exactly one measurement target, always, which is the simplest instruction to follow and
- * therefore the one a small model complies with most reliably. Conversion happens afterwards, in
- * `parseChatEnvelope`.
+ * There is no `unitSystem` parameter: the model always writes metric, the one target a small model
+ * follows reliably, and `parseChatEnvelope` converts for the reader.
  */
 export function buildChatMessages(
-	conversation: AiChatMessage[],
+	conversation: AiTextChatMessage[],
 	currentDraft: AiRecipeDraft | null,
 	locale: SupportedLocale = DEFAULT_LOCALE
 ): AiChatMessage[] {
@@ -510,18 +457,8 @@ export function buildChatMessages(
 
 	const finalIndex = conversation.length - 1;
 
-	conversation.forEach((message, index) => {
-		// Chat turns are always plain text — the request schema only accepts strings, and the image
-		// content-part form belongs to the photo import prompt, which builds its own messages. Pass
-		// anything else through rather than wrapping or re-serializing it.
-		if (typeof message.content !== 'string') {
-			messages.push(message);
-			return;
-		}
-
-		const content = message.content;
-
-		if (message.role === 'assistant') {
+	conversation.forEach(({ role, content }, index) => {
+		if (role === 'assistant') {
 			messages.push({
 				role: 'assistant',
 				content: serializeAssistantTurn(
@@ -530,11 +467,6 @@ export function buildChatMessages(
 					locale
 				)
 			});
-			return;
-		}
-
-		if (message.role !== 'user') {
-			messages.push(message);
 			return;
 		}
 
@@ -601,11 +533,8 @@ function toDensityKey(raw: unknown): DensityKey {
 }
 
 /**
- * Ingredients are asked for as objects, but tolerance is sized for the schema-free rung of the
- * provider's downgrade ladder, where a model told "objects" still emits plain strings a meaningful
- * fraction of the time. A string is normalised rather than merely parsed: it may itself be
- * imperial, and it may be a line we rendered for an imperial reader last turn and the client
- * echoed straight back.
+ * Ingredients are asked for as objects, but without a schema a model still sends plain strings
+ * often enough to matter. A string is normalised to canonical metric, since it may be imperial.
  */
 function toStructuredIngredient(entry: unknown): AiIngredient | null {
 	if (typeof entry === 'string') {
@@ -656,10 +585,8 @@ function mapEntries<T>(value: unknown, map: (entry: unknown) => T | null): T[] {
 	return value.map(map).filter((entry): entry is T => entry !== null);
 }
 
-// Shown when a model sends a recipe with no usable title. Localised, because a French cook should
-// not be handed an English placeholder — and note that emptiness is tracked with a flag below,
-// never by comparing a title against this string, so localising it cannot break the
-// draft-preservation branch that used to depend on that comparison.
+// Shown when a model sends a recipe with no usable title. Emptiness is tracked by `hasContent`,
+// never by comparing a title with this text.
 const UNTITLED_RECIPE: Record<SupportedLocale, string> = {
 	en: 'Untitled recipe',
 	nl: 'Naamloos recept',
@@ -779,10 +706,8 @@ export function parseChatEnvelope(
 				? node
 				: null;
 
-	// No usable "recipe" means the model didn't intend a recipe change — and that is now a
-	// first-class, prompt-taught outcome rather than an accident. Keep the existing draft untouched
-	// rather than resetting it to blank defaults; only fall back to defaults when there is no draft
-	// yet to preserve.
+	// No usable "recipe" is the prompt's chat-only turn: keep the draft as it is, or start a blank one
+	// when there is none yet.
 	if (recipeNode === null) {
 		return {
 			reply,

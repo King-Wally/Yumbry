@@ -1,6 +1,7 @@
-// Rehearses `bun run db:migrate` on scratch databases next to DATABASE_URL, and proves that
-// drizzle/0000_baseline.sql is the schema the Prisma app built. Never touches DATABASE_URL's own
-// database: every database it creates or drops is named rehearse_*.
+// Transitional: rehearses `bun run db:migrate` on scratch databases next to DATABASE_URL, and proves
+// that drizzle/0000_baseline.sql is the schema v1.x's Prisma migrations built. Remove together
+// with migrate.ts's adoption branch. Never touches DATABASE_URL's own database: every database it
+// creates or drops is named rehearse_*.
 //
 //   bun run db:rehearse [--dump backups/pre-svelte.dump] [--prisma-ref v1.3.1] [--keep]
 //
@@ -13,7 +14,7 @@
 //
 // Schemas are compared with pg_dump --schema-only, minus the drizzle schema and _prisma_migrations.
 // pg tools run in the compose `db` service by default; PG_TOOLS=host uses the ones on the PATH.
-// For step 27, point --dump at a fresh production backup.
+// Before deploying, point --dump at a fresh production backup.
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';

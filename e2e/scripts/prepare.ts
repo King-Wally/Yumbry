@@ -1,5 +1,5 @@
-// Runs before `playwright test`: gives the app servers a pristine database (and the built SPA, if
-// the build needs one copied).
+// Runs before `playwright test`: gives the app servers a pristine database and an empty working
+// directory.
 // Kept out of Playwright's globalSetup because web servers start before it, and dropping the
 // schema under a running server leaves its connection pool holding stale prepared statements.
 import { execSync } from 'node:child_process';
@@ -17,9 +17,9 @@ async function resetDatabase(): Promise<void> {
     throw new Error(`Refusing to reset "${dbName}": E2E_DATABASE_URL must name an e2e/test DB.`);
   }
 
-  // Recreate the database rather than one schema: stacks keep migration history in different
-  // places (Prisma in public._prisma_migrations, Drizzle in its own drizzle schema), and a
-  // leftover history would make the migrate command skip everything.
+  // Recreate the database rather than one schema: migration history can live outside `public`
+  // (Drizzle keeps it in its own schema), and a leftover history would make the migrate command
+  // skip everything.
   const adminUrl = new URL(env.databaseUrl);
   adminUrl.pathname = '/postgres';
   const admin = new pg.Client({ connectionString: adminUrl.toString() });
@@ -38,6 +38,7 @@ async function resetDatabase(): Promise<void> {
   });
 }
 
+// Copying E2E_PUBLIC_DIR lets the suite run against another build of the app; remove after cutover.
 function preparePublicDir(): void {
   fs.rmSync(SERVER_DIR, { recursive: true, force: true });
   fs.mkdirSync(SERVER_DIR, { recursive: true });

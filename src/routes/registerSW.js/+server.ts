@@ -1,8 +1,8 @@
 import type { RequestHandler } from './$types';
 
-// vite-plugin-pwa's registration script on main. A shell cached before the switch may still ask for
-// it. It does nothing now: /sw.js retires the old worker (see ../sw.js/+server.ts).
+// Transitional: a page shell cached by a v1.x install may still load this script, so it answers
+// with an empty one. Remove together with routes/sw.js.
 export const GET: RequestHandler = () =>
-	new Response('// Retired: Yumbry no longer uses this script.\n', {
+	new Response('// Intentionally empty.\n', {
 		headers: { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-cache' }
 	});

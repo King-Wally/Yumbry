@@ -11,8 +11,8 @@ import { assertSafeTarget, type ResolvedAddress } from '#lib/server/url-import/s
 // slip past either. TLS stays end-to-end between Chromium and the site (CONNECT is a raw tunnel), so
 // the browser's real TLS fingerprint is preserved.
 //
-// Every hop dials the IP itself: Bun's node:http calls a custom `lookup` with `all: true` and fails
-// on the (address, family) callback main used (see "Bun runtime notes" in MIGRATION.md).
+// Every hop dials the IP itself rather than passing a custom `lookup`: Bun's node:http calls it
+// with `all: true`, so a lookup answering a single (address, family) pair fails.
 
 export interface SsrfProxy {
 	/** `http://host:port` as the browser should reach it. */

@@ -9,6 +9,7 @@ import {
 	assertSafeTarget,
 	hasBotChallengeMarkers,
 	hasSolvableChallengeMarkers,
+	MAX_PAGE_BYTES,
 	type SafeFetchResult
 } from '#lib/server/url-import/safe-fetch.ts';
 import { startSsrfProxy } from '#lib/server/url-import/ssrf-proxy.ts';
@@ -23,13 +24,12 @@ import { UrlImportError } from '#lib/server/url-import/errors.ts';
 // (headful or not, locale, timezone) is set on that server; emulating any of it here over CDP
 // would be detectable.
 
-export interface HeadlessFetchOptions {
+interface HeadlessFetchOptions {
 	timeoutMs?: number;
 	maxBytes?: number;
 }
 
 const DEFAULT_TIMEOUT_MS = 25_000;
-const DEFAULT_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 const POLL_INTERVAL_MS = 500;
 // How long a page without recipe data must sit without navigating before we accept it. Covers bot
 // interstitials we don't recognise, which reload themselves a second or two in.
@@ -102,7 +102,7 @@ async function fetchWithBrowser(
 	options?: HeadlessFetchOptions
 ): Promise<SafeFetchResult> {
 	const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-	const maxBytes = options?.maxBytes ?? DEFAULT_MAX_BYTES;
+	const maxBytes = options?.maxBytes ?? MAX_PAGE_BYTES;
 	const deadline = Date.now() + timeoutMs;
 
 	// Connection failures here are not UrlImportErrors: the caller reads that as "fallback
@@ -140,24 +140,12 @@ async function fetchWithBrowser(
 			});
 		} catch (err) {
 			if (navigationBlocked) {
-				throw new UrlImportError(
-					"That URL points to a private or internal network address, which isn't allowed.",
-					'blocked_url',
-					err
-				);
+				throw new UrlImportError('Navigation blocked by the proxy.', 'blocked_url', err);
 			}
 			if (err instanceof playwrightErrors.TimeoutError) {
-				throw new UrlImportError(
-					'The page took too long to respond. Try again or check the URL.',
-					'timeout',
-					err
-				);
+				throw new UrlImportError('Timed out in the browser.', 'timeout', err);
 			}
-			throw new UrlImportError(
-				'Could not reach that URL. Check the address and try again.',
-				'network_error',
-				err
-			);
+			throw new UrlImportError('Unreachable from the browser.', 'network_error', err);
 		}
 
 		// A challenge page solves itself and reloads (or navigates) into the real page, so poll until
@@ -182,13 +170,10 @@ async function fetchWithBrowser(
 		}
 
 		if (isBlockedPage(html, hasJsonLd)) {
-			throw new UrlImportError(
-				"That site's bot protection blocked import, even with a real browser.",
-				'bot_challenge'
-			);
+			throw new UrlImportError('Bot challenge in the browser.', 'bot_challenge');
 		}
 		if (Buffer.byteLength(html) > maxBytes) {
-			throw new UrlImportError('That page is too large to import.', 'too_large');
+			throw new UrlImportError('Page too large.', 'too_large');
 		}
 
 		return { html, contentType: 'text/html', finalUrl: page.url() };

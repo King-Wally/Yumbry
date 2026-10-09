@@ -1,10 +1,9 @@
 import type { RequestHandler } from './$types';
 
-// Installs of main's app (v1.x) run a Workbox service worker registered at /sw.js. It serves the
-// cached React shell for every navigation, so the new app would never load, and it checks /sw.js for
-// an update on each navigation. This is that update. Once installed, it deletes every cache,
-// unregisters itself and reloads its pages, which then come from the server. The new app then
-// registers /service-worker.js (src/service-worker/index.ts).
+// Transitional: takes over installs of v1.x, whose service worker is registered at /sw.js, serves
+// a cached page shell for every navigation and checks this URL for an update. This is that update:
+// it deletes every cache, unregisters itself and reloads its windows, which then load this app.
+// Remove once requests for /sw.js have stopped showing up in the logs.
 //
 // no-cache: the browser's update check skips the HTTP cache, but Cloudflare's edge would otherwise
 // keep a copy of a .js file.

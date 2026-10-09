@@ -35,7 +35,6 @@ describe('parseMeasurementPrefix', () => {
 		});
 	});
 
-	// The old single-ASCII-word matcher could not see a French spoon at all.
 	it('matches multi-token and accented unit words', () => {
 		expect(parseMeasurementPrefix("2 c. à s. huile d'olive")).toMatchObject({
 			quantity: 2,

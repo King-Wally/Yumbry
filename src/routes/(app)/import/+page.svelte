@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { enhance, type SubmitFunction } from '$app/forms';
-	import { tick } from 'svelte';
-	import { ArrowLeft, ClipboardPaste, Upload } from '@lucide/svelte';
+	import { ClipboardPaste, Upload } from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import { submitEarlyPick } from '#lib/client/catch-up.ts';
+	import { hydrated } from '#lib/client/hydrated.svelte.ts';
 	import Card from '#lib/components/ui/Card.svelte';
 	import CardHeader from '#lib/components/ui/CardHeader.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import type { PageProps } from './$types';
 
 	let { form }: PageProps = $props();
@@ -12,9 +14,9 @@
 	let jsonLd = $state('');
 	let importing = $state(false);
 
-	/** Both forms share one pending state, as main did. Default behaviour otherwise: follow the
-	 * redirect, or show the returned message. A failed upload clears the file input, so picking the
-	 * same file again (after fixing it) still fires `change`. */
+	/** Both forms share one pending state. Default behaviour otherwise: follow the redirect, or show
+	 * the returned message. A failed upload clears the file input, so picking the same file again
+	 * (after fixing it) still fires `change`. */
 	const trackPending: SubmitFunction = ({ formElement }) => {
 		importing = true;
 		return async ({ result, update }) => {
@@ -27,27 +29,10 @@
 			}
 		};
 	};
-
-	/** A file picked before hydration fired no change handler; submit it now. After a tick, so the
-	 * form's `use:enhance` is attached and this isn't a full-page POST. */
-	function catchUpEarlyPick(input: HTMLInputElement) {
-		void tick().then(() => {
-			if (input.files?.length) input.form?.requestSubmit();
-		});
-	}
 </script>
 
 <div class="mx-auto max-w-2xl pb-4">
-	<div class="mb-4 flex items-center gap-3">
-		<a
-			href="/"
-			aria-label={m.common_back()}
-			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-300 text-stone-600 hover:bg-stone-100"
-		>
-			<ArrowLeft size={18} />
-		</a>
-		<h1 class="font-serif text-2xl font-bold text-stone-900">{m.import_json_title()}</h1>
-	</div>
+	<PageHeader backHref="/" title={m.import_json_title()} class="mb-4" />
 
 	<div class="space-y-6">
 		<Card>
@@ -65,13 +50,15 @@
 					name="jsonLd"
 					aria-label={m.import_json_card_title()}
 					bind:value={jsonLd}
+					defaultValue=""
+					required
 					rows={12}
 					placeholder={'{ "@context": "https://schema.org", "@type": "Recipe", ... }'}
 					class="w-full rounded-md border border-stone-300 px-3 py-2 font-mono text-sm focus:border-clay focus:outline-none"
 				></textarea>
 				<button
 					type="submit"
-					disabled={!jsonLd.trim() || importing}
+					disabled={importing || (hydrated.current && !jsonLd.trim())}
 					class="rounded-md bg-clay px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
 				>
 					{importing ? m.import_json_importing_text() : m.import_json_import_from_text()}
@@ -91,7 +78,7 @@
 					class="block cursor-pointer rounded-lg border border-dashed border-stone-300 px-4 py-8 text-center text-sm text-stone-500 hover:border-clay hover:text-clay"
 				>
 					<input
-						{@attach catchUpEarlyPick}
+						{@attach submitEarlyPick((input) => !!input.files?.length)}
 						type="file"
 						name="file"
 						accept="application/json,.json"

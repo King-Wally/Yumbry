@@ -2,7 +2,7 @@
 	import { Ellipsis, X } from '@lucide/svelte';
 	import type { Snippet } from 'svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import PopoverMenu from './PopoverMenu.svelte';
+	import PopoverMenu from '#lib/components/ui/PopoverMenu.svelte';
 
 	interface Props {
 		/** Actions that stay visible next to the menu button. */

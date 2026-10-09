@@ -55,8 +55,8 @@ export async function getVersion(
 	};
 }
 
-/** The save that would put the snapshot's content back. No `image_path`: a revert never touches
- * the photo, as with every update. */
+/** The save that would put the snapshot's content back. No `image_path`: a snapshot holds no photo,
+ * and updateRecipe never touches it. */
 export function snapshotToRecipeBody(snapshot: RecipeSnapshot): RecipeBody {
 	return {
 		title: snapshot.title,

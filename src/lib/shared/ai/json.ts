@@ -1,19 +1,10 @@
-/**
- * Salvaging JSON out of whatever a model actually sent.
- *
- * Shared by every AI feature rather than owned by one, because the provider's downgrade ladder can
- * end up asking only for "valid JSON" with no schema at all — at which point the response is as
- * likely to be fenced, prefixed with reasoning, or wrapped in a sentence of commentary as it is to
- * be the bare object the prompt asked for.
- */
+// Salvaging JSON out of whatever a model actually sent. On the schema-free rungs of the provider's
+// downgrade ladder (`requestCompletion` in #lib/server/ai/provider.ts) the answer is as likely to be
+// fenced, prefixed with reasoning, or wrapped in a sentence as to be the bare object asked for.
 
-/**
- * Returns the first balanced `{ ... }` span, tracking string literals and escapes so braces inside
- * recipe text don't throw off the depth count. Covers models that wrap their JSON in a sentence of
- * commentary — still a live case, because the provider's downgrade ladder can end up asking only
- * for "valid JSON" with no schema at all.
- */
-export function firstBalancedObject(text: string): string | null {
+/** The first balanced `{ ... }` span, tracking strings and escapes so braces inside recipe text
+ * don't throw off the depth count. */
+function firstBalancedObject(text: string): string | null {
 	const start = text.indexOf('{');
 	if (start === -1) return null;
 

@@ -62,7 +62,7 @@ describe('isEmailConfigured', () => {
 });
 
 describe('sendPasswordResetEmail', () => {
-	it('sends main’s reset link through RESEND_BASE_URL', async () => {
+	it('sends the reset link through RESEND_BASE_URL', async () => {
 		await sendPasswordResetEmail('cook@example.test', 'abc123');
 
 		expect(sent).toHaveLength(1);

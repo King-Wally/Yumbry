@@ -2,13 +2,7 @@
 // OpenRouter pool (or the Gemini daily request quota), `user` is one user's own daily cap.
 export type AiQuotaScope = 'shared' | 'user';
 
-/**
- * The OpenRouter budget as one user sees it, returned by the settings page load.
- *
- * The monthly budget accrues one day's share at a time and whatever a day leaves unspent rolls
- * over to the next, until the month resets on the 1st (UTC). Each user can spend at most
- * `userDailyCapUsd` of it per UTC day, so one heavy user cannot drain the pool for everyone.
- */
+/** The OpenRouter budget as one user sees it (the rule is in #lib/server/ai/budget.ts). */
 export interface AiBudgetStatus {
 	monthlyBudgetUsd: number;
 	dailyAllowanceUsd: number;

@@ -3,6 +3,8 @@
 	import DiffText from '#lib/components/versions/DiffText.svelte';
 	import IngredientList from '#lib/components/recipe/IngredientList.svelte';
 	import InstructionList from '#lib/components/recipe/InstructionList.svelte';
+	import NutritionCell from '#lib/components/recipe/NutritionCell.svelte';
+	import RecipeBadge from '#lib/components/recipe/RecipeBadge.svelte';
 	import TimeStat from '#lib/components/recipe/TimeStat.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { DiffPane, NutritionKey, Segment, TimeKey } from '#lib/shared/recipe/diff.ts';
@@ -22,13 +24,6 @@
 		prep_time_minutes: { icon: 'clock', label: m.recipes_detail_prep },
 		cook_time_minutes: { icon: 'flame', label: m.recipes_detail_cook },
 		total_time_minutes: { icon: 'timer', label: m.recipes_detail_total }
-	};
-
-	const NUTRITION_META: Record<NutritionKey, { unit: string; label: () => string }> = {
-		calories: { unit: 'kcal', label: m.recipes_detail_calories },
-		fat_content: { unit: 'g', label: m.recipes_detail_fat },
-		carbohydrate_content: { unit: 'g', label: m.recipes_detail_carbs },
-		protein_content: { unit: 'g', label: m.recipes_detail_protein }
 	};
 
 	/** The one highlight colour for every difference on the page — bright on purpose. */
@@ -55,20 +50,12 @@
 		<div class="flex flex-wrap items-center gap-1">
 			{#if pane.category.name}
 				<span class={['inline-flex rounded-full p-0.75', highlightIf(pane.category.changed)]}>
-					<span
-						class="rounded-full bg-clay px-3 py-1 text-xs font-semibold tracking-wide text-white capitalize"
-					>
-						{pane.category.name}
-					</span>
+					<RecipeBadge name={pane.category.name} kind="category" />
 				</span>
 			{/if}
 			{#each pane.tags as tag (tag.name)}
 				<span class={['inline-flex rounded-full p-0.75', highlightIf(tag.changed)]}>
-					<span
-						class="rounded-full border border-clay/25 bg-clay/10 px-3 py-1 text-xs font-medium tracking-wide text-clay capitalize"
-					>
-						{tag.name}
-					</span>
+					<RecipeBadge name={tag.name} kind="tag" />
 				</span>
 			{/each}
 		</div>
@@ -98,20 +85,11 @@
 			</div>
 			<div class="grid grid-cols-4 gap-2">
 				{#each nutritionKeys as key (key)}
-					{@const stat = pane.nutrition[key]}
-					<div
-						class={[
-							'rounded-md px-1.5 py-1.5 text-center',
-							highlightIf(stat.changed, 'bg-stone-100')
-						]}
-					>
-						<div class="text-sm font-medium text-stone-900">
-							{stat.value === null ? '—' : Number(stat.value.toFixed(1))}<span
-								class="ml-0.5 text-[10px] text-stone-500">{NUTRITION_META[key].unit}</span
-							>
-						</div>
-						<div class="text-[10px] text-stone-500">{NUTRITION_META[key].label()}</div>
-					</div>
+					<NutritionCell
+						{key}
+						value={pane.nutrition[key].value}
+						class={highlightIf(pane.nutrition[key].changed, 'bg-stone-100')}
+					/>
 				{/each}
 			</div>
 		</div>

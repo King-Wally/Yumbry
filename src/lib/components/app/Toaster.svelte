@@ -5,7 +5,6 @@
 	import { pauseToast, resumeToast, toasts } from '#lib/client/toast.svelte.ts';
 </script>
 
-<!-- Bottom-centre, sliding up from below like main's Radix toasts. -->
 <ol
 	aria-live="polite"
 	class="fixed bottom-0 left-1/2 z-40 m-4 flex w-full max-w-sm -translate-x-1/2 flex-col items-center gap-2 outline-none"

@@ -1,25 +1,23 @@
+<script lang="ts" module>
+	import type { KindedErrorData } from '#lib/shared/kinded-error.ts';
+
+	/** A kinded failure, or a plain `{ message }` one such as a malformed request. */
+	export type AiError = Pick<KindedErrorData, 'message'> & Partial<KindedErrorData>;
+</script>
+
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
-	import type { AiQuotaScope } from '#lib/shared/ai/budget.ts';
 	import { formatRetryAt } from '#lib/shared/ai/budget-display.ts';
 
-	interface Props {
-		message: string;
-		kind?: string;
-		scope?: AiQuotaScope;
-		retryAt?: string | null;
-	}
+	let { error }: { error: AiError } = $props();
 
-	let { message, kind, scope, retryAt }: Props = $props();
-
-	// The server's quota message is English-only and can't name the reader's local time, so a spent
-	// budget is worded here instead.
+	// The server doesn't know the reader's time zone, so a spent budget names its refill time here.
 	const text = $derived.by(() => {
-		if (kind !== 'quota_exceeded') return message;
-		const user = scope === 'user';
-		if (retryAt) {
-			const time = formatRetryAt(retryAt, getLocale());
+		if (error.kind !== 'quota_exceeded') return error.message;
+		const user = error.scope === 'user';
+		if (error.retryAt) {
+			const time = formatRetryAt(error.retryAt, getLocale());
 			return user ? m.ai_quota_user_exceeded_at({ time }) : m.ai_quota_shared_exceeded_at({ time });
 		}
 		return user ? m.ai_quota_user_exceeded() : m.ai_quota_shared_exceeded();

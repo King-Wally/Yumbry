@@ -3,24 +3,15 @@ import type { DensityKey } from '#lib/shared/units/density.ts';
 import type { ModelUnit } from '#lib/shared/units/unit-model.ts';
 
 /**
- * The worked example shown at the end of the system prompt.
+ * The worked example shown at the end of the system prompt, built from one structural fixture and
+ * a table of translated strings so the tests can check it against `AI_ENVELOPE_JSON_SCHEMA` and
+ * `parseChatEnvelope` in every locale. A stale example is worse than none: a model copies the
+ * example over the spec whenever the two disagree.
  *
- * One structural fixture plus a table of translated strings, assembled by code — not four
- * hand-maintained JSON blobs. The point is testability: because the example is built rather than
- * written, CI can assert that it validates against `AI_ENVELOPE_JSON_SCHEMA` and survives our own
- * `parseChatEnvelope`, in every locale. Four static blobs cannot be kept honest that way, and a
- * stale example is worse than no example at all — a model copies the example over the spec
- * whenever the two disagree.
- *
- * The dish is chosen to exercise every part of the contract in one artefact: something counted
- * whole, a plain weight, a weight a cook could also measure by the cupful, a spooned volume, an
- * ingredient with no quantity, both a filled and an absent note, an oven temperature in °C, and
- * plain imperative steps.
- *
- * Its tags carry exactly one of each kind the field notes list — protein, cuisine, dietary
- * restriction, cooking method — so the example demonstrates the mapping rather than merely showing
- * four plausible words. Each is true of this dish; nothing in it contains wheat, so the dietary
- * tag is a fact rather than a guess, which is the habit worth teaching.
+ * The dish exercises the whole contract: something counted whole, a plain weight, a weight a cook
+ * could also measure by the cupful, a spooned volume, an ingredient with no quantity, filled and
+ * absent notes, an oven temperature in °C. Its tags carry one of each kind the field notes list,
+ * each true of this dish.
  */
 interface ExampleIngredient {
 	quantity: number | null;
@@ -47,13 +38,8 @@ const EXAMPLE_TIMES = {
 	total_time_minutes: 55
 };
 
-/**
- * Per serving, and plausible for a quarter of this dish — the example teaches the division too.
- *
- * `calories` is not an independent guess: it is what the Atwater factors give for these three
- * macros (32.5 × 9 + 6.2 × 4 + 39 × 4 = 473.3, rounded), so the example demonstrates the arithmetic
- * the prompt asks for rather than quietly contradicting it. A test holds the two in step.
- */
+/** Per serving, a quarter of the dish. `calories` follows from the macros by the Atwater factors
+ * (32.5 × 9 + 6.2 × 4 + 39 × 4 = 473.3), as the prompt asks; a test holds the two in step. */
 const EXAMPLE_NUTRITION = {
 	calories: 473,
 	fat_content: 32.5,

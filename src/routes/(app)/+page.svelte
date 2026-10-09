@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { afterNavigate, goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
 	import FilterChips from '#lib/components/recipe-list/FilterChips.svelte';
@@ -10,8 +10,12 @@
 
 	let { data }: PageProps = $props();
 
-	// Seeded once: a slow navigation must never overwrite what the user is still typing.
+	// Not derived: a slow navigation must never overwrite what the user is still typing. Every other
+	// navigation (the logo, back/forward, a chip) brings the box in line with the URL again.
 	let search = $state(untrack(() => data.filters.search));
+	afterNavigate(({ type }) => {
+		if (type !== 'goto') search = data.filters.search;
+	});
 
 	/**
 	 * Navigates client-side to the list with the typed search term, keeping the other filters.
@@ -27,13 +31,7 @@
 
 <div class="space-y-6">
 	<div class="space-y-4">
-		<SearchBar
-			bind:value={search}
-			oninput={(value) => {
-				search = value;
-				navigate();
-			}}
-		/>
+		<SearchBar bind:value={search} oninput={navigate} />
 		<FilterChips
 			name="category"
 			items={data.categories}

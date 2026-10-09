@@ -8,9 +8,11 @@ import { UrlImportError } from '#lib/server/url-import/errors.ts';
 // The server-side fetch behind URL import. A user-supplied URL must never reach the app's own
 // network, so every hop (the first request and each redirect) is resolved, checked, and then dialled
 // at the address that check approved. Dialling by IP is what pins DNS: the hostname travels only in
-// the Host header and TLS SNI, so a rebinding resolver gets no second chance. On Bun this replaces
-// main's undici Agent with a custom `connect.lookup`, which Bun's built-in undici silently ignores
-// (see "Bun runtime notes" in MIGRATION.md; runtime.spec.ts guards both behaviours).
+// the Host header and TLS SNI, so a rebinding resolver gets no second chance. Don't swap this for
+// an undici Agent with `connect.lookup`: Bun's built-in undici ignores the lookup and resolves the
+// hostname itself (runtime.spec.ts guards both behaviours).
+//
+// Error messages here are for the import log; the user reads a translated message per kind.
 
 export interface SafeFetchResult {
 	html: string;
@@ -18,7 +20,7 @@ export interface SafeFetchResult {
 	finalUrl: string;
 }
 
-export interface SafeFetchOptions {
+interface SafeFetchOptions {
 	timeoutMs?: number;
 	maxBytes?: number;
 	maxRedirects?: number;
@@ -28,7 +30,8 @@ export interface SafeFetchOptions {
 }
 
 const DEFAULT_TIMEOUT_MS = 10_000;
-const DEFAULT_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+/** The largest page either fetcher (this one or the headless fallback) accepts. */
+export const MAX_PAGE_BYTES = 10 * 1024 * 1024;
 const DEFAULT_MAX_REDIRECTS = 10;
 const DEFAULT_ACCEPT_LANGUAGE = 'en-US,en;q=0.9';
 
@@ -38,7 +41,7 @@ const DEFAULT_ACCEPT_LANGUAGE = 'en-US,en;q=0.9';
 // derive from one version so they never disagree (a mismatch is itself a bot signal).
 const CHROME_MAJOR = 153;
 
-export const BROWSER_USER_AGENT = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${CHROME_MAJOR}.0.0.0 Safari/537.36`;
+const BROWSER_USER_AGENT = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${CHROME_MAJOR}.0.0.0 Safari/537.36`;
 
 const BROWSER_NAVIGATION_HEADERS: Record<string, string> = {
 	accept:
@@ -54,18 +57,15 @@ const BROWSER_NAVIGATION_HEADERS: Record<string, string> = {
 	'user-agent': BROWSER_USER_AGENT
 };
 
-const INVALID_URL_MESSAGE = 'Enter a valid http or https URL.';
-const UNREACHABLE_MESSAGE = 'Could not reach that URL. Check the address and try again.';
-
 function parseAllowedUrl(rawUrl: string): URL {
 	let url: URL;
 	try {
 		url = new URL(rawUrl);
 	} catch {
-		throw new UrlImportError(INVALID_URL_MESSAGE, 'invalid_url');
+		throw new UrlImportError('Not an http(s) URL.', 'invalid_url');
 	}
 	if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-		throw new UrlImportError(INVALID_URL_MESSAGE, 'invalid_url');
+		throw new UrlImportError('Not an http(s) URL.', 'invalid_url');
 	}
 	return url;
 }
@@ -95,25 +95,22 @@ export interface ResolvedAddress {
  * ones a caller may dial for this URL. */
 export async function assertSafeTarget(url: URL): Promise<ResolvedAddress[]> {
 	if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-		throw new UrlImportError(INVALID_URL_MESSAGE, 'invalid_url');
+		throw new UrlImportError('Not an http(s) URL.', 'invalid_url');
 	}
 
 	let addresses: ResolvedAddress[];
 	try {
 		addresses = await dns.lookup(bareHostname(url), { all: true });
 	} catch (err) {
-		throw new UrlImportError(UNREACHABLE_MESSAGE, 'network_error', err);
+		throw new UrlImportError('Unreachable.', 'network_error', err);
 	}
-	if (addresses.length === 0) throw new UrlImportError(UNREACHABLE_MESSAGE, 'network_error');
+	if (addresses.length === 0) throw new UrlImportError('Host has no addresses.', 'network_error');
 
 	if (isAllowlistedForTests(url)) return addresses;
 
 	for (const { address } of addresses) {
 		if (ipaddr.process(address).range() !== 'unicast') {
-			throw new UrlImportError(
-				"That URL points to a private or internal network address, which isn't allowed.",
-				'blocked_url'
-			);
+			throw new UrlImportError(`Non-unicast address ${address}.`, 'blocked_url');
 		}
 	}
 
@@ -198,7 +195,7 @@ async function readBodyWithLimit(response: Response, maxBytes: number): Promise<
 		total += value.byteLength;
 		if (total > maxBytes) {
 			await reader.cancel();
-			throw new UrlImportError('That page is too large to import.', 'too_large');
+			throw new UrlImportError('Page too large.', 'too_large');
 		}
 		chunks.push(value);
 	}
@@ -211,7 +208,7 @@ export async function safeFetchHtml(
 	options?: SafeFetchOptions
 ): Promise<SafeFetchResult> {
 	const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-	const maxBytes = options?.maxBytes ?? DEFAULT_MAX_BYTES;
+	const maxBytes = options?.maxBytes ?? MAX_PAGE_BYTES;
 	const maxRedirects = options?.maxRedirects ?? DEFAULT_MAX_REDIRECTS;
 	const acceptLanguage = options?.acceptLanguage ?? DEFAULT_ACCEPT_LANGUAGE;
 
@@ -238,13 +235,9 @@ export async function safeFetchHtml(
 				});
 			} catch (err) {
 				if (controller.signal.aborted) {
-					throw new UrlImportError(
-						'The page took too long to respond. Try again or check the URL.',
-						'timeout',
-						err
-					);
+					throw new UrlImportError('Timed out.', 'timeout', err);
 				}
-				throw new UrlImportError(UNREACHABLE_MESSAGE, 'network_error', err);
+				throw new UrlImportError('Unreachable.', 'network_error', err);
 			}
 
 			await storeCookies(cookieJar, response, currentUrl);
@@ -253,7 +246,7 @@ export async function safeFetchHtml(
 			if (response.status >= 300 && response.status < 400 && location) {
 				await response.body?.cancel();
 				if (redirectCount >= maxRedirects) {
-					throw new UrlImportError('That URL redirected too many times.', 'too_many_redirects');
+					throw new UrlImportError('Too many redirects.', 'too_many_redirects');
 				}
 				currentUrl = parseAllowedUrl(new URL(location, currentUrl).toString());
 				addresses = await assertSafeTarget(currentUrl);
@@ -264,7 +257,7 @@ export async function safeFetchHtml(
 			if (!/text\/html|application\/xhtml\+xml/i.test(contentType)) {
 				await response.body?.cancel();
 				throw new UrlImportError(
-					"That URL didn't return an HTML page.",
+					`Not HTML (${contentType || 'no content type'}).`,
 					'unsupported_content_type'
 				);
 			}
@@ -273,7 +266,7 @@ export async function safeFetchHtml(
 
 			if (looksLikeBotChallenge(response.status, html)) {
 				throw new UrlImportError(
-					"That site's bot protection blocked automatic import.",
+					`Bot challenge (HTTP ${response.status}).`,
 					'bot_challenge',
 					undefined,
 					{ httpStatus: response.status }
@@ -283,12 +276,9 @@ export async function safeFetchHtml(
 			// Anything else that isn't a success would otherwise reach the JSON-LD check and be
 			// misreported as "no structured data found".
 			if (response.status < 200 || response.status >= 300) {
-				throw new UrlImportError(
-					`The site returned HTTP ${response.status} instead of the page.`,
-					'network_error',
-					undefined,
-					{ httpStatus: response.status }
-				);
+				throw new UrlImportError(`HTTP ${response.status}.`, 'network_error', undefined, {
+					httpStatus: response.status
+				});
 			}
 
 			return { html, contentType, finalUrl: currentUrl.toString() };
@@ -296,11 +286,7 @@ export async function safeFetchHtml(
 	} catch (err) {
 		// A timeout can also fire while the body is streaming, after fetch itself resolved.
 		if (controller.signal.aborted && !(err instanceof UrlImportError)) {
-			throw new UrlImportError(
-				'The page took too long to respond. Try again or check the URL.',
-				'timeout',
-				err
-			);
+			throw new UrlImportError('Timed out.', 'timeout', err);
 		}
 		throw err;
 	} finally {

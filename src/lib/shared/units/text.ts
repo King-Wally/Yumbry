@@ -236,8 +236,7 @@ export function convertTextUnits(
 				}
 			);
 	} catch {
-		// A recipe is never worth throwing over; an unconverted instruction is a far better outcome
-		// than a 502 on the whole turn.
+		// An unconverted instruction is a far better outcome than failing the whole turn.
 		return text;
 	}
 }

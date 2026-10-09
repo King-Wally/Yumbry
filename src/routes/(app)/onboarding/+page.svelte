@@ -16,6 +16,7 @@
 		Users
 	} from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import CopyLinkField from '#lib/components/ui/CopyLinkField.svelte';
 	import { hydrated } from '#lib/client/hydrated.svelte.ts';
 	import {
 		currentInstallPlatform,
@@ -38,7 +39,8 @@
 
 	const ALL_STEPS: StepKey[] = ['language', 'create', 'family', 'pwa', 'done'];
 
-	// Paraglide has no arrays, so each platform's numbered steps pair a message with main's icon.
+	// Paraglide has no arrays, so each platform's steps are numbered messages, each with the icon of
+	// the browser control it names.
 	const PWA_STEPS: Record<InstallPlatform, { text: () => string; icon: Component }[]> = {
 		'ios-safari': [
 			{ text: m.onboarding_pwa_steps_ios_safari_1, icon: Share },
@@ -60,7 +62,6 @@
 
 	let step = $state(0);
 	let pickedLocale = $state<SupportedLocale | null>(null);
-	let copied = $state(false);
 
 	// Set once on mount: the PWA step is a one-time nudge, and both need `navigator`.
 	let platform = $state<InstallPlatform>('desktop');
@@ -122,12 +123,6 @@
 	function handleNext() {
 		if (currentKey === 'language' && !pickedLocale) return;
 		step += 1;
-	}
-
-	async function copyInvite() {
-		await navigator.clipboard.writeText(data.inviteUrl);
-		copied = true;
-		setTimeout(() => (copied = false), 2000);
 	}
 </script>
 
@@ -290,23 +285,14 @@ picked language survive a locale switch), so the page keys its own markup. -->
 						>
 							{m.settings_family_invite_label()}
 						</label>
-						<div class="flex gap-2">
-							<input
-								id="onboarding-invite-link"
-								type="text"
-								readonly
-								value={data.inviteUrl}
-								onfocus={(event) => event.currentTarget.select()}
-								class="w-full truncate rounded-md border border-stone-200 px-3 py-2 text-xs text-stone-400"
-							/>
-							<button
-								type="button"
-								onclick={copyInvite}
-								class="shrink-0 rounded-md bg-clay px-3.5 py-2 text-xs font-medium text-white"
-							>
-								{copied ? m.settings_family_copied() : m.settings_family_copy_link()}
-							</button>
-						</div>
+						<CopyLinkField
+							id="onboarding-invite-link"
+							url={data.inviteUrl}
+							copyLabel={m.settings_family_copy_link()}
+							copiedLabel={m.settings_family_copied()}
+							inputClass="w-full truncate rounded-md border border-stone-200 px-3 py-2 text-xs text-stone-400"
+							buttonClass="shrink-0 rounded-md bg-clay px-3.5 py-2 text-xs font-medium text-white"
+						/>
 					</div>
 					<p class="mx-auto mt-4 max-w-115 text-center text-[13px] leading-relaxed text-stone-400">
 						{m.onboarding_family_hint()}

@@ -52,7 +52,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
   then they ran only an allowlist (`e2e/ported-specs.txt`, now deleted) that each feature step
   extended. Every test must stay green.
 - **`CLAUDE.md` describes this branch since step 26.** Before that it still described `main`'s
-  architecture. This file wins wherever they disagree.
+  architecture. `CLAUDE.md` describes the code as it is now; this file is the history.
 - **Framework-free logic** (scaling, form rules, diffing, units, AI prompt building and parsing)
   goes in `src/lib/shared/` with unit tests. Server-only code goes in `src/lib/server/`.
 - **Every query that touches `recipes`, `tags`, `categories` or `recipe_versions` filters by the

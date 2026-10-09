@@ -1,6 +1,6 @@
 // A quantity token: a mixed number ("1 1/2"), a simple fraction ("1/2"), or a plain integer/decimal.
-// Shared between the AI recipe draft's unit converter and the backend's ingredient-line parser so
-// the two never drift apart on what counts as a parseable quantity.
+// The AI draft's unit converter and `parseMeasurementPrefix` share it so they agree on what counts
+// as a quantity.
 export const QUANTITY_TOKEN_PATTERN = '\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+|\\d+(?:\\.\\d+)?';
 
 /**
@@ -26,7 +26,7 @@ export function parseQuantityToken(token: string): number {
 
 const VULGAR_FRACTION_CHARS = '¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞';
 
-export const VULGAR_FRACTIONS: Record<string, string> = {
+const VULGAR_FRACTIONS: Record<string, string> = {
 	'¼': '1/4',
 	'½': '1/2',
 	'¾': '3/4',

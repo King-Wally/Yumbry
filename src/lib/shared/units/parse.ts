@@ -17,11 +17,10 @@ import type { AiIngredient } from '#lib/shared/units/format.ts';
 
 const LEADING_QUANTITY_REGEX = new RegExp(`^(${QUANTITY_TOKEN_PATTERN})(?=\\s|$)`);
 
-// Longest-first so "fl oz" beats "oz" and "cuillère à soupe" beats "cuillère". The old parser
-// matched a single ASCII word, which could never see "c. à s." at all.
+// Longest-first so "fl oz" beats "oz" and "cuillère à soupe" beats "cuillère".
 const UNIT_TOKENS = tokensByLengthDesc(RECOGNIZED_UNITS.keys());
 
-export interface ParsedPrefix {
+interface ParsedPrefix {
 	quantity: number | null;
 	/** Set when the unit word maps to something we can convert. */
 	unit: UnitCode | null;
@@ -41,7 +40,7 @@ function boundaryAt(text: string, index: number): boolean {
 }
 
 /** Longest recognised unit word at the start of `text`, tolerating inner whitespace variation. */
-export function matchUnitWord(text: string): { word: string; length: number } | null {
+function matchUnitWord(text: string): { word: string; length: number } | null {
 	const lowered = text.toLowerCase();
 
 	for (const token of UNIT_TOKENS) {

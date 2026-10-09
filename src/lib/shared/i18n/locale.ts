@@ -1,8 +1,4 @@
-/**
- * The locales the app ships UI translations for. Lives here rather than alongside the AI prompt
- * code that used to own it: the auth schema, the settings page and the unit label tables all need
- * it and have nothing to do with the AI assistant.
- */
+/** The locales the app ships UI translations for. */
 export const SUPPORTED_LOCALES = ['en', 'nl', 'fr', 'es'] as const;
 
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
@@ -23,8 +19,8 @@ export const LANGUAGE_NAMES: Record<SupportedLocale, string> = {
 
 /**
  * Which decimal separator a rendered amount uses. English recipes write "2.5", the other three
- * write "2,5" — and the backend's ingredient parser normalizes a leading decimal comma, so both
- * survive the round trip into the `amount` column.
+ * write "2,5"; `parseMeasurementPrefix` reads a leading decimal comma, so both survive the round
+ * trip into the `amount` column.
  */
 export function decimalSeparator(locale: SupportedLocale): '.' | ',' {
 	return locale === 'en' ? '.' : ',';

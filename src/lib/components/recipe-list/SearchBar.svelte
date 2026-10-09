@@ -5,7 +5,7 @@
 
 	interface Props {
 		value: string;
-		oninput?: (value: string) => void;
+		oninput?: () => void;
 	}
 
 	let { value = $bindable(), oninput }: Props = $props();
@@ -22,7 +22,7 @@
 		type="search"
 		bind:value
 		defaultValue={initial}
-		oninput={(event) => oninput?.(event.currentTarget.value)}
+		oninput={() => oninput?.()}
 		aria-label={m.recipes_list_search_placeholder()}
 		placeholder={m.recipes_list_search_placeholder()}
 		class="w-full rounded-full border border-stone-300 bg-white py-2 pr-4 pl-10 text-stone-800 transition-colors hover:border-stone-400 focus:border-clay focus:outline-none"

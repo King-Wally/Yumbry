@@ -9,7 +9,7 @@ function limiter(opts: { limit?: number; disabled?: boolean } = {}) {
 	const rl = createRateLimiter({
 		windowMs: 60_000,
 		limit: opts.limit ?? 3,
-		message: 'Slow down.',
+		message: () => 'Slow down.',
 		now: () => time,
 		disabled: () => opts.disabled ?? false
 	});

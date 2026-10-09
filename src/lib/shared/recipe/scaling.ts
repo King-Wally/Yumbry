@@ -3,7 +3,7 @@ import { toNumber } from '#lib/shared/recipe/numeric.ts';
 import type { Ingredient } from '#lib/shared/recipe/dto.ts';
 import { formatScaledAmount } from '#lib/shared/units/format.ts';
 
-export interface ScaledIngredient extends Ingredient {
+interface ScaledIngredient extends Ingredient {
 	displayText: string;
 	scaledAmount?: number;
 }

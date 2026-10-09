@@ -2,14 +2,17 @@ import path from 'node:path';
 import { rm } from 'node:fs/promises';
 import { UPLOADS_DIR } from '$app/env/private';
 import { parseRecipeId } from '#lib/server/recipes/recipe-id.ts';
+import { PHOTO_LIMIT_MB, type PhotoRefusal } from '#lib/shared/recipe/photo.ts';
+
+export { PHOTO_LIMIT_MB, type PhotoError, type PhotoRefusal } from '#lib/shared/recipe/photo.ts';
 
 /** Where recipe photos live on disk. Stored paths are `/uploads/` + a path relative to this. */
 export function uploadsRoot(): string {
 	return path.resolve(UPLOADS_DIR ?? 'uploads');
 }
 
-// New uploads are always WebP. The others are what older versions stored, and stay servable. The
-// type comes from this list, never from sniffing the file.
+// New uploads are always WebP; photos already on disk may be any of the others. The type comes from
+// this list, never from sniffing the file.
 const CONTENT_TYPES: Record<string, string> = {
 	webp: 'image/webp',
 	jpg: 'image/jpeg',
@@ -57,15 +60,6 @@ export const ALLOWED_PHOTO_TYPES: ReadonlySet<string> = new Set([
 	'image/webp',
 	'image/gif'
 ]);
-
-/** Ceiling for an original as the camera wrote it; what is stored is re-encoded far smaller.
- * `BODY_SIZE_LIMIT` (30M in the Dockerfile and the e2e config) leaves room for multipart overhead. */
-export const PHOTO_LIMIT_MB = 25;
-
-export type PhotoRefusal = 'missing' | 'unsupported_type' | 'too_large';
-
-/** Why the photo action refused an upload: the checks here, or bytes sharp can't decode. */
-export type PhotoError = PhotoRefusal | 'unreadable_image';
 
 /** Why a form value can't be taken as a recipe photo, or null if it can. Only the declared type is
  * checked here; `optimizeRecipePhoto` is what looks at the bytes. */

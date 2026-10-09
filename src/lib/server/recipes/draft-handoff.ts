@@ -10,13 +10,13 @@ import type { RecipeBody } from '#lib/server/recipes/body-schema.ts';
 // cookie carries only a random id and the draft waits here, in memory: one process serves the app
 // (as for rate-limit.ts), and a restart merely drops drafts nobody has opened yet.
 
-export type DraftSource = 'url' | 'photo' | 'ai';
+type DraftSource = 'url' | 'photo' | 'ai';
 
 /** The form the draft is for: null for /recipes/new, or the id of the recipe whose edit form
  * reviews it. */
 export type DraftTarget = number | null;
 
-export interface Draft {
+interface Draft {
 	draft: RecipeBody;
 	source: DraftSource;
 }
@@ -45,17 +45,21 @@ function sweep(time: number): void {
 	}
 }
 
+/** Stashes `draft` for the form at `target`. An AI draft's `ingredients_structured` is dropped: the
+ * form edits the rendered lines, and the canonical amounts stay behind with the chat. */
 export function stashDraft(
 	cookies: Cookies,
 	userId: string,
-	draft: RecipeBody,
+	draft: RecipeBody & { ingredients_structured?: unknown },
 	source: DraftSource,
 	target: DraftTarget,
 	now = Date.now()
 ): void {
 	sweep(now);
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	const { ingredients_structured, ...body } = draft;
 	const id = randomBytes(24).toString('hex');
-	drafts.set(id, { userId, draft, source, target, expiresAt: now + TTL_MS });
+	drafts.set(id, { userId, draft: body, source, target, expiresAt: now + TTL_MS });
 	cookies.set(DRAFT_COOKIE, id, {
 		path: COOKIE_PATH,
 		httpOnly: true,

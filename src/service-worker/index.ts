@@ -2,8 +2,6 @@
 // pages: they are rendered per user, so navigations, `__data.json`, form posts and /api always go
 // to the network, and a PWA opened without a connection shows the browser's offline page. A
 // request this worker doesn't answer goes out exactly as it would without one.
-//
-// Installs of main's app had a Workbox worker at /sw.js. src/routes/sw.js/+server.ts retires it.
 import { self } from '$app/service-worker';
 import { version } from '$app/env';
 import { assets, immutable } from '$app/manifest';
@@ -11,7 +9,7 @@ import { assets, immutable } from '$app/manifest';
 const APP_CACHE = `cache-${version}`;
 // Not versioned, so photos survive a deploy.
 const UPLOADS_CACHE = 'uploads';
-// As main's Workbox `maxEntries`.
+// Enough for a family's whole collection, small enough not to crowd the browser's storage quota.
 const MAX_UPLOADS = 300;
 
 // Both lists are relative to the base path, which is the worker's scope.
@@ -37,7 +35,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
 	event.waitUntil(
 		(async () => {
-			// Also clears what an older worker left behind, Workbox's caches included.
+			// Deletes every other cache on this origin, including any an earlier worker left.
 			for (const key of await caches.keys()) {
 				if (key !== APP_CACHE && key !== UPLOADS_CACHE) await caches.delete(key);
 			}

@@ -10,7 +10,7 @@ import type { SignedIn } from '#lib/server/auth/guards.ts';
 import { failKinded } from '#lib/server/http/kinded-errors.ts';
 import { assertOpenRouterBudget } from '#lib/server/ai/budget.ts';
 import { chatWithAi, type AiModelTier } from '#lib/server/ai/provider.ts';
-import { AiProviderError } from '#lib/server/ai/errors.ts';
+import { parseModelAnswer } from '#lib/server/ai/errors.ts';
 import {
 	AI_ENVELOPE_JSON_SCHEMA,
 	buildChatMessages,
@@ -51,15 +51,9 @@ export function chatTier(mode: AiChatMode, turns: number): AiModelTier {
 	return mode === 'create' && turns === 1 ? 'big' : 'medium';
 }
 
-/** `parseChatEnvelope`, with its plain "The AI response …" errors turned into the malformed answer
- * they are. */
+/** `parseChatEnvelope`, with its errors turned into the malformed answer they are. */
 export function parseEnvelope(raw: string, options: ParseEnvelopeOptions): AiChatEnvelope {
-	try {
-		return parseChatEnvelope(raw, options);
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new AiProviderError(message, 'malformed_response', err);
-	}
+	return parseModelAnswer(() => parseChatEnvelope(raw, options));
 }
 
 function parseJsonField(value: FormDataEntryValue | null): unknown {
@@ -123,8 +117,6 @@ export async function reviewDraft(event: RequestEvent, { user }: SignedIn, targe
 	);
 	if (!parsed.success) return fail(400, { message: m.common_something_went_wrong() });
 
-	// The form edits rendered lines; the canonical amounts stay behind with the chat.
-	const draft = { ...parsed.data, ingredients_structured: undefined };
-	stashDraft(event.cookies, user.id, draft, 'ai', target);
+	stashDraft(event.cookies, user.id, parsed.data, 'ai', target);
 	redirect(303, target === null ? '/recipes/new' : `/recipes/${target}/edit`);
 }

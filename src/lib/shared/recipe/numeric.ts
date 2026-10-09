@@ -14,9 +14,9 @@ export function toNullableNumber(value: string | number | null | undefined): num
 }
 
 /**
- * A Postgres numeric as the recipe DTOs carry it: without the column's padding, so `numeric(65,30)`
- * "4.000000000000000000000000000000" reads "4" and "14.50" reads "14.5", as Prisma's Decimal
- * printed them on main (version snapshots stored by main hold those strings).
+ * A Postgres numeric as the recipe DTOs and version snapshots carry it: without the column's
+ * padding, so `numeric(65,30)` "4.000000000000000000000000000000" reads "4" and "14.50" reads
+ * "14.5".
  */
 export function decimalString(value: string): string;
 export function decimalString(value: string | null): string | null;

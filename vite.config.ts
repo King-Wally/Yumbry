@@ -28,8 +28,8 @@ export default defineConfig({
 			// A PWA can stay open for days without a full load. Polling lets the next navigation after
 			// a deploy load the new build (and update the service worker) instead of the old chunks.
 			version: { pollInterval: 60 * 60 * 1000 },
-			// helmet's default policy, as main sent it. The other security headers are set in
-			// hooks.server.ts. Kit adds nonces/hashes for its own inline scripts ('auto').
+			// helmet's default policy. The other security headers are set in hooks.server.ts. Kit
+			// adds nonces/hashes for its own inline scripts ('auto').
 			csp: {
 				mode: 'auto',
 				directives: {

@@ -1,7 +1,7 @@
 ---
 description: Generate a commit message from staged changes and commit
 model: haiku
-allowed-tools: Bash(git add:*), Bash(git status:*), Bash(git diff:*)
+allowed-tools: Bash(git add:*), Bash(git status:*), Bash(git diff:*), Bash(git commit:*)
 disable-model-invocation: true
 ---
 

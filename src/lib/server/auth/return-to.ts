@@ -1,8 +1,8 @@
 import type { RequestEvent } from '@sveltejs/kit';
 
 // Where a signed-out visitor was headed, kept for the login (or register → onboarding) that
-// follows. A cookie rather than a `?redirectTo=` query: the login page's URL is part of the
-// contract (the e2e specs expect a bare /login), as it was on main, which kept it in router state.
+// follows. A cookie rather than a `?redirectTo=` query, so protected pages redirect to a bare
+// /login (the e2e specs expect exactly that URL).
 
 export const RETURN_TO_COOKIE = 'yumbry-return-to';
 const TEN_MINUTES_SECONDS = 10 * 60;

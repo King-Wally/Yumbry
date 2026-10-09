@@ -1,6 +1,6 @@
-import { error, fail, redirect } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 import { setFlash } from '#lib/server/http/flash.ts';
-import { requireRecipe } from '#lib/server/auth/guards.ts';
+import { recipeNotFound, requireRecipe } from '#lib/server/auth/guards.ts';
 import { parseRecipeId } from '#lib/server/recipes/recipe-id.ts';
 import { getVersion, listVersions, revertToVersion } from '#lib/server/recipes/versions.ts';
 import { getRecipe } from '#lib/server/recipes/recipes.ts';
@@ -15,7 +15,7 @@ export const load: PageServerLoad = async (event) => {
 		listVersions(recipeId, familyId)
 	]);
 	// Null only if the recipe was deleted since requireRecipe looked.
-	if (!recipe) error(404, 'Recipe not found.');
+	if (!recipe) recipeNotFound();
 
 	// `?version=` picks one; anything else (missing, malformed, not this recipe's) means the newest.
 	const picked = parseRecipeId(event.url.searchParams.get('version'));

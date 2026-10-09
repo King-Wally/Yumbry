@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { untrack, type Snippet } from 'svelte';
-	import { ArrowLeft, Clock, Flame, ReceiptText, Tags } from '@lucide/svelte';
+	import { Clock, Flame, ReceiptText, Tags } from '@lucide/svelte';
 	import { deserialize, enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import AiErrorBanner from '#lib/components/ai/AiErrorBanner.svelte';
+	import AiErrorBanner, { type AiError } from '#lib/components/ai/AiErrorBanner.svelte';
 	import Card from '#lib/components/ui/Card.svelte';
 	import CardHeader from '#lib/components/ui/CardHeader.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import CategoryPicker from '#lib/components/recipe-form/CategoryPicker.svelte';
 	import ReorderableListEditor from '#lib/components/ui/ReorderableListEditor.svelte';
 	import ServingsStepper from '#lib/components/recipe/ServingsStepper.svelte';
@@ -14,7 +15,6 @@
 	import { hydrated } from '#lib/client/hydrated.svelte.ts';
 	import { m } from '#lib/paraglide/messages.js';
 	import { toNullableNumber } from '#lib/shared/recipe/numeric.ts';
-	import type { AiQuotaScope } from '#lib/shared/ai/budget.ts';
 	import type { AiNutritionEstimate } from '#lib/shared/ai/nutrition.ts';
 	import {
 		mergeNutritionEstimate,
@@ -73,17 +73,10 @@
 		instructions: fields.instructions.map((step) => ({ id: step.id, text: step.text }))
 	});
 
-	// Nutrition estimate
-	type EstimateError = {
-		message: string;
-		kind?: string;
-		scope?: AiQuotaScope;
-		retryAt?: string | null;
-	};
 	const nutritionConfigured = $derived(page.data.nutritionConfigured === true);
 	const canEstimate = $derived(nutritionRequestFromForm(current) !== null);
 	let estimating = $state(false);
-	let estimateError = $state<EstimateError | null>(null);
+	let estimateError = $state<AiError | null>(null);
 
 	/** Posts the form's fields to `?/estimateNutrition` the way `use:enhance` would, but handles the
 	 * result here: only the four nutrition fields change, and nothing else on the page reloads. */
@@ -98,9 +91,7 @@
 				body: new FormData(formEl),
 				headers: { 'x-sveltekit-action': 'true' }
 			});
-			const result = deserialize<{ estimate: AiNutritionEstimate }, EstimateError>(
-				await response.text()
-			);
+			const result = deserialize<{ estimate: AiNutritionEstimate }, AiError>(await response.text());
 			if (result.type === 'success' && result.data) {
 				// The merge rule (a null keeps what was typed) lives with the other form rules.
 				const merged = mergeNutritionEstimate(current, result.data.estimate);
@@ -169,18 +160,11 @@
 {/snippet}
 
 <div class="mx-auto max-w-3xl pb-4">
-	<div class="mb-4 flex items-center gap-3">
-		<a
-			href={backHref}
-			aria-label={m.common_back()}
-			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-300 text-stone-600 hover:bg-stone-100"
-		>
-			<ArrowLeft size={18} />
-		</a>
-		<h1 class="font-serif text-2xl font-bold text-stone-900">
-			{mode === 'edit' ? m.recipe_form_edit_title() : m.recipe_form_add_title()}
-		</h1>
-	</div>
+	<PageHeader
+		{backHref}
+		title={mode === 'edit' ? m.recipe_form_edit_title() : m.recipe_form_add_title()}
+		class="mb-4"
+	/>
 
 	{#if notice}
 		<p class="mb-4 rounded-md border border-clay/25 bg-clay/10 px-3 py-2 text-sm text-clay">
@@ -230,6 +214,7 @@
 						name="description"
 						rows="2"
 						bind:value={fields.description}
+						defaultValue={start.description}
 						placeholder={m.recipe_form_description_placeholder()}
 						{...invalid('description')}
 						class={inputClass}></textarea>
@@ -331,7 +316,7 @@
 								: m.recipe_form_estimate_nutrition()}
 						</button>
 						{#if estimateError}
-							<div class="mt-2"><AiErrorBanner {...estimateError} /></div>
+							<div class="mt-2"><AiErrorBanner error={estimateError} /></div>
 						{/if}
 					</div>
 				{/if}
@@ -384,6 +369,7 @@
 								name="instruction"
 								rows="2"
 								bind:value={step.text}
+								defaultValue={untrack(() => step.text)}
 								aria-label={m.recipe_form_instructions_item_label({ number: index + 1 })}
 								placeholder={m.recipe_form_instructions_placeholder()}
 								class="w-full rounded-md border border-stone-300 px-3 py-1.5 focus:border-clay focus:outline-none"

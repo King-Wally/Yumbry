@@ -38,8 +38,7 @@ describe('imperial source rendered in metric', () => {
 		expect(formatMeasurement(value, unit, metric)).toBe(expected);
 	});
 
-	// Pint, quart, gallon and stick used to pass through a metric recipe untouched, by design.
-	it('no longer leaks the larger imperial volumes or a stick of butter', () => {
+	it('converts the larger imperial volumes and a stick of butter', () => {
 		expect(formatMeasurement(1, 'qt', metric)).toBe('960 ml');
 		expect(formatMeasurement(1, 'pt', metric)).toBe('480 ml');
 		expect(formatMeasurement(1, 'stick', metric)).toBe('115 g');
@@ -253,8 +252,6 @@ describe('renderIngredientLine', () => {
 });
 
 describe('formatScaledAmount', () => {
-	// The old formatter rounded every unit to eighths and then printed a decimal, so a third of a
-	// cup came out as "0,375" and 200 g scaled by a third as "66,625".
 	it('renders a scaled spoon or cup count as a fraction', () => {
 		expect(formatScaledAmount(1 / 3, 'cup', 'en')).toBe('1/3');
 		expect(formatScaledAmount(1.5, 'cups', 'en')).toBe('1 1/2');

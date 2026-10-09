@@ -2,9 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { hydrated } from '#lib/client/hydrated.svelte.ts';
 	import { m } from '#lib/paraglide/messages.js';
-
-	// Mirrors PHOTO_LIMIT_MB in #lib/server/uploads/storage.ts (server-only), which has the final say.
-	const PHOTO_LIMIT_MB = 25;
+	import { photoErrorMessage, PHOTO_LIMIT_MB, type PhotoError } from '#lib/shared/recipe/photo.ts';
 
 	interface Props {
 		imagePath: string | null;
@@ -19,19 +17,6 @@
 	let uploading = $state(false);
 
 	let fileInput: HTMLInputElement;
-
-	function photoErrorMessage(kind: unknown): string {
-		switch (kind) {
-			case 'unsupported_type':
-				return m.photo_error_unsupported_type();
-			case 'too_large':
-				return m.photo_error_too_large({ limitMb: PHOTO_LIMIT_MB });
-			case 'unreadable_image':
-				return m.photo_error_unreadable_image();
-			default:
-				return m.photo_error_missing();
-		}
-	}
 
 	function onChange() {
 		const file = fileInput.files?.[0];
@@ -58,7 +43,7 @@
 				path = (result.data?.image_path as string | undefined) ?? path;
 				error = null;
 			} else if (result.type === 'failure') {
-				error = photoErrorMessage(result.data?.photoError);
+				error = photoErrorMessage((result.data?.photoError as PhotoError | undefined) ?? 'missing');
 			} else {
 				await update();
 			}

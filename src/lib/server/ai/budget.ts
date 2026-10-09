@@ -179,7 +179,7 @@ export function zonedDayBounds(now: Date, timeZone: string): { start: Date; end:
 	return { start: midnightAt(0), end: midnightAt(1) };
 }
 
-export interface GeminiQuotaStatus {
+interface GeminiQuotaStatus {
 	used: number;
 	limit: number;
 	allowed: boolean;
@@ -198,8 +198,9 @@ export async function getGeminiQuota(now: Date = new Date()): Promise<GeminiQuot
 	return { used, limit, allowed, retryAt: allowed ? null : end.toISOString() };
 }
 
-// The guards. An AI action calls one first, before it reads the request body, so a refused photo
-// import is never uploaded. They run against the real ledger even where a test fakes the provider.
+// The guards. An AI action calls one before the provider, and before it reads a large request body,
+// so a refused photo import is never uploaded. They run against the real ledger even where a test
+// fakes the provider.
 
 /** Refuses OpenRouter-backed calls (chat, photo import) once the shared monthly pool or the
  * user's own daily cap is used up. */
@@ -214,7 +215,7 @@ export async function assertGeminiQuota(): Promise<void> {
 	if (!quota.allowed) throw new AiQuotaExceededError('shared', quota.retryAt);
 }
 
-export interface AiUsageRecord {
+interface AiUsageRecord {
 	userId: string;
 	backend: AiBackendName;
 	tier: string;

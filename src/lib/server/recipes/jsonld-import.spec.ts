@@ -166,12 +166,20 @@ describe('parseRecipeFromJsonLd', () => {
 
 	it('throws when the input has no Recipe node', () => {
 		expect(() => parseRecipeFromJsonLd(JSON.stringify({ '@type': 'WebPage' }))).toThrow(
-			/No schema.org Recipe/
+			expect.objectContaining({ kind: 'no_recipe' })
 		);
 	});
 
 	it('throws on invalid JSON', () => {
-		expect(() => parseRecipeFromJsonLd('not json')).toThrow();
+		expect(() => parseRecipeFromJsonLd('not json')).toThrow(
+			expect.objectContaining({ kind: 'invalid_json' })
+		);
+	});
+
+	it('throws when the document is neither an object nor an array', () => {
+		expect(() => parseRecipeFromJsonLd('"a string"')).toThrow(
+			expect.objectContaining({ kind: 'not_a_document' })
+		);
 	});
 
 	it('repairs a raw newline left unescaped inside a JSON string value', () => {

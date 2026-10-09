@@ -10,8 +10,8 @@
 	"scripts": {
 		"dev": "bun --bun vite dev",
 		"build": "bun --bun vite build",
-		"preview": "bun --bun vite preview",
 		"start": "bun scripts/serve.ts",
+		"release": "scripts/release.sh",
 		"prepare": "svelte-kit sync && bun scripts/paraglide-compile.ts",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && tsc --noEmit -p src/service-worker",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
@@ -19,7 +19,7 @@
 		"format": "prettier --write .",
 		"test:unit": "bun --bun vitest",
 		"test": "bun run test:unit --run",
-		"db:start": "docker compose up",
+		"db:start": "docker compose up -d db",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "bun scripts/migrate.ts",
 		"db:rehearse": "bun scripts/rehearse-migrate.ts",
@@ -36,7 +36,6 @@
 		"postgres": "^3.4.9",
 		"resend": "^6.32.0",
 		"sharp": "^0.35.5",
-		"svelte-dnd-action": "^0.9.80",
 		"zod": "^4.6.5"
 	},
 	"devDependencies": {
@@ -63,6 +62,7 @@
 		"prettier-plugin-tailwindcss": "^0.8.0",
 		"svelte": "^5.57.1",
 		"svelte-check": "^4.6.0",
+		"svelte-dnd-action": "^0.9.80",
 		"tailwindcss": "^4.3.0",
 		"tough-cookie": "^6.0.2",
 		"typescript": "^6.0.3",

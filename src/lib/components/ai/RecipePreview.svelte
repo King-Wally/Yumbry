@@ -57,10 +57,10 @@
 		</div>
 
 		<NutritionStats
-			calories={draft.calories ?? null}
-			fatContent={draft.fat_content ?? null}
-			carbohydrateContent={draft.carbohydrate_content ?? null}
-			proteinContent={draft.protein_content ?? null}
+			calories={draft.calories}
+			fatContent={draft.fat_content}
+			carbohydrateContent={draft.carbohydrate_content}
+			proteinContent={draft.protein_content}
 		/>
 
 		<section>

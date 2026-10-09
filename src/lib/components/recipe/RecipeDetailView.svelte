@@ -5,13 +5,13 @@
 	import { toNumber } from '#lib/shared/recipe/numeric.ts';
 	import type { RecipeDetail } from '#lib/shared/recipe/dto.ts';
 	import { scaleIngredients } from '#lib/shared/recipe/scaling.ts';
-	import IngredientList from './IngredientList.svelte';
-	import InstructionList from './InstructionList.svelte';
-	import NutritionStats from './NutritionStats.svelte';
-	import RecipeHero from './RecipeHero.svelte';
-	import RecipeTagBadges from './RecipeTagBadges.svelte';
-	import ServingsStepper from './ServingsStepper.svelte';
-	import TimeStat from './TimeStat.svelte';
+	import IngredientList from '#lib/components/recipe/IngredientList.svelte';
+	import InstructionList from '#lib/components/recipe/InstructionList.svelte';
+	import NutritionStats from '#lib/components/recipe/NutritionStats.svelte';
+	import RecipeHero from '#lib/components/recipe/RecipeHero.svelte';
+	import RecipeTagBadges from '#lib/components/recipe/RecipeTagBadges.svelte';
+	import ServingsStepper from '#lib/components/recipe/ServingsStepper.svelte';
+	import TimeStat from '#lib/components/recipe/TimeStat.svelte';
 
 	/**
 	 * The read-only body of a recipe: summary card, photo, scalable ingredients and steps. Owns the

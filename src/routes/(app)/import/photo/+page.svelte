@@ -1,25 +1,18 @@
 <script lang="ts">
 	import { enhance, type SubmitFunction } from '$app/forms';
 	import { untrack } from 'svelte';
-	import { ArrowLeft, Camera, X } from '@lucide/svelte';
-	import AiErrorBanner from '#lib/components/ai/AiErrorBanner.svelte';
+	import { Camera, X } from '@lucide/svelte';
+	import AiErrorBanner, { type AiError } from '#lib/components/ai/AiErrorBanner.svelte';
 	import Card from '#lib/components/ui/Card.svelte';
 	import CardHeader from '#lib/components/ui/CardHeader.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import type { AiQuotaScope } from '#lib/shared/ai/budget.ts';
-
-	type PhotoError = {
-		message: string;
-		kind?: string;
-		scope?: AiQuotaScope;
-		retryAt?: string | null;
-	};
 
 	// An object URL beats a base64 data URL: the file goes up as multipart, so nothing else needs it
 	// in memory.
 	let photo = $state<{ file: File; url: string } | null>(null);
 	let pending = $state(false);
-	let error = $state<PhotoError | null>(null);
+	let error = $state<AiError | null>(null);
 
 	// Revokes the previous URL whenever the photo changes, and the last one on unmount.
 	$effect(() => {
@@ -56,23 +49,14 @@
 		error = null;
 		return async ({ result, update }) => {
 			pending = false;
-			if (result.type === 'failure') error = (result.data as PhotoError | undefined) ?? null;
+			if (result.type === 'failure') error = (result.data as AiError | undefined) ?? null;
 			await update({ reset: false });
 		};
 	};
 </script>
 
 <div class="mx-auto max-w-2xl pb-4">
-	<div class="mb-4 flex items-center gap-3">
-		<a
-			href="/"
-			aria-label={m.common_back()}
-			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-300 text-stone-600 hover:bg-stone-100"
-		>
-			<ArrowLeft size={18} />
-		</a>
-		<h1 class="font-serif text-2xl font-bold text-stone-900">{m.import_photo_title()}</h1>
-	</div>
+	<PageHeader backHref="/" title={m.import_photo_title()} class="mb-4" />
 
 	<Card>
 		<CardHeader title={m.import_photo_card_title()} description={m.import_photo_card_description()}>
@@ -149,12 +133,7 @@
 
 		{#if error}
 			<div class="mt-3">
-				<AiErrorBanner
-					message={error.message}
-					kind={error.kind}
-					scope={error.scope}
-					retryAt={error.retryAt}
-				/>
+				<AiErrorBanner {error} />
 			</div>
 		{/if}
 	</Card>

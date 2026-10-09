@@ -1,9 +1,13 @@
 import { isSupportedLocale, type SupportedLocale } from '#lib/shared/i18n/locale.ts';
 
-/** Where main's React app kept a visitor's language. Read once, then removed. */
+// Transitional: moves the language a v1.x install kept in localStorage into the locale cookie, once
+// per browser. Remove this file, its spec and its call in hooks.client.ts once those installs are
+// gone.
+
+/** The localStorage key holding the visitor's language. Read once, then removed. */
 export const LEGACY_LOCALE_STORAGE_KEY = 'yumbry.locale';
 
-export interface LegacyLocaleMigration {
+interface LegacyLocaleMigration {
 	/** Remove the localStorage key. */
 	remove: boolean;
 	/** Write this locale to the cookie. */
@@ -13,7 +17,7 @@ export interface LegacyLocaleMigration {
 }
 
 /**
- * Decides how to carry a choice from main's localStorage over to the locale cookie. The key is
+ * Decides how to carry the stored choice over to the locale cookie. The key is
  * always removed. The value only fills a missing cookie, so a choice made since then (or a
  * signed-in user's saved preference, which the server mirrors into the cookie) is never
  * overwritten. Once the cookie exists, a stale key can't trigger another reload.

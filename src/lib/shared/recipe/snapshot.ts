@@ -1,17 +1,19 @@
+import type { RecipeDetail } from '#lib/shared/recipe/dto.ts';
+
 /** The content of a recipe at one point in its history, as stored in `recipe_versions.snapshot`.
  *
  * Tags and the category are kept by name rather than id: an edit that drops the last use of one
  * deletes its row (see deleteOrphaned), so an id would dangle. Ingredients are kept as their raw
  * text line only — every write re-parses amount/unit/name from it, so the parsed columns carry
- * nothing a revert would need. The photo is deliberately absent: `image_path` is owned by the photo
- * upload endpoint, and a revert never touches it. */
+ * nothing a revert would need. The photo is deliberately absent: `image_path` changes only through a
+ * photo upload, and a revert never touches it. */
 export interface RecipeSnapshot {
 	title: string;
 	description: string | null;
 	prep_time_minutes: number | null;
 	cook_time_minutes: number | null;
 	total_time_minutes: number | null;
-	/** Decimal columns, stringified exactly as the recipe API sends them. */
+	/** Decimal columns, as `decimalString` prints them. */
 	servings: string;
 	calories: string | null;
 	fat_content: string | null;
@@ -33,25 +35,7 @@ export interface RecipeVersion extends RecipeVersionSummary {
 	snapshot: RecipeSnapshot;
 }
 
-/** Structural so both the backend's row type and the frontend's `Recipe` DTO satisfy it. */
-export interface SnapshotSource {
-	title: string;
-	description: string | null;
-	prep_time_minutes: number | null;
-	cook_time_minutes: number | null;
-	total_time_minutes: number | null;
-	servings: string;
-	calories: string | null;
-	fat_content: string | null;
-	carbohydrate_content: string | null;
-	protein_content: string | null;
-	category: { name: string } | null;
-	tags: { name: string }[];
-	ingredients: { raw_text: string; sort_order: number }[];
-	instructions: { step_number: number; text: string }[];
-}
-
-export function toRecipeSnapshot(recipe: SnapshotSource): RecipeSnapshot {
+export function toRecipeSnapshot(recipe: RecipeDetail): RecipeSnapshot {
 	return {
 		title: recipe.title,
 		description: recipe.description,

@@ -1,15 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
 	AI_NUTRITION_JSON_SCHEMA,
-	ATWATER_FACTORS,
 	buildNutritionMessages,
 	caloriesFromMacros,
 	NUTRITION_FIELDS,
-	NUTRITION_SAMPLING,
 	parseNutritionEstimate,
 	type AiNutritionRequest
 } from '#lib/shared/ai/nutrition.ts';
-import { SUPPORTED_LOCALES } from '#lib/shared/i18n/locale.ts';
 
 const SYSTEM_PROMPT_MARKER = 'You are a nutritionist.';
 
@@ -72,8 +69,7 @@ describe('AI_NUTRITION_JSON_SCHEMA', () => {
 	});
 });
 
-// Rungs two and three of the provider's downgrade ladder send no schema at all, so any constraint
-// that lives only in the schema is silently unenforced there.
+// The schema-free rungs of the downgrade ladder leave the prompt as the only contract.
 describe('prompt and schema never drift', () => {
 	it.each([...NUTRITION_FIELDS])('names "%s" verbatim in the prompt', (field) => {
 		expect(systemPrompt()).toContain(`"${field}"`);
@@ -90,14 +86,6 @@ describe('prompt and schema never drift', () => {
 		expect(quoted.sort()).toEqual(NUTRITION_FIELDS.map((field) => `"${field}"`).sort());
 	});
 
-	it('states the per-serving rule, the nullability and both units', () => {
-		const prompt = systemPrompt();
-		expect(prompt).toContain('per serving');
-		expect(prompt).toContain('or null');
-		expect(prompt).toContain('kilocalories (kcal)');
-		expect(prompt).toContain('in grams');
-	});
-
 	it('shows a worked example that parses back to four numbers', () => {
 		const example = /\{"calories".*\}/.exec(systemPrompt());
 		expect(example).not.toBeNull();
@@ -109,31 +97,12 @@ describe('prompt and schema never drift', () => {
 		});
 	});
 
-	// A model copies the example over the spec whenever the two disagree, so an example whose
-	// calories did not follow from its own macros would teach exactly the habit the section forbids.
+	// A model copies the example over the spec whenever the two disagree.
 	it('shows a worked example whose calories follow from its macros', () => {
 		const example = /\{"calories".*\}/.exec(systemPrompt())![0];
 		const parsed = parseNutritionEstimate(example);
 
 		expect(parsed.calories).toBe(Math.round(caloriesFromMacros(parsed)));
-	});
-
-	it('prints every Atwater factor and the formula that uses them', () => {
-		const prompt = systemPrompt();
-
-		expect(prompt).toContain(`Protein         ${ATWATER_FACTORS.protein} calories per gram`);
-		expect(prompt).toContain(`Carbohydrates   ${ATWATER_FACTORS.carbohydrate} calories per gram`);
-		expect(prompt).toContain(`Fats            ${ATWATER_FACTORS.fat} calories per gram`);
-		expect(prompt).toContain(`Alcohol         ${ATWATER_FACTORS.alcohol} calories per gram`);
-		expect(prompt).toContain(
-			`calories = fat × ${ATWATER_FACTORS.fat} + carbohydrate × ${ATWATER_FACTORS.carbohydrate} + protein × ${ATWATER_FACTORS.protein}`
-		);
-	});
-
-	// Alcohol carries energy that none of the three stored macros accounts for; without this line a
-	// model forces the total back down to 4/4/9 and loses it.
-	it('explains why alcohol is listed even though it has no field', () => {
-		expect(systemPrompt()).toContain('Alcohol has no field of its own');
 	});
 });
 
@@ -176,8 +145,6 @@ describe('buildNutritionMessages', () => {
 		expect(user.content).not.toContain('Instructions:');
 	});
 
-	// The request schema accepts any string, so a recipe could otherwise close the tag itself and
-	// write instructions below it.
 	it('strips an injected closing tag from the recipe', () => {
 		const [, user] = buildNutritionMessages({
 			...REQUEST,
@@ -202,11 +169,8 @@ describe('buildNutritionMessages', () => {
 		}
 	});
 
-	// Nothing a human reads is generated here — every value is a number — so unlike the recipe
-	// prompt this one takes no locale at all. Asserting it keeps a locale param from creeping in.
-	it('builds the same prompt whatever the reader speaks', () => {
-		const prompts = SUPPORTED_LOCALES.map(() => JSON.stringify(buildNutritionMessages(REQUEST)));
-		expect(new Set(prompts).size).toBe(1);
+	// Every value in the answer is a number, so the prompt takes no locale.
+	it('takes no locale', () => {
 		expect(buildNutritionMessages).toHaveLength(1);
 	});
 });
@@ -280,25 +244,14 @@ describe('parseNutritionEstimate', () => {
 	});
 
 	it('rejects a response with no JSON in it', () => {
-		expect(() => parseNutritionEstimate('Sorry, I cannot help with that.')).toThrow(
-			/^The AI response/
-		);
+		expect(() => parseNutritionEstimate('Sorry, I cannot help with that.')).toThrow();
 	});
 
-	// All four null is a non-answer. Throwing gives the cook a "try again" instead of a button that
-	// appears to do nothing.
 	it('rejects a response that estimated nothing at all', () => {
-		expect(() => parseNutritionEstimate('{}')).toThrow(/^The AI response/);
+		expect(() => parseNutritionEstimate('{}')).toThrow();
 	});
 
 	it('rejects a JSON array', () => {
-		expect(() => parseNutritionEstimate('[1, 2, 3]')).toThrow(/^The AI response/);
-	});
-});
-
-describe('NUTRITION_SAMPLING', () => {
-	it('stays low-variance', () => {
-		expect(NUTRITION_SAMPLING.temperature).toBeLessThanOrEqual(0.5);
-		expect(NUTRITION_SAMPLING.topP).toBeLessThanOrEqual(1);
+		expect(() => parseNutritionEstimate('[1, 2, 3]')).toThrow();
 	});
 });

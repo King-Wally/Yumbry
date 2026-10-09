@@ -14,13 +14,7 @@ import {
 	OPENROUTER_BASE_URL
 } from '$app/env/private';
 import { recordAiUsage, type AiBackendName } from '#lib/server/ai/budget.ts';
-import {
-	AiProviderError,
-	badStatusMessage,
-	malformedResponseMessage,
-	notConfiguredMessage,
-	unreachableMessage
-} from '#lib/server/ai/errors.ts';
+import { AiProviderError } from '#lib/server/ai/errors.ts';
 import type {
 	AiChatMessage,
 	AiJsonSchemaFormat,
@@ -110,17 +104,13 @@ function samplingBody(sampling: AiSamplingParams | undefined): Record<string, un
 	return { temperature, top_p: topP };
 }
 
-// A missing GEMINI_API_KEY only takes nutrition estimates offline; the rest of the assistant keeps
-// working.
-const geminiNotConfiguredMessage =
-	'Nutrition estimates are not configured on this server. Ask your administrator to set GEMINI_API_KEY.';
-
 function requireApiKey(backend: AiBackendName): string {
 	if (backend === 'gemini') {
-		if (!GEMINI_API_KEY) throw new AiProviderError(geminiNotConfiguredMessage, 'not_configured');
+		if (!GEMINI_API_KEY) throw new AiProviderError('GEMINI_API_KEY is not set.', 'not_configured');
 		return GEMINI_API_KEY;
 	}
-	if (!OPENROUTER_API_KEY) throw new AiProviderError(notConfiguredMessage, 'not_configured');
+	if (!OPENROUTER_API_KEY)
+		throw new AiProviderError('OPENROUTER_API_KEY is not set.', 'not_configured');
 	return OPENROUTER_API_KEY;
 }
 
@@ -140,34 +130,30 @@ function createClient(backend: AiBackendName, apiKey: string): OpenAI {
 	});
 }
 
-// Logged here (not just left to bubble up as a generic 503) so the real cause — the upstream's own
-// status and message, e.g. a 503 "model overloaded" — is visible in server logs even though the
-// client only ever sees the generic AiProviderError kind/message.
+// Logged here because the caller only shows the kind's generic message: the upstream's own status
+// and text (a 503 "model overloaded", say) are only visible in the server log.
 function toAiProviderError(err: unknown, backend: AiBackendName): AiProviderError {
 	const label = BACKEND_LABEL[backend];
 	if (err instanceof APIConnectionError) {
 		console.error(`[ai-provider] connection to ${label} failed: ${err.message}`);
-		return new AiProviderError(unreachableMessage(), 'unreachable', err);
+		return new AiProviderError(`Could not reach ${label}.`, 'unreachable', err);
 	}
 	if (err instanceof APIError) {
 		console.error(`[ai-provider] ${label} responded with HTTP ${err.status}: ${err.message}`);
 		return new AiProviderError(
-			badStatusMessage(err.status ?? '???', err.message),
+			`${label} responded with HTTP ${err.status}: ${err.message}`,
 			'bad_status',
 			err
 		);
 	}
 	console.error(`[ai-provider] unexpected error calling ${label}:`, err);
-	return new AiProviderError(unreachableMessage(), 'unreachable', err);
+	return new AiProviderError(`Could not reach ${label}.`, 'unreachable', err);
 }
 
 // Gemini signals an exhausted quota as a 400 carrying RESOURCE_EXHAUSTED for some limits, which
 // would otherwise look like a rejected request shape.
 const QUOTA_PATTERN = /resource_exhausted|quota|rate limit|too many requests/i;
 
-// A 400/422 means the endpoint (or the underlying model) refused the request shape (unknown
-// response_format) rather than the model failing, so it's safe to resend once asking only for JSON.
-// A quota-shaped 400 is excluded: retrying it would only burn more of the exhausted quota.
 function rejectsRequestShape(err: unknown): boolean {
 	return (
 		err instanceof APIError &&
@@ -176,10 +162,8 @@ function rejectsRequestShape(err: unknown): boolean {
 	);
 }
 
-// Whether the endpoint accepted our `json_schema` response_format is otherwise unobservable: the
-// ladder below swallows the rejection and the request still succeeds, so a schema that is silently
-// never applied looks exactly like one that works. That distinction decides how much of the unit
-// and language contract the prompt alone has to carry, so make the downgrade audible.
+// The request still succeeds after a downgrade, so a schema that is never applied would look exactly
+// like one that works. Whether it was decides how much the prompt alone has to carry, so say so.
 function warnDowngrade(from: string, to: string, err: unknown): void {
 	const detail = err instanceof APIError ? `${err.status} ${err.message}` : String(err);
 	console.warn(`[ai-provider] response_format ${from} rejected, retrying as ${to}: ${detail}`);
@@ -224,6 +208,41 @@ async function recordUsage(
 	});
 }
 
+type CreateCompletion = (
+	responseFormat: ChatResponseFormat | undefined,
+	withSampling: boolean
+) => Promise<ChatCompletion>;
+
+/**
+ * The downgrade ladder. Not every model behind OpenRouter or Gemini's compat layer accepts a
+ * `json_schema` response format, or sampling alongside one. A 400/422 (other than a quota error)
+ * means the endpoint refused the request shape rather than the model failing, so the request is
+ * resent with less asked of it: `json_schema` with sampling, then `json_object` with sampling, then
+ * `json_object` alone. Any other failure ends the ladder.
+ *
+ * The lower rungs send no schema, so everything the schema constrains is also stated in the prompt,
+ * and every parser of a model's answer tolerates the loose JSON a schema-free model sends.
+ */
+async function requestCompletion(
+	create: CreateCompletion,
+	jsonSchema: AiJsonSchemaFormat | undefined
+): Promise<ChatCompletion> {
+	if (!jsonSchema) return create(undefined, true);
+	try {
+		return await create({ type: 'json_schema', json_schema: jsonSchema }, true);
+	} catch (err) {
+		if (!rejectsRequestShape(err)) throw err;
+		warnDowngrade('json_schema', 'json_object', err);
+	}
+	try {
+		return await create({ type: 'json_object' }, true);
+	} catch (err) {
+		if (!rejectsRequestShape(err)) throw err;
+		warnDowngrade('json_object with sampling', 'json_object alone', err);
+	}
+	return create({ type: 'json_object' }, false);
+}
+
 async function runCompletion(
 	config: TierConfig,
 	tier: AiModelTier,
@@ -231,68 +250,32 @@ async function runCompletion(
 	options: ChatOptions
 ): Promise<string> {
 	const client = createClient(config.backend, requireApiKey(config.backend));
-	const fail = (err: unknown) => toAiProviderError(err, config.backend);
 
 	let requestCount = 0;
+	const create: CreateCompletion = (responseFormat, withSampling) => {
+		requestCount++;
+		return client.chat.completions.create({
+			...routingBody(config),
+			messages,
+			...(responseFormat ? { response_format: responseFormat } : {}),
+			...(withSampling ? samplingBody(options.sampling) : {})
+		} as ChatCompletionCreateParamsNonStreaming) as Promise<ChatCompletion>;
+	};
+
 	let response: ChatCompletion | undefined;
 	try {
-		response = await requestCompletion(client, config, messages, options, fail, () => {
-			requestCount++;
-		});
+		response = await requestCompletion(create, options.jsonSchema);
+	} catch (err) {
+		throw toAiProviderError(err, config.backend);
 	} finally {
 		await recordUsage(config, tier, options.userId, requestCount, response);
 	}
 
 	const content = response.choices[0]?.message?.content;
 	if (typeof content !== 'string') {
-		throw new AiProviderError(malformedResponseMessage, 'malformed_response');
+		throw new AiProviderError('The reply had no assistant message.', 'malformed_response');
 	}
 	return content;
-}
-
-async function requestCompletion(
-	client: OpenAI,
-	config: TierConfig,
-	messages: AiChatMessage[],
-	options: ChatOptions,
-	fail: (err: unknown) => AiProviderError,
-	onAttempt: () => void
-): Promise<ChatCompletion> {
-	const create = (responseFormat: ChatResponseFormat | undefined, withSampling: boolean) => {
-		onAttempt();
-		return client.chat.completions.create({
-			...routingBody(config),
-			messages,
-			...(responseFormat ? { response_format: responseFormat } : {}),
-			...(withSampling ? samplingBody(options.sampling) : {})
-		} as ChatCompletionCreateParamsNonStreaming);
-	};
-
-	const schemaFormat: ChatResponseFormat | undefined = options.jsonSchema
-		? { type: 'json_schema', json_schema: options.jsonSchema }
-		: undefined;
-
-	try {
-		return await create(schemaFormat, true);
-	} catch (err) {
-		if (!options.jsonSchema || !rejectsRequestShape(err)) throw fail(err);
-		// A 400/422 on the schema request means the endpoint refused the request shape rather than
-		// the model failing, so it's safe to retry once with less asked of it. Sampling params are
-		// carried into this first retry since a schema-only endpoint often still accepts them; if
-		// that retry itself 400s, drop sampling too on the last attempt.
-		warnDowngrade('json_schema', 'json_object', err);
-		try {
-			return await create({ type: 'json_object' }, true);
-		} catch (retryErr) {
-			if (!rejectsRequestShape(retryErr)) throw fail(retryErr);
-			warnDowngrade('json_object with sampling', 'json_object alone', retryErr);
-			try {
-				return await create({ type: 'json_object' }, false);
-			} catch (finalErr) {
-				throw fail(finalErr);
-			}
-		}
-	}
 }
 
 /** One completion from the tier's model (default `medium`), billed to `userId` in the ledger. The

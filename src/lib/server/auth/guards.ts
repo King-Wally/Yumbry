@@ -43,7 +43,19 @@ export async function requireRecipe(
 	const signedIn = requireUser(event);
 	const recipeId = parseRecipeId(rawId);
 	if (recipeId === null || !(await recipeBelongsToFamily(recipeId, signedIn.familyId))) {
-		error(404, 'Recipe not found.');
+		recipeNotFound();
 	}
 	return { ...signedIn, recipeId };
+}
+
+/** The 404 for a recipe the family can't see, whatever the reason. */
+export function recipeNotFound(): never {
+	error(404, 'Recipe not found.');
+}
+
+/** `signedIn` back, or a 404: JSON import and export exist only while the user has them turned
+ * on in settings. */
+export function requireJsonImportExport<T extends SignedIn>(signedIn: T): T {
+	if (!signedIn.user.jsonImportExportEnabled) error(404, 'Not found.');
+	return signedIn;
 }

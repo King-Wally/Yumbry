@@ -4,10 +4,9 @@
 
 	interface Props {
 		value: number;
-		min?: number;
 	}
 
-	let { value = $bindable(), min = 1 }: Props = $props();
+	let { value = $bindable() }: Props = $props();
 
 	const labelId = $props.id();
 </script>
@@ -19,8 +18,8 @@
 	<div class="flex items-center rounded-full border border-stone-300 bg-white">
 		<button
 			type="button"
-			onclick={() => (value = Math.max(min, value - 1))}
-			disabled={!hydrated.current || value <= min}
+			onclick={() => (value = Math.max(1, value - 1))}
+			disabled={!hydrated.current || value <= 1}
 			class="rounded-l-full px-3 py-1 text-lg text-stone-600 transition-colors hover:bg-stone-100 disabled:cursor-not-allowed disabled:text-stone-300 disabled:hover:bg-transparent"
 			aria-label={m.servings_stepper_decrease()}
 		>

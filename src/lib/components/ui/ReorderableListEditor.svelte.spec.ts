@@ -3,10 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 import { markHydrated } from '#lib/client/hydrated.svelte.ts';
-import ReorderableListEditor from './ReorderableListEditor.svelte';
+import ReorderableListEditor from '#lib/components/ui/ReorderableListEditor.svelte';
 
-// No e2e spec reorders (main's suite didn't either), so svelte-dnd-action's keyboard and pointer
-// paths are covered here, with our translated announcements.
+// No e2e spec reorders, so svelte-dnd-action's keyboard and pointer paths are covered here, with
+// our translated announcements.
 
 // The root layout, which marks the page hydrated, isn't rendered here.
 markHydrated();

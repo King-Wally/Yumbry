@@ -1,6 +1,6 @@
 import { parseMeasurementPrefix } from '#lib/shared/units/parse.ts';
 
-export interface ParsedIngredient {
+interface ParsedIngredient {
 	raw_text: string;
 	amount: number | null;
 	unit: string | null;
@@ -23,13 +23,8 @@ function unparsed(rawText: string): ParsedIngredient {
 }
 
 /**
- * Splits a written ingredient line into the columns the database stores.
- *
- * The unit vocabulary comes from the shared registry rather than a list maintained here. The two
- * used to be independent — one answering "what can we convert", the other "what can we recognise" —
- * and they drifted, which is why a French or Dutch recipe saved with a null unit and the unit word
- * swallowed into the name. One registry, generated once, means "2 c. à s." and "2 el" now parse as
- * well as "2 tbsp" does.
+ * Splits a written ingredient line into the columns the database stores. The unit vocabulary is
+ * the same registry the unit converter uses, so "2 c. à s." and "2 el" parse as well as "2 tbsp".
  */
 export function parseIngredientLine(rawText: string): ParsedIngredient {
 	const trimmed = rawText.trim();

@@ -1,6 +1,6 @@
-import { error, fail, redirect } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 import { takeDraft } from '#lib/server/recipes/draft-handoff.ts';
-import { requireRecipe } from '#lib/server/auth/guards.ts';
+import { recipeNotFound, requireRecipe } from '#lib/server/auth/guards.ts';
 import { optimizeRecipePhoto, UnreadableImageError } from '#lib/server/uploads/image-prep.ts';
 import { estimateNutrition } from '#lib/server/ai/nutrition-action.ts';
 import { parseRecipeForm } from '#lib/server/recipes/form-action.ts';
@@ -25,7 +25,7 @@ export const load: PageServerLoad = async (event) => {
 		listCategories(familyId)
 	]);
 	// Null only if the recipe was deleted since requireRecipe looked.
-	if (!recipe) error(404, 'Recipe not found.');
+	if (!recipe) recipeNotFound();
 	return {
 		recipe,
 		tags,
@@ -43,7 +43,7 @@ export const actions: Actions = {
 		const parsed = await parseRecipeForm(event.request);
 		if (!('input' in parsed)) return parsed;
 
-		if (!(await updateRecipe(recipeId, parsed.input, familyId))) error(404, 'Recipe not found.');
+		if (!(await updateRecipe(recipeId, parsed.input, familyId))) recipeNotFound();
 		redirect(303, `/recipes/${recipeId}`);
 	},
 
@@ -66,7 +66,7 @@ export const actions: Actions = {
 		const imagePath = await saveRecipePhoto(recipeId, webp);
 		if (!(await setRecipePhoto(recipeId, imagePath, familyId))) {
 			await deleteUploadedFile(imagePath);
-			error(404, 'Recipe not found.');
+			recipeNotFound();
 		}
 		return { image_path: imagePath };
 	}

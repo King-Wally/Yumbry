@@ -1,15 +1,9 @@
 import { db } from '#lib/server/db/index.ts';
 import { deleteFamilyIfEmpty, lockFamilies, removeRecipeUploads } from './family.ts';
 
-/**
- * better-auth's `deleteUser.afterDelete` hook. Recipes belong to the family, not to their author,
- * so deleting an account only nulls `recipes.author_id` and leaves the collection to the remaining
- * members. The family itself goes once nobody is left in it.
- *
- * better-auth hands both hooks the session's user, which still carries `familyId` after the row is
- * gone, so there is nothing to capture in a `beforeDelete` first. The hook's declared type is
- * better-auth's base user (without the additional fields), hence the narrowing here.
- */
+/** better-auth's `deleteUser.afterDelete` hook: the family goes once nobody is left in it (its
+ * recipes stay with the remaining members otherwise). The user it gets still carries `familyId`,
+ * but is typed without the additional fields, hence the narrowing. */
 export async function cleanUpFamilyAfterDelete(user: { id: string }): Promise<void> {
 	const familyId = (user as { familyId?: unknown }).familyId;
 	if (typeof familyId !== 'number') return;

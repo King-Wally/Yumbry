@@ -33,6 +33,14 @@ describe('draft hand-off', () => {
 		expect(takeDraft(cookies, 'user-1', null)).toEqual({ draft, source: 'url' });
 	});
 
+	it("drops an AI draft's structured ingredients", () => {
+		const cookies = cookieJar();
+		const structured = [{ quantity: 200, unit: 'g', name: 'flour' }];
+		stashDraft(cookies, 'user-1', { ...draft, ingredients_structured: structured }, 'ai', null);
+
+		expect(takeDraft(cookies, 'user-1', null)?.draft).toEqual(draft);
+	});
+
 	it('is taken once', () => {
 		const cookies = cookieJar();
 		stashDraft(cookies, 'user-1', draft, 'url', null);

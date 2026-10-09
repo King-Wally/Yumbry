@@ -5,7 +5,7 @@
 	interface Props {
 		open: boolean;
 		title: string;
-		description?: string | Snippet;
+		description?: string;
 		children: Snippet;
 	}
 
@@ -21,11 +21,7 @@
 			<Dialog.Title class="font-serif text-xl text-stone-900">{title}</Dialog.Title>
 			{#if description}
 				<Dialog.Description class="mt-2 text-sm text-stone-600">
-					{#if typeof description === 'string'}
-						{description}
-					{:else}
-						{@render description()}
-					{/if}
+					{description}
 				</Dialog.Description>
 			{/if}
 			<div class="mt-4">{@render children()}</div>

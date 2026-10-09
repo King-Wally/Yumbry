@@ -1,16 +1,17 @@
 import { fail, type ActionFailure, type RequestEvent } from '@sveltejs/kit';
 import { isAPIError } from 'better-auth/api';
+import { formString } from '#lib/server/http/form.ts';
 import { limitClient, type RateLimiter } from '#lib/server/http/rate-limit.ts';
 
 // Shared by the login and register form actions, which call auth.api.* directly.
 
-export interface CredentialsFailure {
+interface CredentialsFailure {
 	/** Echoed back so the field stays filled in. The password never is. */
 	email: string;
 	message: string;
 }
 
-export interface Credentials {
+interface Credentials {
 	email: string;
 	password: string;
 }
@@ -21,16 +22,16 @@ export async function readCredentials(
 	limiter: RateLimiter
 ): Promise<Credentials | ActionFailure<CredentialsFailure>> {
 	const data = await event.request.formData();
-	const email = String(data.get('email') ?? '').trim();
-	const password = String(data.get('password') ?? '');
+	const email = formString(data, 'email').trim();
+	const password = formString(data, 'password');
 
 	const limit = limitClient(event, limiter);
 	if (limit.limited) return fail(429, { email, message: limit.message });
 	return { email, password };
 }
 
-/** better-auth's refusal (wrong password, email taken, password too short) with its own message,
- * as main showed it. Anything else is unexpected and rethrown. */
+/** better-auth's refusal (wrong password, email taken, password too short) with its own message.
+ * Anything else is unexpected and rethrown. */
 export function authRefusal(err: unknown, fallback: string): { status: number; message: string } {
 	if (!isAPIError(err) || err.statusCode >= 500) throw err;
 	return { status: err.statusCode, message: err.body?.message || fallback };

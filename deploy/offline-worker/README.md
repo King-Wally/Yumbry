@@ -17,11 +17,11 @@ generic error page.
 ## Setup
 
 1. **Prerequisites.** Your domain's DNS is on Cloudflare and the Yumbry hostname is proxied
-   (orange cloud, the Tunnel's CNAME). Node 18+.
-2. **Log in.** `cd deploy/offline-worker && npx wrangler login`
+   (orange cloud, the Tunnel's CNAME). Bun (wrangler itself needs Node 18+).
+2. **Log in.** `cd deploy/offline-worker && bunx wrangler login`
    (for CI, set `CLOUDFLARE_API_TOKEN` with _Workers Scripts: Edit_ and _Workers Routes: Edit_).
 3. **Set your route.** In `wrangler.toml`, change `pattern` and `zone_name` to your hostname and domain.
-4. **Deploy.** `npx wrangler deploy`
+4. **Deploy.** `bunx wrangler deploy`
 5. **Check the route.** Dashboard → Workers & Pages → `yumbry-offline` → Settings → Domains & Routes.
 6. **Test.** Stop `cloudflared` (or the `app` container), load the site in a browser and confirm the
    offline page. Try `curl -si -H 'Accept: text/html' -H 'Accept-Language: nl' https://your-host/`.
@@ -32,5 +32,5 @@ generic error page.
 ## Notes
 
 - Every request to the route counts towards Workers' free-tier limit (100k requests/day).
-- Editing `offline.html` or the strings in `worker.js` needs a new `npx wrangler deploy`.
+- Editing `offline.html` or the strings in `worker.js` needs a new `bunx wrangler deploy`.
 - The favicon is the 96px PNG from `static/`, inlined as a data URI.

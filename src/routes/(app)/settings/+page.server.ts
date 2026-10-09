@@ -4,6 +4,7 @@ import { m } from '#lib/paraglide/messages.js';
 import { auth } from '#lib/server/auth/better-auth.ts';
 import { authRefusal } from '#lib/server/auth/forms.ts';
 import { requireUser } from '#lib/server/auth/guards.ts';
+import { formString } from '#lib/server/http/form.ts';
 import { kindedError } from '#lib/server/http/kinded-errors.ts';
 import { parsePreferences } from '#lib/server/preferences/parse.ts';
 import {
@@ -57,9 +58,9 @@ export const actions: Actions = {
 	password: async (event) => {
 		requireUser(event);
 		const data = await event.request.formData();
-		const currentPassword = String(data.get('currentPassword') ?? '');
-		const newPassword = String(data.get('newPassword') ?? '');
-		const confirmNewPassword = String(data.get('confirmNewPassword') ?? '');
+		const currentPassword = formString(data, 'currentPassword');
+		const newPassword = formString(data, 'newPassword');
+		const confirmNewPassword = formString(data, 'confirmNewPassword');
 
 		const limit = limitClient(event, changePasswordLimiter);
 		if (limit.limited) return fail(429, { passwordError: limit.message });
@@ -99,7 +100,7 @@ export const actions: Actions = {
 	deleteAccount: async (event) => {
 		requireUser(event);
 		const data = await event.request.formData();
-		const password = String(data.get('password') ?? '');
+		const password = formString(data, 'password');
 
 		const limit = limitClient(event, deleteAccountLimiter);
 		if (limit.limited) return fail(429, { deleteError: limit.message });

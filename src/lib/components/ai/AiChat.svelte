@@ -1,12 +1,11 @@
 <script lang="ts">
 	import { tick, untrack } from 'svelte';
-	import { ArrowLeft } from '@lucide/svelte';
 	import { applyAction, enhance, type SubmitFunction } from '$app/forms';
-	import AiErrorBanner from '#lib/components/ai/AiErrorBanner.svelte';
-	import { hydrated } from '#lib/client/hydrated.svelte.ts';
+	import AiErrorBanner, { type AiError } from '#lib/components/ai/AiErrorBanner.svelte';
 	import RecipePreview from '#lib/components/ai/RecipePreview.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import { hydrated } from '#lib/client/hydrated.svelte.ts';
 	import { m } from '#lib/paraglide/messages.js';
-	import type { AiQuotaScope } from '#lib/shared/ai/budget.ts';
 	import type { AiRecipeDraft } from '#lib/shared/ai/recipe-draft.ts';
 	import type { SupportedLocale } from '#lib/shared/i18n/locale.ts';
 	import { renderDraftForReader } from '#lib/shared/ai/render-draft.ts';
@@ -18,13 +17,6 @@
 	 * transcript and draft live here and travel with every `?/chat` post; the action answers with the
 	 * whole next state. The chat is inherently interactive, so its controls wait for hydration.
 	 */
-	type ChatError = {
-		message: string;
-		kind?: string;
-		scope?: AiQuotaScope;
-		retryAt?: string | null;
-	};
-
 	/** A transcript turn as the action types it: the server's literal widens `role` to a string. */
 	type ChatMessage = { role: string; content: string };
 
@@ -46,7 +38,7 @@
 	const start = untrack(() => ({ initialDraft, preferences }));
 	let messages = $state<ChatMessage[]>([]);
 	let draft = $state<AiRecipeDraft | null>(start.initialDraft);
-	let error = $state<ChatError | null>(null);
+	let error = $state<AiError | null>(null);
 	let pending = $state(false);
 	let input = $state('');
 	let unitSystem = $state<UnitSystem>(start.preferences.unitSystem);
@@ -61,7 +53,7 @@
 
 	const sendTurn: SubmitFunction<
 		{ messages: ChatMessage[]; draft: AiRecipeDraft | null },
-		ChatError & { messages?: ChatMessage[]; draft?: AiRecipeDraft | null }
+		AiError & { messages?: ChatMessage[]; draft?: AiRecipeDraft | null }
 	> = ({ cancel }) => {
 		const text = input.trim();
 		if (!text) {
@@ -90,38 +82,26 @@
 		};
 	};
 
-	/** Stored like any other preference, but changed here because the preview is where it shows.
-	 * Fire-and-forget: the preview has already redrawn, and a failed save costs nothing here. */
-	function persistPreference(name: 'unitSystem' | 'smallVolumes', value: string) {
-		const body = new FormData();
-		body.set(name, value);
-		fetch('/settings?/preferences', {
-			method: 'POST',
-			body,
-			headers: { 'x-sveltekit-action': 'true' }
-		}).catch(() => {});
-	}
+	/** Stored like any other preference, but changed here because the preview is where it shows. The
+	 * preview has already redrawn, so only a redirect (a lapsed session) needs following. */
+	const savePreference: SubmitFunction = () => {
+		return async ({ result }) => {
+			if (result.type === 'redirect') await applyAction(result);
+		};
+	};
 
 	const selectClass =
 		'mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5 text-sm text-stone-700 focus:border-clay focus:outline-none disabled:opacity-50';
 </script>
 
 <div class="space-y-4 pb-4">
-	<div class="mb-4 flex items-center gap-3">
-		<a
-			href={backHref}
-			aria-label={m.common_back()}
-			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-300 text-stone-600 hover:bg-stone-100"
-		>
-			<ArrowLeft size={18} />
-		</a>
-		<h1 class="font-serif text-2xl font-bold text-stone-900">
-			{mode === 'create' ? m.ai_chat_create_title() : m.ai_chat_improve_title()}
-		</h1>
-	</div>
+	<PageHeader
+		{backHref}
+		title={mode === 'create' ? m.ai_chat_create_title() : m.ai_chat_improve_title()}
+		class="mb-4"
+	/>
 
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
-		<!-- Chat column -->
 		<div
 			class="flex h-[60vh] flex-col rounded-xl border border-stone-200 bg-white shadow-sm md:h-[70vh]"
 		>
@@ -189,24 +169,29 @@
 					</button>
 				</form>
 				{#if error}
-					<AiErrorBanner {...error} />
+					<AiErrorBanner {error} />
 				{/if}
 			</div>
 		</div>
 
-		<!-- Preview column -->
 		<div
 			class="flex h-[60vh] flex-col rounded-xl border border-stone-200 bg-white shadow-sm md:h-[70vh]"
 		>
-			<div class="flex flex-wrap gap-3 border-b border-stone-200 p-3">
+			<form
+				method="POST"
+				action="/settings?/preferences"
+				use:enhance={savePreference}
+				class="flex flex-wrap gap-3 border-b border-stone-200 p-3"
+			>
 				<label
 					class="min-w-32 flex-1 text-xs font-medium text-stone-600"
 					title={m.ai_chat_units_description()}
 				>
 					{m.ai_chat_units_label()}
 					<select
+						name="unitSystem"
 						bind:value={unitSystem}
-						onchange={(event) => persistPreference('unitSystem', event.currentTarget.value)}
+						onchange={(event) => event.currentTarget.form?.requestSubmit()}
 						disabled={!hydrated.current}
 						class={selectClass}
 					>
@@ -227,8 +212,9 @@
 					{m.ai_chat_small_volumes_label()}
 					<!-- Imperial has no alternative to spoons at these sizes, so there is nothing to pick. -->
 					<select
+						name="smallVolumes"
 						bind:value={smallVolumes}
-						onchange={(event) => persistPreference('smallVolumes', event.currentTarget.value)}
+						onchange={(event) => event.currentTarget.form?.requestSubmit()}
 						disabled={!hydrated.current || unitSystem === 'imperial'}
 						class={selectClass}
 					>
@@ -241,7 +227,7 @@
 						{/each}
 					</select>
 				</label>
-			</div>
+			</form>
 
 			<div class="flex-1 overflow-y-auto p-5">
 				<RecipePreview draft={shownDraft} />

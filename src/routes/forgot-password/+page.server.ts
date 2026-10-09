@@ -2,13 +2,14 @@ import { fail } from '@sveltejs/kit';
 import { m } from '#lib/paraglide/messages.js';
 import { auth } from '#lib/server/auth/better-auth.ts';
 import { authRefusal } from '#lib/server/auth/forms.ts';
+import { formString } from '#lib/server/http/form.ts';
 import { limitClient, passwordResetRequestLimiter } from '#lib/server/http/rate-limit.ts';
 import type { Actions } from './$types';
 
 export const actions: Actions = {
 	default: async (event) => {
 		const data = await event.request.formData();
-		const email = String(data.get('email') ?? '').trim();
+		const email = formString(data, 'email').trim();
 
 		const limit = limitClient(event, passwordResetRequestLimiter);
 		if (limit.limited) return fail(429, { email, message: limit.message });

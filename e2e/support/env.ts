@@ -50,8 +50,8 @@ export const env = {
   serverCmd: process.env.E2E_SERVER_CMD ?? `bun ${path.join(REPO_ROOT, 'scripts/serve.ts')}`,
   /** Brings an empty database up to the current schema; DATABASE_URL is set for it. */
   migrateCmd: process.env.E2E_MIGRATE_CMD ?? 'bun run db:migrate',
-  /** Built SPA assets the server serves from `<cwd>/public`. Empty string skips the copy: the
-   * SvelteKit build serves its own assets. */
+  /** Lets the suite run against another build of the app, whose assets are copied to
+   * `<cwd>/public`; remove after cutover. Empty (the default) skips the copy. */
   publicDir: process.env.E2E_PUBLIC_DIR ?? '',
   /** Polled until it answers 2xx before tests start. */
   readyPath: process.env.E2E_READY_PATH ?? '/api/health',

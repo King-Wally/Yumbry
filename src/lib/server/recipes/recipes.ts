@@ -37,7 +37,7 @@ export async function recipeBelongsToFamily(recipeId: number, familyId: number):
 	return row !== undefined;
 }
 
-export interface RecipeFilters {
+interface RecipeFilters {
 	/** Case-insensitive substring of the title or description. */
 	search?: string;
 	/** Exact tag name. */
@@ -69,7 +69,13 @@ export async function listRecipes(
 					.select({ one: recipeTags.tagId })
 					.from(recipeTags)
 					.innerJoin(tags, eq(tags.id, recipeTags.tagId))
-					.where(and(eq(recipeTags.recipeId, recipes.id), eq(tags.name, tag)))
+					.where(
+						and(
+							eq(recipeTags.recipeId, recipes.id),
+							eq(tags.familyId, familyId),
+							eq(tags.name, tag)
+						)
+					)
 			)
 		);
 	}
@@ -164,7 +170,7 @@ export async function createRecipe(
 /**
  * Replaces the recipe's content, first keeping what it replaces as a version (the snapshot and the
  * update commit together, so a failed save leaves no version behind). Every save writes one, even
- * an unchanged one, as on main. The photo is left alone: the photo action owns it. Returns false if
+ * an unchanged one. The photo is left alone: the photo action owns it. Returns false if
  * the recipe isn't the family's.
  */
 export async function updateRecipe(

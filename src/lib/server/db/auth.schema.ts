@@ -1,6 +1,6 @@
-// better-auth's tables. Written by hand to match the database the Prisma app created — do not
-// regenerate with `@better-auth/cli generate`, which emits singular camelCase tables. The JS keys
-// are what better-auth's field names map to; the SQL names are the existing snake_case ones.
+// better-auth's tables, written by hand to match drizzle/0000_baseline.sql — do not regenerate with
+// `@better-auth/cli generate`, which emits singular camelCase tables. The JS keys are better-auth's
+// field names; the SQL names are the database's snake_case ones.
 import { sql } from 'drizzle-orm';
 import {
 	boolean,
@@ -19,7 +19,7 @@ const createdAt = () =>
 		.notNull()
 		.default(sql`CURRENT_TIMESTAMP`);
 
-// No database default (Prisma's @updatedAt set it client-side), so every writer must supply it.
+// The column has no database default, so every writer must supply it.
 const updatedAt = () =>
 	timestamp('updated_at', { withTimezone: true, mode: 'date' })
 		.notNull()

@@ -166,8 +166,7 @@ describe('the worked example', () => {
 });
 
 describe('prompt and schema stay in step', () => {
-	// Rungs two and three of the provider's downgrade ladder send no schema at all, so a constraint
-	// that lives only in the schema is a constraint that sometimes does not exist.
+	// The schema-free rungs of the downgrade ladder leave the prompt as the only contract.
 	it('prints every unit and density enum member in the prompt', () => {
 		const prompt = buildChatMessages([{ role: 'user', content: 'soup' }], null)[0].content;
 

@@ -28,7 +28,7 @@ services:
       BROWSER_CDP_URL: ${BROWSER_CDP_URL-http://browser:9222}
       BROWSER_PROXY_HOST: app
     volumes:
-      # Same volume as v1.3.1, which mounted it at /app/backend/uploads.
+      # Existing installs keep their photos in this volume; never rename it.
       - uploads_data:/app/uploads
     networks:
       - default

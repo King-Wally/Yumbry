@@ -1,18 +1,12 @@
-import { randomBytes } from 'node:crypto';
 import { and, asc, count, eq, inArray, ne, notExists, sql } from 'drizzle-orm';
 import { db, type DbExecutor } from '#lib/server/db/index.ts';
 import { categories, families, recipes, tags, users } from '#lib/server/db/schema.ts';
 import { FamilyError } from '#lib/server/family/errors.ts';
+import { randomToken } from '#lib/server/http/token.ts';
 import { deleteRecipeUploadsDir } from '#lib/server/uploads/storage.ts';
 import type { Family } from '#lib/server/family/types.ts';
 
 const TOKEN_ATTEMPTS = 3;
-
-/** A family invite token. Stored raw (see `families.inviteToken`), because the settings page
- * has to keep re-displaying the same link. */
-function generateInviteToken(): string {
-	return randomBytes(32).toString('hex');
-}
 
 /** Drizzle wraps driver errors in a DrizzleQueryError whose `cause` is the postgres error. */
 function isUniqueViolation(err: unknown): boolean {
@@ -27,7 +21,7 @@ export async function createFamily(executor: DbExecutor = db): Promise<{ id: num
 		try {
 			const [family] = await executor
 				.insert(families)
-				.values({ inviteToken: generateInviteToken() })
+				.values({ inviteToken: randomToken() })
 				.returning({ id: families.id });
 			return family;
 		} catch (err) {

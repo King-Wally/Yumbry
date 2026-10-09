@@ -1,8 +1,8 @@
 import { getCookies } from 'better-auth/cookies';
 import { describe, expect, it, vi } from 'vitest';
 
-// Pins the session cookie to the name and attributes the Express app used. Renaming it would sign
-// every existing user out at the cutover.
+// Pins the session cookie's name and attributes. Existing sessions depend on them; renaming the
+// cookie would sign every user out.
 
 vi.mock('$app/env/private', () => ({
 	ORIGIN: 'http://app.test',
@@ -17,7 +17,7 @@ vi.mock('#lib/server/family/family.ts', () => ({ createFamily: vi.fn() }));
 const { auth } = await import('#lib/server/auth/better-auth.ts');
 
 describe('session cookie', () => {
-	it('keeps main’s name and attributes', () => {
+	it('keeps its name and attributes', () => {
 		const { sessionToken } = getCookies(auth.options);
 		expect(sessionToken.name).toBe('yumbry.session_token');
 		expect(sessionToken.attributes).toMatchObject({

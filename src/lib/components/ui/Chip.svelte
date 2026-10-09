@@ -5,7 +5,7 @@
 		active?: boolean;
 	}
 
-	let { active = false, class: className = '', children, ...rest }: Props = $props();
+	let { active = false, children, ...rest }: Props = $props();
 </script>
 
 <button
@@ -13,8 +13,7 @@
 	aria-pressed={active}
 	class={[
 		'rounded-full px-3 py-1 text-sm capitalize transition',
-		active ? 'bg-clay text-white shadow-sm' : 'bg-stone-100 text-stone-600 hover:bg-stone-200',
-		className
+		active ? 'bg-clay text-white shadow-sm' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
 	]}
 	{...rest}
 >

@@ -112,8 +112,6 @@ describe('parseIngredientLine', () => {
 		expect(result.name).toBe('eggs, beaten');
 	});
 
-	// The word list used to be English-only, so a Dutch or French recipe saved with a null unit and
-	// the unit word swallowed into the name.
 	it.each([
 		['2 el olijfolie', 'el', 'olijfolie'],
 		['1 theelepel zout', 'theelepel', 'zout'],
@@ -127,8 +125,7 @@ describe('parseIngredientLine', () => {
 		expect(result.is_scalable).toBe(true);
 	});
 
-	// "1½" used to substitute into "11/2" with no separator, which the leading-quantity match then
-	// read as eleven halves.
+	// A naive substitution would splice "1½" into "11/2", eleven halves.
 	it('reads a mixed vulgar fraction as one and a half, not five and a half', () => {
 		const result = parseIngredientLine('1½ cups flour');
 		expect(result.amount).toBe(1.5);
