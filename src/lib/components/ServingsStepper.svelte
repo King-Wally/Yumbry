@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { hydrated } from '#lib/hydrated.svelte.ts';
 	import { m } from '#lib/paraglide/messages.js';
 
 	interface Props {
@@ -19,7 +20,7 @@
 		<button
 			type="button"
 			onclick={() => (value = Math.max(min, value - 1))}
-			disabled={value <= min}
+			disabled={!hydrated.current || value <= min}
 			class="rounded-l-full px-3 py-1 text-lg text-stone-600 transition-colors hover:bg-stone-100 disabled:cursor-not-allowed disabled:text-stone-300 disabled:hover:bg-transparent"
 			aria-label={m.servings_stepper_decrease()}
 		>
@@ -31,6 +32,7 @@
 		<button
 			type="button"
 			onclick={() => (value = value + 1)}
+			disabled={!hydrated.current}
 			class="rounded-r-full px-3 py-1 text-lg text-stone-600 transition-colors hover:bg-stone-100"
 			aria-label={m.servings_stepper_increase()}
 		>

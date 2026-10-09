@@ -92,12 +92,3 @@ export function fromBase(base: number, unit: UnitCode): number {
 export const MODEL_UNIT_ENUM = ['g', 'ml', 'cm', ''] as const;
 
 export type ModelUnit = (typeof MODEL_UNIT_ENUM)[number];
-
-export function isModelUnit(value: unknown): value is ModelUnit {
-	return typeof value === 'string' && (MODEL_UNIT_ENUM as readonly string[]).includes(value);
-}
-
-/** The dimension a model-emitted unit measures. `''` (countable) has none. */
-export function modelUnitDimension(unit: ModelUnit): Dimension | null {
-	return unit === '' ? null : UNIT_META[unit].dimension;
-}

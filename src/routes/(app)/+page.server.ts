@@ -3,15 +3,15 @@ import { listRecipes } from '#lib/server/services/recipes.ts';
 import { listCategories, listTags } from '#lib/server/services/tags-categories.ts';
 import type { PageServerLoad } from './$types';
 
-// The filters live in the URL (?search=&category=&tag=), so the page navigates client-side to
-// filter and a filtered list can be linked to or reloaded.
+// The filters live in the URL (?search=&category=&tag=), so a filtered list can be linked to or
+// reloaded, and the chips filter through a plain GET form. An empty parameter means no filter.
 export const load: PageServerLoad = async (event) => {
 	const { familyId } = requireUser(event);
 	const params = event.url.searchParams;
 	const filters = {
 		search: params.get('search') ?? '',
-		category: params.get('category'),
-		tag: params.get('tag')
+		category: params.get('category') || null,
+		tag: params.get('tag') || null
 	};
 
 	const [recipes, categories, tags] = await Promise.all([

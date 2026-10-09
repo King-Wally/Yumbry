@@ -1,12 +1,9 @@
 node_modules/
-dist/
-dev-dist/
 .env
 /uploads/
 *.log
 .DS_Store
 coverage/
-backend/src/generated/
 /temp/
 backups/
 

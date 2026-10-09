@@ -11,6 +11,7 @@
 	import ReorderableListEditor from '#lib/components/ReorderableListEditor.svelte';
 	import ServingsStepper from '#lib/components/ServingsStepper.svelte';
 	import TagEditor from '#lib/components/TagEditor.svelte';
+	import { hydrated } from '#lib/hydrated.svelte.ts';
 	import { m } from '#lib/paraglide/messages.js';
 	import { toNullableNumber } from '#lib/shared/numeric.ts';
 	import type { AiQuotaScope } from '#lib/shared/ai-budget.ts';
@@ -146,7 +147,7 @@
 
 {#snippet numberField(name: NumberField, label: string, step?: string)}
 	<div>
-		<label class="text-sm text-stone-600">
+		<label class="block text-sm text-stone-600">
 			{label}
 			<input
 				type="number"
@@ -158,6 +159,7 @@
 					// A number input binds as a number (null when empty); the form state keeps strings.
 					(value: number | null) => (fields[name] = value == null ? '' : String(value))
 				}
+				defaultValue={toNullableNumber(start[name]) ?? ''}
 				{...invalid(name)}
 				class={numberClass}
 			/>
@@ -166,7 +168,7 @@
 	</div>
 {/snippet}
 
-<div class="mx-auto max-w-3xl pb-28">
+<div class="mx-auto max-w-3xl pb-4">
 	<div class="mb-4 flex items-center gap-3">
 		<a
 			href={backHref}
@@ -201,6 +203,9 @@
 					<label for="{uid}-title" class="mb-1 block text-sm font-medium text-stone-700">
 						{m.recipe_form_title_placeholder()}
 					</label>
+					<!-- Each bound input also gets a `defaultValue` (what it was rendered with). Without one,
+					     hydration drops the server's `value` attribute a tick later and re-sets the value,
+					     collapsing a selection made in between: a fill racing hydration would append. -->
 					<input
 						id="{uid}-title"
 						form="recipe-form"
@@ -208,6 +213,7 @@
 						name="title"
 						required
 						bind:value={fields.title}
+						defaultValue={start.title}
 						placeholder={m.recipe_form_title_placeholder()}
 						{...invalid('title')}
 						class={inputClass}
@@ -317,7 +323,7 @@
 						<button
 							type="button"
 							onclick={estimateNutrition}
-							disabled={estimating || !canEstimate}
+							disabled={!hydrated.current || estimating || !canEstimate}
 							class="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100 disabled:opacity-50"
 						>
 							{estimating
@@ -352,6 +358,7 @@
 							type="text"
 							name="ingredient"
 							bind:value={item.text}
+							defaultValue={untrack(() => item.text)}
 							aria-label={m.recipe_form_ingredients_item_label({ number: index + 1 })}
 							placeholder={m.recipe_form_ingredients_placeholder()}
 							class="flex-1 rounded-md border border-stone-300 px-3 py-1.5 focus:border-clay focus:outline-none"
@@ -370,17 +377,20 @@
 					removeLabel={(i) => m.recipe_form_instructions_remove_item({ number: i + 1 })}
 					itemLabel={(i) => m.recipe_form_instructions_item_label({ number: i + 1 })}
 					createItem={() => keyed({ text: '' })}
+					controlClass="mt-2"
 				>
 					{#snippet row(step, index)}
-						<span class="w-4 text-sm text-stone-400">{index + 1}</span>
-						<textarea
-							name="instruction"
-							rows="2"
-							bind:value={step.text}
-							aria-label={m.recipe_form_instructions_item_label({ number: index + 1 })}
-							placeholder={m.recipe_form_instructions_placeholder()}
-							class="flex-1 rounded-md border border-stone-300 px-3 py-1.5 focus:border-clay focus:outline-none"
-						></textarea>
+						<span class="mt-2 w-4 text-sm text-stone-400">{index + 1}</span>
+						<div class="flex-1">
+							<textarea
+								name="instruction"
+								rows="2"
+								bind:value={step.text}
+								aria-label={m.recipe_form_instructions_item_label({ number: index + 1 })}
+								placeholder={m.recipe_form_instructions_placeholder()}
+								class="w-full rounded-md border border-stone-300 px-3 py-1.5 focus:border-clay focus:outline-none"
+							></textarea>
+						</div>
 					{/snippet}
 				</ReorderableListEditor>
 				{@render fieldError('instructions')}

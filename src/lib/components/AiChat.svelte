@@ -120,7 +120,7 @@
 		'mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5 text-sm text-stone-700 focus:border-clay focus:outline-none disabled:opacity-50';
 </script>
 
-<div class="space-y-4 pb-24">
+<div class="space-y-4 pb-4">
 	<div class="mb-4 flex items-center gap-3">
 		<a
 			href={backHref}
@@ -184,6 +184,7 @@
 						required
 						autocomplete="off"
 						bind:value={input}
+						defaultValue=""
 						aria-label={mode === 'create'
 							? m.ai_chat_cook_placeholder()
 							: m.ai_chat_change_placeholder()}

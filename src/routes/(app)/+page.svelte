@@ -14,17 +14,13 @@
 	let search = $state(untrack(() => data.filters.search));
 
 	/**
-	 * Navigates client-side to the list with the given filters changed, dropping empty params.
-	 * The search term always comes from the input, since `page.url` lags while typing.
+	 * Navigates client-side to the list with the typed search term, keeping the other filters.
+	 * The term comes from the input, since `page.url` lags while typing.
 	 */
-	function navigate(changes: { category?: string | null; tag?: string | null } = {}) {
+	function navigate() {
 		const url = new URL(page.url.href);
-		const params: Record<string, string | null | undefined> = { search, ...changes };
-		for (const [key, value] of Object.entries(params)) {
-			if (value === undefined) continue;
-			if (value) url.searchParams.set(key, value);
-			else url.searchParams.delete(key);
-		}
+		if (search) url.searchParams.set('search', search);
+		else url.searchParams.delete('search');
 		goto(url, { replace: true, reset: false });
 	}
 </script>
@@ -39,14 +35,16 @@
 			}}
 		/>
 		<FilterChips
+			name="category"
 			items={data.categories}
 			active={data.filters.category}
-			onselect={(category) => navigate({ category })}
+			keep={{ search, tag: data.filters.tag }}
 		/>
 		<FilterChips
+			name="tag"
 			items={data.tags}
 			active={data.filters.tag}
-			onselect={(tag) => navigate({ tag })}
+			keep={{ search, category: data.filters.category }}
 		/>
 	</div>
 

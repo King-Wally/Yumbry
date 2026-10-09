@@ -2,10 +2,14 @@ import { createRawSnippet } from 'svelte';
 import { describe, expect, it } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
+import { markHydrated } from '#lib/hydrated.svelte.ts';
 import ReorderableListEditor from './ReorderableListEditor.svelte';
 
 // No e2e spec reorders (main's suite didn't either), so the keyboard and pointer paths are
 // covered here.
+
+// The root layout, which marks the page hydrated, isn't rendered here.
+markHydrated();
 
 interface Item {
 	key: number;

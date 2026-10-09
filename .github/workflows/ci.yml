@@ -95,7 +95,6 @@ jobs:
           path: ~/.cloakbrowser
           key: cloakbrowser-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
           restore-keys: cloakbrowser-${{ runner.os }}-${{ runner.arch }}-
-      # Runs only the specs in e2e/ported-specs.txt.
       - run: bun run e2e
         env:
           E2E_DATABASE_URL: postgres://chef:changeme@localhost:5432/yumbry_e2e

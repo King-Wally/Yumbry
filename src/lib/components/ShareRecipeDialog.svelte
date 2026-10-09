@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { hydrated } from '#lib/hydrated.svelte.ts';
 	import { m } from '#lib/paraglide/messages.js';
 	import ConfirmDialog from './ConfirmDialog.svelte';
 	import Dialog from './Dialog.svelte';
@@ -48,12 +49,17 @@
 				type="text"
 				readonly
 				value={shareUrl}
-				onfocus={(e) => e.currentTarget.select()}
+				onfocus={(e) => {
+					e.currentTarget.select();
+					// Selecting scrolls to the end; keep the start of the link (the host) in view.
+					e.currentTarget.scrollLeft = 0;
+				}}
 				class="w-full rounded-md border border-stone-300 bg-stone-50 px-3 py-2 text-[13px] text-stone-600 focus:border-clay focus:outline-none"
 			/>
 			<button
 				type="button"
 				onclick={copy}
+				disabled={!hydrated.current}
 				class="shrink-0 rounded-md bg-clay px-4 py-2 text-[13px] text-white hover:bg-clay/90"
 			>
 				{copied ? m.recipes_share_copied() : m.recipes_share_copy_link()}
@@ -62,7 +68,12 @@
 		<p class="mt-2 text-xs text-stone-500">{m.recipes_share_hint()}</p>
 
 		<div class="mt-6 flex items-center justify-between gap-2">
-			<button type="button" onclick={stopSharing} class="text-sm text-red-600 hover:underline">
+			<button
+				type="button"
+				onclick={stopSharing}
+				disabled={!hydrated.current}
+				class="text-sm text-red-600 hover:underline"
+			>
 				{m.recipes_share_stop()}
 			</button>
 			<button

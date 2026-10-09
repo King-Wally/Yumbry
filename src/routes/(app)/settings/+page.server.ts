@@ -37,7 +37,7 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
 	// Any subset of the four preferences. The page posts the language and the JSON switch; the AI
-	// chat page (step 23) posts its unit system and small-volume selects here too.
+	// chat page posts its unit system and small-volume selects here too.
 	preferences: async (event) => {
 		const { user } = requireUser(event);
 		const formData = await event.request.formData();

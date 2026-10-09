@@ -3,25 +3,42 @@
 	import Chip from './Chip.svelte';
 
 	interface Props {
+		/** The URL parameter this row sets. */
+		name: string;
 		items: { id: number; name: string }[] | undefined;
 		/** The selected item's name, or null for "All". */
 		active: string | null;
-		onselect: (value: string | null) => void;
+		/** The other filters, carried over unchanged. Empty ones are left out of the URL. */
+		keep: Record<string, string | null>;
 	}
 
-	let { items, active, onselect }: Props = $props();
+	let { name, items, active, keep }: Props = $props();
 </script>
 
+<!-- A GET form rather than click handlers, so a chip works before (and without) hydration. A chip
+     that clears the filter submits no value for it. -->
 {#if items && items.length > 0}
-	<div class="flex flex-wrap gap-2">
-		<Chip active={!active} onclick={() => onselect(null)}>{m.common_all()}</Chip>
+	<form
+		method="GET"
+		data-sveltekit-replacestate
+		data-sveltekit-reset="false"
+		class="flex flex-wrap gap-2"
+	>
+		{#each Object.entries(keep) as [key, value] (key)}
+			{#if value}
+				<input type="hidden" name={key} {value} />
+			{/if}
+		{/each}
+		<Chip type="submit" active={!active}>{m.common_all()}</Chip>
 		{#each items as item (item.id)}
 			<Chip
+				type="submit"
+				name={item.name === active ? undefined : name}
+				value={item.name === active ? undefined : item.name}
 				active={active === item.name}
-				onclick={() => onselect(item.name === active ? null : item.name)}
 			>
 				{item.name}
 			</Chip>
 		{/each}
-	</div>
+	</form>
 {/if}

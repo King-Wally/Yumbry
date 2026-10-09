@@ -11,17 +11,14 @@ changes.
 ```sh
 docker compose up -d db          # any Postgres works; see E2E_DATABASE_URL below
 bun run e2e:build                # from the repo root: builds the SvelteKit app
-bun run e2e                      # resets the e2e database, starts the servers, runs the allowlist
-bun run e2e:all                  # the same, but every spec
-bun run e2e:ui                   # every spec, in Playwright's UI mode
+bun run e2e                      # resets the e2e database, starts the servers, runs every spec
+bun run e2e:ui                   # the same, in Playwright's UI mode
 ```
 
 The first time, install the browser with `bunx playwright install chromium` (from `e2e/`).
 
-While the app is being migrated, `bun run e2e` runs only the tests listed in `ported-specs.txt`:
-the ones the new build already passes. Extra arguments go to Playwright
-(`bun run e2e --headed`). Bun installs this package as a workspace, but Playwright, the fakes and
-the scripts here run on Node.
+Extra arguments go to Playwright (`bun run e2e --headed`). Bun installs this package as a
+workspace, but Playwright, the fakes and the scripts here run on Node.
 
 `bun run e2e` drops and recreates the `E2E_DATABASE_URL` database (default
 `postgres://chef:changeme@localhost:5432/yumbry_e2e`). It refuses to touch a database whose name

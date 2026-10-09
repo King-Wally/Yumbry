@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { hydrated } from '#lib/hydrated.svelte.ts';
 	import { m } from '#lib/paraglide/messages.js';
 	import { addTag, suggestTags } from '#lib/shared/recipe-form.ts';
 
@@ -35,6 +36,7 @@
 					<button
 						type="button"
 						onclick={() => remove(tag)}
+						disabled={!hydrated.current}
 						aria-label={m.recipe_form_remove_tag()}
 						class="text-stone-400 hover:text-red-600"
 					>
@@ -49,6 +51,7 @@
 		<input
 			type="text"
 			bind:value={input}
+			defaultValue=""
 			onfocus={() => (focused = true)}
 			onblur={() => (focused = false)}
 			onkeydown={(event) => {
@@ -64,6 +67,7 @@
 		<button
 			type="button"
 			onclick={() => add()}
+			disabled={!hydrated.current}
 			class="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
 		>
 			{m.common_add()}

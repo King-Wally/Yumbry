@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { hydrated } from '#lib/hydrated.svelte.ts';
 	import { m } from '#lib/paraglide/messages.js';
 
 	// Mirrors PHOTO_LIMIT_MB in #lib/server/uploads.ts (server-only), which has the final say.
@@ -70,7 +71,7 @@
 		{/if}
 		<button
 			type="button"
-			disabled={uploading}
+			disabled={!hydrated.current || uploading}
 			onclick={() => fileInput.click()}
 			class="rounded-md border border-stone-300 px-3 py-1.5 text-sm text-stone-600 hover:bg-stone-100 disabled:opacity-50"
 		>

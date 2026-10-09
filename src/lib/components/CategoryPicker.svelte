@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Chip from '#lib/components/Chip.svelte';
+	import { hydrated } from '#lib/hydrated.svelte.ts';
 	import { m } from '#lib/paraglide/messages.js';
 
 	interface Props {
@@ -29,6 +30,7 @@
 				<Chip
 					active={value === category.name}
 					onclick={() => (value = value === category.name ? null : category.name)}
+					disabled={!hydrated.current}
 				>
 					{category.name}
 				</Chip>
@@ -39,6 +41,7 @@
 		<input
 			type="text"
 			bind:value={custom}
+			defaultValue=""
 			onkeydown={(event) => {
 				if (event.key === 'Enter') {
 					event.preventDefault();
@@ -52,6 +55,7 @@
 		<button
 			type="button"
 			onclick={setCustom}
+			disabled={!hydrated.current}
 			class="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
 		>
 			{m.category_picker_set()}
@@ -64,6 +68,7 @@
 			<button
 				type="button"
 				onclick={() => (value = null)}
+				disabled={!hydrated.current}
 				class="text-stone-400 hover:text-red-600"
 			>
 				{m.category_picker_clear()}

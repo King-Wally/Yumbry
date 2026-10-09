@@ -16,6 +16,7 @@
 		Users
 	} from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import { hydrated } from '#lib/hydrated.svelte.ts';
 	import { currentInstallPlatform, isStandalonePwa } from '#lib/install-platform.ts';
 	import { applyLocale } from '#lib/locale-client.ts';
 	import type { InstallPlatform } from '#lib/shared/install-platform.ts';
@@ -57,7 +58,6 @@
 	let step = $state(0);
 	let pickedLocale = $state<SupportedLocale | null>(null);
 	let copied = $state(false);
-	let hydrated = $state(false);
 
 	// Set once on mount: the PWA step is a one-time nudge, and both need `navigator`.
 	let platform = $state<InstallPlatform>('desktop');
@@ -66,7 +66,6 @@
 	onMount(() => {
 		platform = currentInstallPlatform();
 		showPwaStep = !isStandalonePwa();
-		hydrated = true;
 	});
 
 	const stepKeys = $derived(showPwaStep ? ALL_STEPS : ALL_STEPS.filter((key) => key !== 'pwa'));
@@ -174,7 +173,7 @@ picked language survive a locale switch), so the page keys its own markup. -->
 								type="submit"
 								name="locale"
 								value={locale}
-								disabled={!hydrated}
+								disabled={!hydrated.current}
 								class="flex items-center justify-between rounded-lg border px-4.5 py-3.5 text-left disabled:cursor-default {selected
 									? 'border-clay bg-clay/10'
 									: 'border-stone-300 bg-white'}"

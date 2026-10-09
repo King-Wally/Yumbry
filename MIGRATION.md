@@ -25,17 +25,18 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 
 ## Decisions
 
-| Topic               | Decision                                                                                                                                                                                                                                                                                                                                                             |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Runtime and tooling | **Bun** is both package manager and runtime: `bun install`, `bun --bun vite`, and the production server runs on `bun`. Playwright's test runner is the one exception: it stays on Node, the only runtime it officially supports. Step 2 found it does run on Bun 1.4.2, but the e2e harness keeps Node anyway (see "Bun runtime notes").                             |
-| Adapter             | `@sveltejs/adapter-node`, with its output run by `bun scripts/serve.ts`, a thin wrapper around `build/index.js` that applies `ORIGIN` at runtime (step 5). Step 2 found no blocker: every Node API the backend needs (`node:http`, `node:net`, `node:tls`) works under Bun.                                                                                          |
-| Data layer          | Load functions (`+page.server.ts`) and form actions with `use:enhance`. `+server.ts` only for things that aren't pages: `/api/health`, `/uploads/*`, file downloads and photo streams. The old `/api/*` JSON API is **not** ported, and `api/client.ts`, react-query and `queryKeys.ts` go away. Remote functions are still experimental in Kit 3.0, so they're out. |
-| Base URL env var    | `ORIGIN` everywhere, read at runtime: better-auth's `baseURL`, the request origin SvelteKit's CSRF check and cookies see (adapter-node 6 dropped `ORIGIN`, so `scripts/serve.ts` feeds it in), and links in emails. `BETTER_AUTH_URL` and `APP_BASE_URL` are dropped. Production must set `ORIGIN` before the cutover (step 27).                                     |
-| UI primitives       | `bits-ui` for dialog, switch, dropdown and menus. `@lucide/svelte` for icons. Native pointer events or `svelte-dnd-action` for reorderable lists. Toasts are a small module of our own.                                                                                                                                                                              |
-| i18n                | Paraglide (already set up), with the messages converted from `main`'s i18next JSON. No locale segment in URLs, as today: the strategy is the signed-in user's preference, then cookie, then `Accept-Language`, then `en`.                                                                                                                                            |
-| `shared/`           | Folded into `src/lib/shared/`. It stays framework-free and keeps its unit tests, but there is no separate package or build step any more.                                                                                                                                                                                                                            |
-| Old tests           | Unit tests of pure logic and services are ported next to the code they test. Express `*.api.test.ts` and React component tests are **not** ported: e2e covers that behaviour.                                                                                                                                                                                        |
-| Schema              | **No schema changes until the cutover is done.** Production can then still roll back to v1.3.1 on the same database (step 27).                                                                                                                                                                                                                                       |
+| Topic               | Decision                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime and tooling | **Bun** is both package manager and runtime: `bun install`, `bun --bun vite`, and the production server runs on `bun`. Playwright's test runner is the one exception: it stays on Node, the only runtime it officially supports. Step 2 found it does run on Bun 1.4.2, but the e2e harness keeps Node anyway (see "Bun runtime notes").                                                                                                                              |
+| Adapter             | `@sveltejs/adapter-node`, with its output run by `bun scripts/serve.ts`, a thin wrapper around `build/index.js` that applies `ORIGIN` at runtime (step 5). Step 2 found no blocker: every Node API the backend needs (`node:http`, `node:net`, `node:tls`) works under Bun.                                                                                                                                                                                           |
+| Data layer          | Load functions (`+page.server.ts`) and form actions with `use:enhance`. `+server.ts` only for things that aren't pages: `/api/health`, `/uploads/*`, file downloads and photo streams. The old `/api/*` JSON API is **not** ported, and `api/client.ts`, react-query and `queryKeys.ts` go away. Remote functions are still experimental in Kit 3.0, so they're out.                                                                                                  |
+| Hydration           | Forms and links must work **before hydration**: form actions with `use:enhance`, GET forms and real links. That is the goal, not no-JS support. Inherently interactive controls (AI chat, reordering, dialogs, toasts, steppers) may need JS: they are disabled until `hydrated.current` (`#lib/hydrated.svelte.ts`) and get no `<noscript>` or other no-JS fallback. Replacing a JS-only control with a link or GET form is fine when it looks and behaves the same. |
+| Base URL env var    | `ORIGIN` everywhere, read at runtime: better-auth's `baseURL`, the request origin SvelteKit's CSRF check and cookies see (adapter-node 6 dropped `ORIGIN`, so `scripts/serve.ts` feeds it in), and links in emails. `BETTER_AUTH_URL` and `APP_BASE_URL` are dropped. Production must set `ORIGIN` before the cutover (step 27).                                                                                                                                      |
+| UI primitives       | `bits-ui` for dialogs. Menus are native popovers (`PopoverMenu.svelte`, step 25), so they open before hydration. `@lucide/svelte` for icons. Native pointer events or `svelte-dnd-action` for reorderable lists. Toasts are a small module of our own.                                                                                                                                                                                                                |
+| i18n                | Paraglide (already set up), with the messages converted from `main`'s i18next JSON. No locale segment in URLs, as today: the strategy is the signed-in user's preference, then cookie, then `Accept-Language`, then `en`.                                                                                                                                                                                                                                             |
+| `shared/`           | Folded into `src/lib/shared/`. It stays framework-free and keeps its unit tests, but there is no separate package or build step any more.                                                                                                                                                                                                                                                                                                                             |
+| Old tests           | Unit tests of pure logic and services are ported next to the code they test. Express `*.api.test.ts` and React component tests are **not** ported: e2e covers that behaviour.                                                                                                                                                                                                                                                                                         |
+| Schema              | **No schema changes until the cutover is done.** Production can then still roll back to v1.3.1 on the same database (step 27).                                                                                                                                                                                                                                                                                                                                        |
 
 ## Ground rules (every step)
 
@@ -47,10 +48,9 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 - **Never edit `e2e/specs/*`.** Harness files (`e2e/support/env.ts`, `e2e/playwright.config.ts`,
   `e2e/scripts/*`) may change only to point at the new build. A failing spec means the app is
   wrong.
-- **The e2e allowlist.** Until step 25, CI runs only the specs listed in `e2e/ported-specs.txt`
-  (one `specs/file.spec.ts` or `specs/file.spec.ts:LINE` per line, where the line is a test or
-  `describe`). Each feature step adds the tests it turns green. A test that was green must stay
-  green.
+- **The e2e suite.** Since step 25, `bun run e2e` and CI run every spec, in both projects. Until
+  then they ran only an allowlist (`e2e/ported-specs.txt`, now deleted) that each feature step
+  extended. Every test must stay green.
 - **`CLAUDE.md` still describes `main`'s architecture until step 26.** Use it as a description of
   behaviour, not of where code goes now. This file wins wherever they disagree.
 - **Framework-free logic** (scaling, form rules, diffing, units, AI prompt building and parsing)
@@ -60,7 +60,7 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 - **For `.svelte` files,** use the Svelte skills and the `svelte:svelte-file-editor` agent (Svelte 5
   runes only).
 - **Checks before each commit:** `bun run check`, `bun run lint`, `bun run test:unit -- --run`, and
-  the allowlisted e2e specs (`bun run e2e`).
+  the e2e suite (`bun run e2e`).
 
 ## Tracker
 
@@ -99,7 +99,8 @@ If a step turns out bigger than planned, split it into `Na`/`Nb` here before you
 
 **Phase D: Finish**
 
-- [ ] 25. Full parity pass
+- [x] 25. Full parity pass
+- [ ] 25a. Hydration audit: before-hydration, not no-JS
 - [ ] 26. Docs and release tooling
 - [ ] 27. Production cutover
 
@@ -112,23 +113,6 @@ Found during a step but owned by a later one. Remove an entry once the owning st
   `POSTGRES_DB` and points it at `db`, so `.env`'s `DATABASE_URL` can stay on `localhost` for
   `vite dev`. A password with `@`, `/`, `:` or `%` would break that URL. Coolify's own
   `DATABASE_URL` setting becomes unused.
-- **Clicks that land before hydration are lost on JS-only controls** (found in step 13, owned by step
-  25). Main's SPA rendered nothing until its JS ran; SSR renders working-looking buttons first. Forms
-  and links now work without JS (step 13 fixed the two ways they didn't), but the profile menu
-  (`auth.spec.ts:52`) and the list's filter chips (`recipe-list.spec.ts:116`) still need JS, and
-  under local load (7 workers) a run occasionally clicks them too early. CI's 2 workers didn't show
-  it in five runs. Fix in the app, not the specs: e.g. chips as `?category=` links, the menu as a
-  `<details>` or a link to a page.
-  Step 14 found a third case: a `fill` racing hydration on the edit form. In 2 of 70 runs of
-  `versions.spec.ts --repeat-each=10`, each the first test of a cold worker, `editTitle`'s
-  `getByLabel('Title').fill(...)` saved "Tomato SoupRoasted Tomato Soup". The text was appended, as
-  if hydration dropped the select-all that `fill` makes. The spec's h1 check matches by substring,
-  so it's the later `exact` h3 that fails. Neither a fill before hydration nor 8× CPU throttling
-  reproduced it. Look at what `RecipeForm`'s hydration does to the title input's value or selection.
-  Step 24 found a fourth case: the Add recipe menu. Under 7 local workers, the first `Create with AI`
-  tests of `ai.spec.ts` sometimes time out waiting for the menu's `Create with AI` link: the trigger
-  click lands, but the menu never opens. Without the step 24 change it failed the same way (2 of 4
-  allowlist runs, against 2 of 6 with it), so it's not caused by the outage cover.
 
 ---
 
@@ -1694,6 +1678,123 @@ Read MIGRATION.md (Decisions, Ground rules, Step 25), then plan Step 25.
 4. Clean-up: unused dependencies, dead components, leftovers from the scaffold or the
    migration (the conversion script, placeholders), TODOs. svelte-check must be clean.
 Tick Step 25 and commit as "test: full e2e suite green on SvelteKit; remove allowlist".
+```
+
+**Outcome.** The whole suite (124 tests, both projects) is green on the final build: three runs in
+a row with local workers, plus a run with `--workers=2` as in CI. Before the fixes, two of three
+baseline runs failed on the Add recipe menu. `e2e/ported-specs.txt` and `run-ported.ts` are gone,
+`bun run e2e` runs everything and `e2e:all` is dropped. The allowlist had a dead entry
+(`i18n.spec.ts:116`), so `i18n.spec.ts:102` ("signed-in pages are translated", four locales) had
+never run in CI. It passed as is.
+
+- **Hydration races** (the Open issues entry, now removed). Fixed in the app, specs untouched.
+  `--repeat-each=5` over the nine specs that use these controls passed 320 of 320, and
+  `versions.spec.ts --repeat-each=20` passed 140 of 140.
+  - **Menus are native popovers.** `#lib/components/PopoverMenu.svelte`: a
+    `<button popovertarget>` plus a `<div popover>`, placed with CSS anchor positioning, with a
+    `getBoundingClientRect` fallback for browsers without it. It opens, light-dismisses and closes
+    on Escape before hydration. The header's Add recipe and Profile menus and `CollapsibleActions`
+    use it, which replaced bits-ui `NavigationMenu`. That menu opened on a 200 ms hover timer and
+    ignored the click once hovering had opened it, so an early click was lost both ways.
+    `afterNavigate` closes the menu, but not on the `enter` navigation that hydration itself
+    reports. Closing then dropped a menu opened before hydration: the first fix failed 4 of 372
+    tests that way.
+  - **Filter chips are a GET form.** They are submit buttons with `name`/`value` and keep
+    `aria-pressed`. `data-sveltekit-replacestate` and `data-sveltekit-reset="false"` match the old
+    `goto(…, { replace: true, reset: false })`. An active chip and "All" send no parameter, and the
+    load treats `''` as absent.
+  - **The edit form's appended title** came from Svelte's `remove_input_defaults`. On an input with
+    `bind:value` plus a spread, it runs in a hydration microtask and collapses the selection that
+    Playwright's `fill` makes. A `defaultValue` attribute skips it, and SSR still emits `value`.
+    `bind:value` text and number inputs that render before hydration carry one now. Textareas
+    have no such skip; none raced.
+  - **The other JS-only controls are disabled until hydrated.** That covers the dialog triggers,
+    copy-link, the servings stepper and the form's picker, tag, list, photo and estimate buttons.
+    The flag lives in `#lib/hydrated.svelte.ts` and the root layout's `onMount` sets it. Playwright
+    waits for them to be enabled. Onboarding uses the same flag now.
+  - **Checked with JavaScript off:** the menus open and navigate, the chips filter and clear, the
+    actions menu opens, and logout works.
+- **Visual parity.** `main` was built in a git worktree and both apps ran on fresh databases with
+  identical seed data: four users, five recipes, a photo, a share link, an invite token and two
+  saved versions with fixed timestamps. The seeding used `e2e/support`'s `Db` and `signUpViaApi`,
+  plus SQL. A scratch Playwright script took 40 states at 1280×800 and 390×844, light scheme,
+  reduced motion and a fixed clock. That covers every route in main's `App.tsx`, the three menus,
+  the share, delete and leave-family dialogs, a version compare, a save toast, an import error and
+  the outage cover. `pixelmatch` compared each pair. All but the ones below are pixel-identical,
+  the menus included. Fixed along the way:
+  - the recipe form and AI chat had `pb-28`/`pb-24` where main has `pb-4`, so there was extra
+    space above the footer;
+  - the timing fields' labels were inline (wrapped in a `div`) where main's are grid items, which
+    moved them 4px;
+  - instruction rows lacked main's `mt-2` alignment and block textarea wrapper;
+  - the list editor's screen-reader live region came after the Add button, so Tailwind 4's
+    `space-y-2` gave that button 8px of bottom margin;
+  - a stray space before "(you)" in the family member list;
+  - the share link field scrolled to the end of the URL when its text was selected.
+- **Intended differences:**
+  - **Dialog backdrops cover the header.** Main's Radix overlay had no z-index, so the sticky
+    header stayed bright above it.
+  - **Menus open on click only.** Main's Radix `NavigationMenu` also opened on hover.
+  - **"Estimate with AI"** is hidden when `GEMINI_API_KEY` is unset. Main showed it whenever
+    OpenRouter was configured, and it then failed with `not_configured`.
+  - **JSON import errors** quote the runtime's `JSON.parse` message: JavaScriptCore under Bun, not
+    V8.
+  - **The outage cover sits over the server-rendered page.** Main rendered only the cover. The
+    viewport looks identical.
+  - **A PWA opened offline** shows the browser's offline page (step 24).
+  - **Before hydration,** the photo-upload and Estimate buttons look dimmed for a moment (their
+    existing `disabled:opacity-50`).
+- **Clean-up:**
+  - removed `@sveltejs/enhanced-img` and its Vite plugin, and the scaffold's `src/lib/index.ts` and
+    `#lib` import entry;
+  - removed the empty eslint override block, the old-stack `.gitignore` entries, and dead exports
+    (`isModelUnit`, `modelUnitDimension`, `AiStatusResponse`, `AiChatTurnRequest`/`Response`);
+  - removed 11 unused message keys and two stale step-number comments.
+  - The i18next conversion script was never committed, and there were no TODOs. bits-ui stays, for
+    `Dialog.svelte`.
+  - Left for later: `rehearse-migrate.ts`, `backups/` and the `svelte` CI branch (step 27). Also
+    the e2e `E2E_PUBLIC_DIR` hook, which keeps the harness runnable against main, and the docs
+    (step 26).
+
+### 25a. Hydration audit: before-hydration, not no-JS
+
+**Goal:** the code follows the Hydration decision. Several steps wrote "works without JS" where they
+meant "works before hydration", so some controls got fallbacks only JS-disabled users would need.
+Remove those, and fix any control that still misbehaves before hydration.
+
+**Done when:**
+
+- Every piece of no-JS or before-hydration handling in `src/` is listed in the Outcome as kept,
+  removed or changed, each with a one-line reason.
+- No `<noscript>` is left, unless the Outcome says why it's still needed.
+- The full e2e suite passes three runs in a row, and `bun run check`, `bun run lint` and
+  `bun run test:unit -- --run` are clean.
+
+**Commit:** `refactor: align hydration handling with the before-hydration policy`
+
+**Prompt:**
+
+```text
+Read MIGRATION.md (Decisions, especially Hydration; Ground rules; Open issues; and the Outcomes
+of steps 13 to 25, which record why each workaround was added), then plan Step 25a.
+
+The policy: forms and links must work before hydration (form actions, GET forms, real links).
+Supporting browsers with JS turned off is not a goal. Inherently interactive controls are
+disabled until `hydrated.current` and need no no-JS fallback.
+
+1. Inventory. Search src/ for `<noscript>`, `hydrated`, comments mentioning "no-JS", "without
+   JS" or "before hydration", attachments that catch up input made before hydration, server
+   branches that only a non-enhanced post can reach, and flash or redirect paths that exist
+   only for no-JS posts. Classify each one:
+   - keep: it makes a form or link work before hydration;
+   - remove: it only serves JS-disabled users;
+   - change: it should become a link or GET form, or be disabled until hydrated.
+2. Put the table in your plan. Ask me about every item that isn't clear-cut before changing
+   it, for example where removing a fallback changes what an early click does.
+3. Apply the changes. Don't edit specs. Never break a form submitted before hydration.
+4. Remove the Open issues entries this step resolves, write the Outcome (the final table plus
+   any seams), tick Step 25a and commit as
+   "refactor: align hydration handling with the before-hydration policy".
 ```
 
 ### 26. Docs and release tooling

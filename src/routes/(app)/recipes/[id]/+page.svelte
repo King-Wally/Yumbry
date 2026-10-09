@@ -12,6 +12,7 @@
 	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
 	import RecipeDetailView from '#lib/components/RecipeDetailView.svelte';
 	import ShareRecipeDialog from '#lib/components/ShareRecipeDialog.svelte';
+	import { hydrated } from '#lib/hydrated.svelte.ts';
 	import { fetchExportFile, shareOrDownloadFile, type ExportFile } from '#lib/export-share.ts';
 	import { isStandalonePwa } from '#lib/install-platform.ts';
 	import { m } from '#lib/paraglide/messages.js';
@@ -85,6 +86,7 @@
 			<button
 				type="button"
 				onclick={() => (shareOpen = true)}
+				disabled={!hydrated.current}
 				class="inline-flex items-center gap-2 rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
 			>
 				<Share2 class="h-4 w-4" />
@@ -111,6 +113,7 @@
 			<button
 				type="button"
 				onclick={() => (confirmDeleteOpen = true)}
+				disabled={!hydrated.current}
 				class="inline-flex items-center gap-2 rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-600 transition-colors hover:border-red-300 hover:bg-red-50"
 			>
 				<Trash class="h-4 w-4" />

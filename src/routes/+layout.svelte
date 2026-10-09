@@ -2,8 +2,7 @@
 	import './layout.css';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
-	import { untrack } from 'svelte';
-	import { NavigationMenu } from 'bits-ui';
+	import { onMount, untrack } from 'svelte';
 	import {
 		Camera,
 		FileUp,
@@ -15,8 +14,10 @@
 		UserCircle
 	} from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import PopoverMenu from '#lib/components/PopoverMenu.svelte';
 	import ServerUnavailable from '#lib/components/ServerUnavailable.svelte';
 	import Toaster from '#lib/components/Toaster.svelte';
+	import { markHydrated } from '#lib/hydrated.svelte.ts';
 	import { serverStatus } from '#lib/server-status.svelte.ts';
 	import { showToast } from '#lib/toast.svelte.ts';
 	import { version } from '../../package.json';
@@ -25,6 +26,9 @@
 	let { data, children }: LayoutProps = $props();
 
 	const item = 'flex items-center gap-2 px-3 py-2 transition hover:bg-stone-100';
+
+	// Mounted last, once the whole page has hydrated. See #lib/hydrated.svelte.ts.
+	onMount(markHydrated);
 
 	// A page that brings its own header and footer (onboarding) opts out of the app's.
 	const fullScreen = $derived(page.data.fullScreen === true);
@@ -64,74 +68,61 @@
 					</a>
 					<nav class="text-sm font-medium text-stone-600">
 						{#if data.user}
-							<NavigationMenu.Root class="relative flex items-center gap-2">
-								<NavigationMenu.List class="relative">
-									<NavigationMenu.Item>
-										<NavigationMenu.Trigger
-											class="rounded-md bg-clay px-3 py-1.5 text-white transition hover:bg-clay/90 data-[state=open]:bg-clay/90"
-										>
-											{m.nav_add_recipe()}
-										</NavigationMenu.Trigger>
-										<NavigationMenu.Content
-											class="absolute top-full left-1/2 mt-2 -translate-x-1/2 transform rounded-md border border-stone-200 bg-white text-nowrap shadow-lg"
-										>
-											<div class="flex flex-col divide-y divide-stone-200">
-												<NavigationMenu.Link href="/recipes/new" class={item}>
-													<SquarePen class="h-4 w-4" />
-													{m.nav_manually()}
-												</NavigationMenu.Link>
-												{#if data.user.jsonImportExportEnabled}
-													<NavigationMenu.Link href="/import" class={item}>
-														<FileUp class="h-4 w-4" />
-														{m.nav_import()}
-													</NavigationMenu.Link>
-												{/if}
-												<NavigationMenu.Link href="/import/url" class={item}>
-													<LinkIcon class="h-4 w-4" />
-													{m.nav_paste()}
-												</NavigationMenu.Link>
-												{#if data.aiConfigured}
-													<NavigationMenu.Link href="/import/photo" class={item}>
-														<Camera class="h-4 w-4" />
-														{m.nav_from_photo()}
-													</NavigationMenu.Link>
-													<NavigationMenu.Link href="/create-with-ai" class={item}>
-														<SquareSparkles class="h-4 w-4" />
-														{m.nav_create_with_ai()}
-													</NavigationMenu.Link>
-												{/if}
-											</div>
-										</NavigationMenu.Content>
-									</NavigationMenu.Item>
-								</NavigationMenu.List>
-								<NavigationMenu.List class="relative">
-									<NavigationMenu.Item>
-										<NavigationMenu.Trigger
-											aria-label={m.nav_profile()}
-											class="rounded-full border border-gray-300 p-1.5 transition hover:bg-stone-100 hover:text-clay data-[state=open]:bg-stone-100 data-[state=open]:text-clay"
-										>
-											<UserCircle class="h-5 w-5" />
-										</NavigationMenu.Trigger>
-										<NavigationMenu.Content
-											class="absolute top-full right-0 mt-2 rounded-md border border-stone-200 bg-white text-nowrap shadow-lg"
-										>
-											<div class="flex flex-col divide-y divide-stone-200">
-												<NavigationMenu.Link href="/settings" class={item}>
-													<Settings2 class="h-4 w-4" />
-													{m.nav_settings()}
-												</NavigationMenu.Link>
-												<!-- The /logout action arrives with the auth pages (step 11). -->
-												<form method="POST" action="/logout" use:enhance class="contents">
-													<button type="submit" class={item}>
-														<LogOut class="h-4 w-4" />
-														{m.nav_log_out()}
-													</button>
-												</form>
-											</div>
-										</NavigationMenu.Content>
-									</NavigationMenu.Item>
-								</NavigationMenu.List>
-							</NavigationMenu.Root>
+							<div class="relative flex items-center gap-2">
+								<PopoverMenu
+									triggerClass="rounded-md bg-clay px-3 py-1.5 text-white transition hover:bg-clay/90 data-[state=open]:bg-clay/90"
+									panelClass="rounded-md border border-stone-200 bg-white text-nowrap shadow-lg"
+									align="center"
+								>
+									{#snippet trigger()}{m.nav_add_recipe()}{/snippet}
+									<div class="flex flex-col divide-y divide-stone-200">
+										<a href="/recipes/new" class={item}>
+											<SquarePen class="h-4 w-4" />
+											{m.nav_manually()}
+										</a>
+										{#if data.user.jsonImportExportEnabled}
+											<a href="/import" class={item}>
+												<FileUp class="h-4 w-4" />
+												{m.nav_import()}
+											</a>
+										{/if}
+										<a href="/import/url" class={item}>
+											<LinkIcon class="h-4 w-4" />
+											{m.nav_paste()}
+										</a>
+										{#if data.aiConfigured}
+											<a href="/import/photo" class={item}>
+												<Camera class="h-4 w-4" />
+												{m.nav_from_photo()}
+											</a>
+											<a href="/create-with-ai" class={item}>
+												<SquareSparkles class="h-4 w-4" />
+												{m.nav_create_with_ai()}
+											</a>
+										{/if}
+									</div>
+								</PopoverMenu>
+								<PopoverMenu
+									label={m.nav_profile()}
+									triggerClass="rounded-full border border-gray-300 p-1.5 transition hover:bg-stone-100 hover:text-clay data-[state=open]:bg-stone-100 data-[state=open]:text-clay"
+									panelClass="rounded-md border border-stone-200 bg-white text-nowrap shadow-lg"
+									align="end"
+								>
+									{#snippet trigger()}<UserCircle class="h-5 w-5" />{/snippet}
+									<div class="flex flex-col divide-y divide-stone-200">
+										<a href="/settings" class={item}>
+											<Settings2 class="h-4 w-4" />
+											{m.nav_settings()}
+										</a>
+										<form method="POST" action="/logout" use:enhance class="contents">
+											<button type="submit" class={item}>
+												<LogOut class="h-4 w-4" />
+												{m.nav_log_out()}
+											</button>
+										</form>
+									</div>
+								</PopoverMenu>
+							</div>
 						{/if}
 					</nav>
 				</div>

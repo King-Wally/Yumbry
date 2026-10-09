@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { Search } from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
 
@@ -8,6 +9,9 @@
 	}
 
 	let { value = $bindable(), oninput }: Props = $props();
+
+	// What the server rendered. With a defaultValue, hydration leaves the typed value and selection be.
+	const initial = untrack(() => value);
 </script>
 
 <div class="relative">
@@ -17,6 +21,7 @@
 	<input
 		type="search"
 		bind:value
+		defaultValue={initial}
 		oninput={(event) => oninput?.(event.currentTarget.value)}
 		aria-label={m.recipes_list_search_placeholder()}
 		placeholder={m.recipes_list_search_placeholder()}

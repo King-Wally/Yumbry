@@ -6,7 +6,6 @@
   "scripts": {
     "setup": "node scripts/prepare.ts",
     "test": "node scripts/prepare.ts && playwright test",
-    "test:ported": "node scripts/prepare.ts && node scripts/run-ported.ts",
     "test:ui": "node scripts/prepare.ts && playwright test --ui",
     "typecheck": "tsc --noEmit",
     "lint": "prettier --check . && eslint .",

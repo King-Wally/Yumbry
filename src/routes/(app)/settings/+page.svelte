@@ -15,6 +15,7 @@
 	import Card from '#lib/components/Card.svelte';
 	import CardHeader from '#lib/components/CardHeader.svelte';
 	import Dialog from '#lib/components/Dialog.svelte';
+	import { hydrated } from '#lib/hydrated.svelte.ts';
 	import { applyLocale } from '#lib/locale-client.ts';
 	import {
 		formatRetryAt,
@@ -183,6 +184,7 @@
 						required
 						autocomplete="current-password"
 						bind:value={currentPassword}
+						defaultValue=""
 						class={input}
 					/>
 				</label>
@@ -195,6 +197,7 @@
 						minlength={8}
 						autocomplete="new-password"
 						bind:value={newPassword}
+						defaultValue=""
 						class={input}
 					/>
 				</label>
@@ -206,6 +209,7 @@
 						required
 						autocomplete="new-password"
 						bind:value={confirmNewPassword}
+						defaultValue=""
 						class={input}
 					/>
 				</label>
@@ -242,10 +246,9 @@
 				<ul class="divide-y divide-stone-200 rounded-md border border-stone-300">
 					{#each data.family.members as member (member.id)}
 						<li class="px-3 py-2 text-sm text-stone-700">
-							{member.email}
-							{#if member.id === data.userId}
-								<span class="ml-2 text-stone-400">{m.settings_family_you()}</span>
-							{/if}
+							{member.email}{#if member.id === data.userId}<span class="ml-2 text-stone-400"
+									>{m.settings_family_you()}</span
+								>{/if}
 						</li>
 					{/each}
 				</ul>
@@ -267,6 +270,7 @@
 					<button
 						type="button"
 						onclick={copyInvite}
+						disabled={!hydrated.current}
 						class="shrink-0 rounded-md bg-clay px-4 py-2 text-[13px] text-white"
 					>
 						{copied ? m.settings_family_copied() : m.settings_family_copy_link()}
@@ -279,6 +283,7 @@
 				<button
 					type="button"
 					onclick={() => (leaveOpen = true)}
+					disabled={!hydrated.current}
 					class="rounded-md border border-stone-300 px-3.5 py-1.5 text-[13px] text-stone-700 transition-colors hover:border-stone-400 hover:bg-stone-100"
 				>
 					{m.settings_family_leave()}
@@ -406,6 +411,7 @@
 			<button
 				type="button"
 				onclick={() => (deleteOpen = true)}
+				disabled={!hydrated.current}
 				class="rounded-md border border-red-600 px-3.5 py-1.5 text-[13px] text-red-700 transition-colors hover:bg-red-100"
 			>
 				{m.settings_danger_zone_delete_account()}

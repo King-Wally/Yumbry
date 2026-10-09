@@ -22,8 +22,3 @@ export interface AiBudgetStatus {
 	/** ISO timestamp of when a blocked user can next make a request; `null` while allowed. */
 	retryAt: string | null;
 }
-
-export interface AiStatusResponse {
-	configured: boolean;
-	budget: AiBudgetStatus;
-}

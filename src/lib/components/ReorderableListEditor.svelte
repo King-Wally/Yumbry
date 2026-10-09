@@ -1,6 +1,7 @@
 <script lang="ts" generics="T extends { key: number }">
 	import { tick, type Snippet } from 'svelte';
 	import { GripVertical } from '@lucide/svelte';
+	import { hydrated } from '#lib/hydrated.svelte.ts';
 	import { m } from '#lib/paraglide/messages.js';
 
 	interface Props {
@@ -15,6 +16,8 @@
 		itemLabel: (index: number) => string;
 		createItem: () => T;
 		row: Snippet<[item: T, index: number]>;
+		/** Extra classes for the drag handle and remove button, e.g. to line them up with a textarea. */
+		controlClass?: string;
 	}
 
 	let {
@@ -25,7 +28,8 @@
 		removeLabel,
 		itemLabel,
 		createItem,
-		row
+		row,
+		controlClass = ''
 	}: Props = $props();
 
 	const labelId = $props.id();
@@ -145,6 +149,8 @@
 
 <div role="group" aria-labelledby={labelId} class="space-y-2">
 	<span id={labelId} class="block text-sm font-medium text-stone-700">{label}</span>
+	<!-- Not last: space-y-2 spaces every child but the last, and the add button must be last. -->
+	<div aria-live="polite" class="sr-only">{announcement}</div>
 	<div bind:this={listEl} class="space-y-2">
 		{#each items as item, index (item.key)}
 			<div class={['flex items-center gap-2', activeIndex === index && 'relative z-10 opacity-60']}>
@@ -154,7 +160,10 @@
 					aria-label={dragHandleLabel}
 					aria-roledescription="sortable"
 					aria-pressed={mode === 'keyboard' && activeIndex === index}
-					class="cursor-grab touch-none text-stone-400 select-none hover:text-stone-700 active:cursor-grabbing"
+					class={[
+						'cursor-grab touch-none text-stone-400 select-none hover:text-stone-700 active:cursor-grabbing',
+						controlClass
+					]}
 					onpointerdown={(event) => startPointerDrag(event, index)}
 					onkeydown={(event) => onHandleKeydown(event, index)}
 					onblur={onHandleBlur}
@@ -165,8 +174,9 @@
 				<button
 					type="button"
 					onclick={() => remove(index)}
+					disabled={!hydrated.current}
 					aria-label={removeLabel(index)}
-					class="text-stone-400 hover:text-red-600"
+					class={['text-stone-400 hover:text-red-600', controlClass]}
 				>
 					✕
 				</button>
@@ -176,9 +186,9 @@
 	<button
 		type="button"
 		onclick={() => items.push(createItem())}
+		disabled={!hydrated.current}
 		class="rounded-md border border-dashed border-stone-300 px-3 py-1.5 text-sm text-stone-500 hover:border-clay hover:text-clay"
 	>
 		{addLabel}
 	</button>
-	<div aria-live="polite" class="sr-only">{announcement}</div>
 </div>

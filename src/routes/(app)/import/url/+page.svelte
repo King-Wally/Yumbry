@@ -11,7 +11,8 @@
 
 	// Seeded once from a failed submit so the URL survives it (with or without JS); a plain `value=`
 	// would wipe text typed before hydration.
-	let url = $state(untrack(() => form?.url ?? ''));
+	const initialUrl = untrack(() => form?.url ?? '');
+	let url = $state(initialUrl);
 	let importing = $state(false);
 
 	/** Default behaviour otherwise: follow the redirect to the draft, or show the returned message. */
@@ -54,6 +55,7 @@
 					required
 					placeholder="https://example.com/some-recipe"
 					bind:value={url}
+					defaultValue={initialUrl}
 					class="w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-clay focus:outline-none"
 				/>
 			</div>
