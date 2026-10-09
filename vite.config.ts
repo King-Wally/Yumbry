@@ -6,6 +6,15 @@ import adapter from '@sveltejs/adapter-node';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { paraglideOptions } from './paraglide.config.ts';
 
+// Specs load modules that import `$app/env/private`, whose required variables are validated on
+// import. Placeholders keep them hermetic (CI has no .env); nothing connects to them, as the db
+// specs swap the client for TEST_DATABASE_URL's. Kit reads the config process's environment, so
+// vitest's `test.env` is too late.
+if (process.env.VITEST) {
+	process.env.DATABASE_URL ||= 'postgres://placeholder:placeholder@localhost:5432/placeholder';
+	process.env.ORIGIN ||= 'http://localhost:5173';
+}
+
 export default defineConfig({
 	plugins: [
 		tailwindcss(),
