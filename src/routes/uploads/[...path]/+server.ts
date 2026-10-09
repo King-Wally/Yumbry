@@ -1,6 +1,6 @@
-import { getUser } from '#lib/server/guards.ts';
-import { recipeBelongsToFamily } from '#lib/server/services/recipes.ts';
-import { resolveUploadPath, uploadsRoot } from '#lib/server/uploads.ts';
+import { getUser } from '#lib/server/auth/guards.ts';
+import { recipeBelongsToFamily } from '#lib/server/recipes/recipes.ts';
+import { resolveUploadPath, uploadsRoot } from '#lib/server/uploads/storage.ts';
 import type { RequestHandler } from './$types';
 
 // Recipe photos, for the family that owns the recipe only. Stored paths are

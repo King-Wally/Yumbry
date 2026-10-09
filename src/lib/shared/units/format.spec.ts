@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { SupportedLocale } from '#lib/shared/locale.ts';
+import type { SupportedLocale } from '#lib/shared/i18n/locale.ts';
 import {
 	formatMeasurement,
 	formatScaledAmount,

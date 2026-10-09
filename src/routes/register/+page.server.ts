@@ -1,10 +1,10 @@
 import { redirect } from '@sveltejs/kit';
 import { m } from '#lib/paraglide/messages.js';
-import { auth } from '#lib/server/auth.ts';
-import { authFailure, readCredentials } from '#lib/server/auth-forms.ts';
-import { getUser } from '#lib/server/guards.ts';
-import { signUpLimiter } from '#lib/server/rate-limit.ts';
-import { rememberRequestedReturnTo, takeReturnTo } from '#lib/server/return-to.ts';
+import { auth } from '#lib/server/auth/better-auth.ts';
+import { authFailure, readCredentials } from '#lib/server/auth/forms.ts';
+import { getUser } from '#lib/server/auth/guards.ts';
+import { signUpLimiter } from '#lib/server/http/rate-limit.ts';
+import { rememberRequestedReturnTo, takeReturnTo } from '#lib/server/auth/return-to.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 // A link may ask to come back to its page afterwards (the share page's "Log in"). Already signed
@@ -21,7 +21,7 @@ export const actions: Actions = {
 
 		try {
 			// better-auth requires a name; the app has none, so the email stands in for it.
-			// autoSignIn (auth.ts) starts the session, and sveltekitCookies sets its cookie here.
+			// autoSignIn (better-auth.ts) starts the session, and sveltekitCookies sets its cookie here.
 			await auth.api.signUpEmail({
 				body: { ...credentials, name: credentials.email },
 				headers: event.request.headers

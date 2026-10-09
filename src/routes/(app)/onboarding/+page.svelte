@@ -16,16 +16,19 @@
 		Users
 	} from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import { hydrated } from '#lib/hydrated.svelte.ts';
-	import { currentInstallPlatform, isStandalonePwa } from '#lib/install-platform.ts';
-	import { applyLocale } from '#lib/locale-client.ts';
-	import type { InstallPlatform } from '#lib/shared/install-platform.ts';
+	import { hydrated } from '#lib/client/hydrated.svelte.ts';
+	import {
+		currentInstallPlatform,
+		isStandalonePwa,
+		type InstallPlatform
+	} from '#lib/client/install-platform.ts';
+	import { applyLocale } from '#lib/client/locale.ts';
 	import {
 		isSupportedLocale,
 		LOCALE_LABELS,
 		SUPPORTED_LOCALES,
 		type SupportedLocale
-	} from '#lib/shared/locale.ts';
+	} from '#lib/shared/i18n/locale.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();

@@ -3,7 +3,7 @@ import {
 	normalizeFractionChars,
 	parseQuantityToken,
 	QUANTITY_TOKEN_PATTERN
-} from '#lib/shared/quantity.ts';
+} from '#lib/shared/units/quantity.ts';
 import type { DensityKey } from '#lib/shared/units/density.ts';
 import { RECOGNIZED_UNITS, tokensByLengthDesc } from '#lib/shared/units/labels.ts';
 import {

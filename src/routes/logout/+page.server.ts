@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import { auth } from '#lib/server/auth.ts';
+import { auth } from '#lib/server/auth/better-auth.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 // Only the header's Log out form posts here; there is nothing to show.

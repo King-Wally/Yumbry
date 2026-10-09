@@ -8,13 +8,17 @@
 		Sparkles,
 		Trash
 	} from '@lucide/svelte';
-	import CollapsibleActions from '#lib/components/CollapsibleActions.svelte';
-	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
-	import RecipeDetailView from '#lib/components/RecipeDetailView.svelte';
-	import ShareRecipeDialog from '#lib/components/ShareRecipeDialog.svelte';
-	import { hydrated } from '#lib/hydrated.svelte.ts';
-	import { fetchExportFile, shareOrDownloadFile, type ExportFile } from '#lib/export-share.ts';
-	import { isStandalonePwa } from '#lib/install-platform.ts';
+	import CollapsibleActions from '#lib/components/ui/CollapsibleActions.svelte';
+	import ConfirmDialog from '#lib/components/ui/ConfirmDialog.svelte';
+	import RecipeDetailView from '#lib/components/recipe/RecipeDetailView.svelte';
+	import ShareRecipeDialog from '#lib/components/recipe/ShareRecipeDialog.svelte';
+	import { hydrated } from '#lib/client/hydrated.svelte.ts';
+	import {
+		fetchExportFile,
+		shareOrDownloadFile,
+		type ExportFile
+	} from '#lib/client/export-share.ts';
+	import { isStandalonePwa } from '#lib/client/install-platform.ts';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
 

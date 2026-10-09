@@ -1,18 +1,18 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import { takeDraft } from '#lib/server/draft-handoff.ts';
-import { requireRecipe } from '#lib/server/guards.ts';
-import { optimizeRecipePhoto, UnreadableImageError } from '#lib/server/image-prep.ts';
-import { estimateNutrition } from '#lib/server/nutrition-action.ts';
-import { parseRecipeForm } from '#lib/server/recipe-form-action.ts';
-import { getRecipe, setRecipePhoto, updateRecipe } from '#lib/server/services/recipes.ts';
-import { listCategories, listTags } from '#lib/server/services/tags-categories.ts';
+import { takeDraft } from '#lib/server/recipes/draft-handoff.ts';
+import { requireRecipe } from '#lib/server/auth/guards.ts';
+import { optimizeRecipePhoto, UnreadableImageError } from '#lib/server/uploads/image-prep.ts';
+import { estimateNutrition } from '#lib/server/ai/nutrition-action.ts';
+import { parseRecipeForm } from '#lib/server/recipes/form-action.ts';
+import { getRecipe, setRecipePhoto, updateRecipe } from '#lib/server/recipes/recipes.ts';
+import { listCategories, listTags } from '#lib/server/recipes/tags-categories.ts';
 import {
 	checkPhotoFile,
 	deleteUploadedFile,
 	saveRecipePhoto,
 	type PhotoError
-} from '#lib/server/uploads.ts';
-import { formStateFromDraft } from '#lib/shared/recipe-form.ts';
+} from '#lib/server/uploads/storage.ts';
+import { formStateFromDraft } from '#lib/shared/recipe/form.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {

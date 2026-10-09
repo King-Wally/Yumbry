@@ -1,11 +1,11 @@
 import { redirect } from '@sveltejs/kit';
-import { takeDraft } from '#lib/server/draft-handoff.ts';
-import { requireUser } from '#lib/server/guards.ts';
-import { estimateNutrition } from '#lib/server/nutrition-action.ts';
-import { parseRecipeForm } from '#lib/server/recipe-form-action.ts';
-import { createRecipe } from '#lib/server/services/recipes.ts';
-import { listCategories, listTags } from '#lib/server/services/tags-categories.ts';
-import { formStateFromDraft } from '#lib/shared/recipe-form.ts';
+import { takeDraft } from '#lib/server/recipes/draft-handoff.ts';
+import { requireUser } from '#lib/server/auth/guards.ts';
+import { estimateNutrition } from '#lib/server/ai/nutrition-action.ts';
+import { parseRecipeForm } from '#lib/server/recipes/form-action.ts';
+import { createRecipe } from '#lib/server/recipes/recipes.ts';
+import { listCategories, listTags } from '#lib/server/recipes/tags-categories.ts';
+import { formStateFromDraft } from '#lib/shared/recipe/form.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {

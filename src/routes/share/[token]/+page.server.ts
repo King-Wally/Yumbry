@@ -1,12 +1,8 @@
 import { error, redirect } from '@sveltejs/kit';
-import { setFlash } from '#lib/server/flash.ts';
-import { getUser } from '#lib/server/guards.ts';
-import { rememberReturnTo } from '#lib/server/return-to.ts';
-import {
-	getSharedRecipe,
-	importSharedRecipe,
-	isShareToken
-} from '#lib/server/services/recipe-share.ts';
+import { setFlash } from '#lib/server/http/flash.ts';
+import { getUser } from '#lib/server/auth/guards.ts';
+import { rememberReturnTo } from '#lib/server/auth/return-to.ts';
+import { getSharedRecipe, importSharedRecipe, isShareToken } from '#lib/server/recipes/share.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 // Public: the token in the URL is the credential for reading. Saving a copy needs an account.

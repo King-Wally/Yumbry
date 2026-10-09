@@ -1,6 +1,6 @@
-import { requireUser } from '#lib/server/guards.ts';
-import { listRecipes } from '#lib/server/services/recipes.ts';
-import { listCategories, listTags } from '#lib/server/services/tags-categories.ts';
+import { requireUser } from '#lib/server/auth/guards.ts';
+import { listRecipes } from '#lib/server/recipes/recipes.ts';
+import { listCategories, listTags } from '#lib/server/recipes/tags-categories.ts';
 import type { PageServerLoad } from './$types';
 
 // The filters live in the URL (?search=&category=&tag=), so a filtered list can be linked to or

@@ -1,8 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { m } from '#lib/paraglide/messages.js';
-import { auth } from '#lib/server/auth.ts';
-import { authRefusal } from '#lib/server/auth-forms.ts';
-import { limitClient, passwordResetLimiter } from '#lib/server/rate-limit.ts';
+import { auth } from '#lib/server/auth/better-auth.ts';
+import { authRefusal } from '#lib/server/auth/forms.ts';
+import { limitClient, passwordResetLimiter } from '#lib/server/http/rate-limit.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 // The emailed link is /reset-password?token=…, the URL main sent.

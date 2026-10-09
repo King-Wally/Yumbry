@@ -1,7 +1,7 @@
 import { error, redirect } from '@sveltejs/kit';
-import { requireRecipe } from '#lib/server/guards.ts';
-import { disableShare, enableShare, shareUrl } from '#lib/server/services/recipe-share.ts';
-import { deleteRecipe, getRecipe } from '#lib/server/services/recipes.ts';
+import { requireRecipe } from '#lib/server/auth/guards.ts';
+import { disableShare, enableShare, shareUrl } from '#lib/server/recipes/share.ts';
+import { deleteRecipe, getRecipe } from '#lib/server/recipes/recipes.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {

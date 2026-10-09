@@ -14,12 +14,12 @@
 		UserCircle
 	} from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import PopoverMenu from '#lib/components/PopoverMenu.svelte';
-	import ServerUnavailable from '#lib/components/ServerUnavailable.svelte';
-	import Toaster from '#lib/components/Toaster.svelte';
-	import { markHydrated } from '#lib/hydrated.svelte.ts';
-	import { serverStatus } from '#lib/server-status.svelte.ts';
-	import { showToast } from '#lib/toast.svelte.ts';
+	import PopoverMenu from '#lib/components/ui/PopoverMenu.svelte';
+	import ServerUnavailable from '#lib/components/app/ServerUnavailable.svelte';
+	import Toaster from '#lib/components/app/Toaster.svelte';
+	import { markHydrated } from '#lib/client/hydrated.svelte.ts';
+	import { serverStatus } from '#lib/client/server-status.svelte.ts';
+	import { showToast } from '#lib/client/toast.svelte.ts';
 	import { version } from '../../package.json';
 	import type { LayoutProps } from './$types';
 
@@ -27,13 +27,13 @@
 
 	const item = 'flex items-center gap-2 px-3 py-2 transition hover:bg-stone-100';
 
-	// Mounted last, once the whole page has hydrated. See #lib/hydrated.svelte.ts.
+	// Mounted last, once the whole page has hydrated. See #lib/client/hydrated.svelte.ts.
 	onMount(markHydrated);
 
 	// A page that brings its own header and footer (onboarding) opts out of the app's.
 	const fullScreen = $derived(page.data.fullScreen === true);
 
-	// A one-shot notice from #lib/server/flash.ts, set by a form action just before its redirect.
+	// A one-shot notice from #lib/server/http/flash.ts, set by a form action just before its redirect.
 	// Untracked: showToast reads the toast list, which would otherwise re-run this on every change.
 	$effect(() => {
 		if (data.flash === 'family_joined') {
@@ -58,7 +58,7 @@
 		</main>
 	{:else}
 		<!-- Messages are read once per render, so a language switch (settings) re-renders the whole
-		     shell. See #lib/locale-client.ts. -->
+		     shell. See #lib/client/locale.ts. -->
 		{#key data.locale}
 			<header class="sticky top-0 z-10 border-b border-stone-200 bg-white/90 backdrop-blur">
 				<div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">

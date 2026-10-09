@@ -1,11 +1,11 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import { setFlash } from '#lib/server/flash.ts';
-import { requireRecipe } from '#lib/server/guards.ts';
-import { parseRecipeId } from '#lib/server/recipe-id.ts';
-import { getVersion, listVersions, revertToVersion } from '#lib/server/services/recipe-versions.ts';
-import { getRecipe } from '#lib/server/services/recipes.ts';
-import { diffRecipes } from '#lib/shared/recipeDiff.ts';
-import { toRecipeSnapshot } from '#lib/shared/recipe-snapshot.ts';
+import { setFlash } from '#lib/server/http/flash.ts';
+import { requireRecipe } from '#lib/server/auth/guards.ts';
+import { parseRecipeId } from '#lib/server/recipes/recipe-id.ts';
+import { getVersion, listVersions, revertToVersion } from '#lib/server/recipes/versions.ts';
+import { getRecipe } from '#lib/server/recipes/recipes.ts';
+import { diffRecipes } from '#lib/shared/recipe/diff.ts';
+import { toRecipeSnapshot } from '#lib/shared/recipe/snapshot.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {

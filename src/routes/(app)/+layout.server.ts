@@ -1,4 +1,4 @@
-import { requireUser } from '#lib/server/guards.ts';
+import { requireUser } from '#lib/server/auth/guards.ts';
 import type { LayoutServerLoad } from './$types';
 
 // Every page in this group needs a signed-in user; signed-out visitors go to /login.

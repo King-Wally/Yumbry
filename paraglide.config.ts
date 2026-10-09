@@ -8,7 +8,7 @@ export const paraglideOptions = {
 	project: './project.inlang',
 	outdir: './src/lib/paraglide',
 	emitTsDeclarations: true,
-	// No locale in URLs. The signed-in user's saved language wins (#lib/server/locale.ts), then the
+	// No locale in URLs. The signed-in user's saved language wins (#lib/server/http/locale.ts), then the
 	// visitor's own choice, then the browser's languages.
 	strategy: ['custom-session', 'cookie', 'preferredLanguage', 'baseLocale'],
 	cookieName: 'yumbry-locale'

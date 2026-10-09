@@ -1,5 +1,5 @@
-import type { SupportedLocale } from '#lib/shared/locale.ts';
-import { SUPPORTED_LOCALES } from '#lib/shared/locale.ts';
+import type { SupportedLocale } from '#lib/shared/i18n/locale.ts';
+import { SUPPORTED_LOCALES } from '#lib/shared/i18n/locale.ts';
 import type { UnitCode } from '#lib/shared/units/unit-model.ts';
 
 /** A unit word. Metric symbols and abbreviations never inflect in any of the four languages. */

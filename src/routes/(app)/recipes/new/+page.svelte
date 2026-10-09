@@ -1,7 +1,7 @@
 <script lang="ts">
-	import RecipeForm from '#lib/components/RecipeForm.svelte';
-	import { draftNotice } from '#lib/draft-notice.ts';
-	import { EMPTY_RECIPE_FORM } from '#lib/shared/recipe-form.ts';
+	import RecipeForm from '#lib/components/recipe-form/RecipeForm.svelte';
+	import { draftNotice } from '#lib/client/draft-notice.ts';
+	import { EMPTY_RECIPE_FORM } from '#lib/shared/recipe/form.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();

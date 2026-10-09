@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
-import { requireRecipe } from '#lib/server/guards.ts';
-import { recipeToJsonLd } from '#lib/server/jsonld-export.ts';
-import { getRecipe } from '#lib/server/services/recipes.ts';
+import { requireRecipe } from '#lib/server/auth/guards.ts';
+import { recipeToJsonLd } from '#lib/server/recipes/jsonld-export.ts';
+import { getRecipe } from '#lib/server/recipes/recipes.ts';
 import type { RequestHandler } from './$types';
 
 // The recipe as a schema.org JSON-LD download, which /import reads back as the same recipe. Like the

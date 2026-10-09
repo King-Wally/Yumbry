@@ -1,5 +1,5 @@
 <script lang="ts">
-	import AiChat from '#lib/components/AiChat.svelte';
+	import AiChat from '#lib/components/ai/AiChat.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeFractionChars } from '#lib/shared/quantity.ts';
+import { normalizeFractionChars } from '#lib/shared/units/quantity.ts';
 import { renderIngredientLine, type RenderContext } from '#lib/shared/units/format.ts';
 import {
 	parseMeasurementPrefix,

@@ -1,4 +1,4 @@
-import { isShareToken, sharedPhotoFile } from '#lib/server/services/recipe-share.ts';
+import { isShareToken, sharedPhotoFile } from '#lib/server/recipes/share.ts';
 import type { RequestHandler } from './$types';
 
 // A shared recipe's uploaded photo, for anyone with the link: /uploads is family-gated. The URL is

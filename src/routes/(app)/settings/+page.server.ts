@@ -1,19 +1,19 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { OPENROUTER_API_KEY } from '$app/env/private';
 import { m } from '#lib/paraglide/messages.js';
-import { auth } from '#lib/server/auth.ts';
-import { authRefusal } from '#lib/server/auth-forms.ts';
-import { requireUser } from '#lib/server/guards.ts';
-import { kindedError } from '#lib/server/kinded-errors.ts';
-import { parsePreferences } from '#lib/server/preferences.ts';
+import { auth } from '#lib/server/auth/better-auth.ts';
+import { authRefusal } from '#lib/server/auth/forms.ts';
+import { requireUser } from '#lib/server/auth/guards.ts';
+import { kindedError } from '#lib/server/http/kinded-errors.ts';
+import { parsePreferences } from '#lib/server/preferences/parse.ts';
 import {
 	changePasswordLimiter,
 	deleteAccountLimiter,
 	limitClient
-} from '#lib/server/rate-limit.ts';
-import { getOpenRouterBudget } from '#lib/server/services/ai-budget.ts';
-import { getFamily, inviteUrl, leaveFamily } from '#lib/server/services/family.ts';
-import { updatePreferences } from '#lib/server/services/user-preferences.ts';
+} from '#lib/server/http/rate-limit.ts';
+import { getOpenRouterBudget } from '#lib/server/ai/budget.ts';
+import { getFamily, inviteUrl, leaveFamily } from '#lib/server/family/family.ts';
+import { updatePreferences } from '#lib/server/preferences/update.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
@@ -50,7 +50,7 @@ export const actions: Actions = {
 
 		await updatePreferences(event, user.id, parsed.data);
 		// Every language pick is an enhanced submit, which re-renders in the new language on the
-		// client (#lib/locale-client.ts); the page catches up a pick made before hydration.
+		// client (#lib/client/locale.ts); the page catches up a pick made before hydration.
 		return { saved: parsed.data.locale ? ('locale' as const) : ('other' as const) };
 	},
 
@@ -106,7 +106,7 @@ export const actions: Actions = {
 
 		try {
 			// Deletes the user and their sessions, clears the cookie, then runs the family clean-up
-			// (auth.ts).
+			// (better-auth.ts).
 			await auth.api.deleteUser({ body: { password }, headers: event.request.headers });
 		} catch (err) {
 			const { status, message } = authRefusal(err, m.common_something_went_wrong());

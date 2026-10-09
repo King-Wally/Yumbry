@@ -1,10 +1,10 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { setFlash } from '#lib/server/flash.ts';
-import { getUser } from '#lib/server/guards.ts';
-import { failKinded } from '#lib/server/kinded-errors.ts';
-import { familyJoinLimiter, limitClient } from '#lib/server/rate-limit.ts';
-import { rememberReturnTo } from '#lib/server/return-to.ts';
-import { joinFamily } from '#lib/server/services/family.ts';
+import { setFlash } from '#lib/server/http/flash.ts';
+import { getUser } from '#lib/server/auth/guards.ts';
+import { failKinded } from '#lib/server/http/kinded-errors.ts';
+import { familyJoinLimiter, limitClient } from '#lib/server/http/rate-limit.ts';
+import { rememberReturnTo } from '#lib/server/auth/return-to.ts';
+import { joinFamily } from '#lib/server/family/family.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 // Public, so the invite can be read before logging in is asked for. Nothing happens on load:

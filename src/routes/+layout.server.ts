@@ -1,11 +1,11 @@
 import { GEMINI_API_KEY, OPENROUTER_API_KEY } from '$app/env/private';
 import { getLocale } from '#lib/paraglide/runtime.js';
-import { takeFlash } from '#lib/server/flash.ts';
+import { takeFlash } from '#lib/server/http/flash.ts';
 import type { LayoutServerLoad } from './$types';
 
 // What the app shell needs on every page: who is signed in, which Add recipe entries to offer, and
 // the language this response was rendered in (a change re-renders the shell, see +layout.svelte),
-// and a notice a form action left for the page it redirected to (#lib/server/flash.ts). A redirect
+// and a notice a form action left for the page it redirected to (#lib/server/http/flash.ts). A redirect
 // from an enhanced form re-runs this load (invalidateAll), a plain POST loads the page afresh.
 export const load: LayoutServerLoad = (event) => ({
 	locale: getLocale(),

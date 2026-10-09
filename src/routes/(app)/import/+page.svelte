@@ -3,8 +3,8 @@
 	import { tick } from 'svelte';
 	import { ArrowLeft, ClipboardPaste, Upload } from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import Card from '#lib/components/Card.svelte';
-	import CardHeader from '#lib/components/CardHeader.svelte';
+	import Card from '#lib/components/ui/Card.svelte';
+	import CardHeader from '#lib/components/ui/CardHeader.svelte';
 	import type { PageProps } from './$types';
 
 	let { form }: PageProps = $props();

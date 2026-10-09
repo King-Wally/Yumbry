@@ -4,11 +4,11 @@
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import Card from '#lib/components/Card.svelte';
-	import VersionPane from '#lib/components/VersionPane.svelte';
+	import Card from '#lib/components/ui/Card.svelte';
+	import VersionPane from '#lib/components/versions/VersionPane.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
-	import { NUTRITION_KEYS, TIME_KEYS } from '#lib/shared/recipeDiff.ts';
+	import { NUTRITION_KEYS, TIME_KEYS } from '#lib/shared/recipe/diff.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();

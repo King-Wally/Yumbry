@@ -1,16 +1,16 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { m } from '#lib/paraglide/messages.js';
-import { parseEnvelope, readerPreferences } from '#lib/server/ai-chat-action.ts';
-import { stashDraft } from '#lib/server/draft-handoff.ts';
-import { requireUser } from '#lib/server/guards.ts';
-import { prepareImageForModel, UnreadableImageError } from '#lib/server/image-prep.ts';
-import { failKinded } from '#lib/server/kinded-errors.ts';
-import { limitClient, photoImportLimiter } from '#lib/server/rate-limit.ts';
-import { assertOpenRouterBudget } from '#lib/server/services/ai-budget.ts';
-import { chatWithAi } from '#lib/server/services/ai-provider.ts';
-import { checkPhotoFile, PHOTO_LIMIT_MB, type PhotoRefusal } from '#lib/server/uploads.ts';
-import { buildPhotoImportMessages } from '#lib/shared/ai-photo-import.ts';
-import { AI_ENVELOPE_JSON_SCHEMA, RECIPE_SAMPLING } from '#lib/shared/ai-recipe-draft.ts';
+import { parseEnvelope, readerPreferences } from '#lib/server/ai/chat-action.ts';
+import { stashDraft } from '#lib/server/recipes/draft-handoff.ts';
+import { requireUser } from '#lib/server/auth/guards.ts';
+import { prepareImageForModel, UnreadableImageError } from '#lib/server/uploads/image-prep.ts';
+import { failKinded } from '#lib/server/http/kinded-errors.ts';
+import { limitClient, photoImportLimiter } from '#lib/server/http/rate-limit.ts';
+import { assertOpenRouterBudget } from '#lib/server/ai/budget.ts';
+import { chatWithAi } from '#lib/server/ai/provider.ts';
+import { checkPhotoFile, PHOTO_LIMIT_MB, type PhotoRefusal } from '#lib/server/uploads/storage.ts';
+import { buildPhotoImportMessages } from '#lib/shared/ai/photo-import.ts';
+import { AI_ENVELOPE_JSON_SCHEMA, RECIPE_SAMPLING } from '#lib/shared/ai/recipe-draft.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = (event) => {

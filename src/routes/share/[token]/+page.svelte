@@ -2,7 +2,7 @@
 	import { BookmarkPlus } from '@lucide/svelte';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
-	import RecipeDetailView from '#lib/components/RecipeDetailView.svelte';
+	import RecipeDetailView from '#lib/components/recipe/RecipeDetailView.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
 

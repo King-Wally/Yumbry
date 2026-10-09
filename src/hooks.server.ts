@@ -1,5 +1,5 @@
 import { building } from '$app/env';
-import { auth } from '#lib/server/auth.ts';
+import { auth } from '#lib/server/auth/better-auth.ts';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import {
 	type Handle,
@@ -9,10 +9,10 @@ import {
 } from '@sveltejs/kit/hooks';
 import { cookieName, getTextDirection } from '#lib/paraglide/runtime.js';
 import { paraglideMiddleware } from '#lib/paraglide/server.js';
-import { CLIENT_ADDRESS_HEADER } from '#lib/server/client-address.ts';
-import { rememberSessionLocale, setLocaleCookie } from '#lib/server/locale.ts';
-import { handleSecurityHeaders } from '#lib/server/security-headers.ts';
-import { sweepOrphanedFamilies } from '#lib/server/services/family.ts';
+import { CLIENT_ADDRESS_HEADER } from '#lib/server/http/client-address.ts';
+import { rememberSessionLocale, setLocaleCookie } from '#lib/server/http/locale.ts';
+import { handleSecurityHeaders } from '#lib/server/http/security-headers.ts';
+import { sweepOrphanedFamilies } from '#lib/server/family/family.ts';
 
 export const init: ServerInit = () => {
 	if (building) return;
@@ -43,7 +43,7 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 };
 
 // Runs after handleBetterAuth, so the signed-in user's saved language is known (see
-// #lib/server/locale.ts). The resolved locale goes into <html lang> in the SSR output.
+// #lib/server/http/locale.ts). The resolved locale goes into <html lang> in the SSR output.
 const handleParaglide: Handle = ({ event, resolve }) =>
 	paraglideMiddleware(event.request, ({ request, locale }) => {
 		// Keep the cookie in step with a signed-in user's preference, so pages they see after

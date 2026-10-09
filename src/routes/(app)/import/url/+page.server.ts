@@ -1,13 +1,13 @@
 import { fail, redirect } from '@sveltejs/kit';
 import * as z from 'zod';
-import { stashDraft } from '#lib/server/draft-handoff.ts';
-import { requireUser } from '#lib/server/guards.ts';
-import { failKinded } from '#lib/server/kinded-errors.ts';
-import { limitClient, urlImportLimiter } from '#lib/server/rate-limit.ts';
-import { logImportAttempt } from '#lib/server/services/import-log.ts';
-import { scrapeRecipeFromUrl } from '#lib/server/services/url-recipe-import.ts';
-import { UrlImportError, type ImportMethod } from '#lib/server/url-import-error.ts';
-import { isSupportedLocale } from '#lib/shared/locale.ts';
+import { stashDraft } from '#lib/server/recipes/draft-handoff.ts';
+import { requireUser } from '#lib/server/auth/guards.ts';
+import { failKinded } from '#lib/server/http/kinded-errors.ts';
+import { limitClient, urlImportLimiter } from '#lib/server/http/rate-limit.ts';
+import { logImportAttempt } from '#lib/server/url-import/import-log.ts';
+import { scrapeRecipeFromUrl } from '#lib/server/url-import/scrape.ts';
+import { UrlImportError, type ImportMethod } from '#lib/server/url-import/errors.ts';
+import { isSupportedLocale } from '#lib/shared/i18n/locale.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 const UrlSchema = z

@@ -1,7 +1,7 @@
 import { error, redirect } from '@sveltejs/kit';
-import { requireUser } from '#lib/server/guards.ts';
-import { takeReturnTo } from '#lib/server/return-to.ts';
-import { getFamily, inviteUrl } from '#lib/server/services/family.ts';
+import { requireUser } from '#lib/server/auth/guards.ts';
+import { takeReturnTo } from '#lib/server/auth/return-to.ts';
+import { getFamily, inviteUrl } from '#lib/server/family/family.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {

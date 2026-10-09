@@ -1,4 +1,4 @@
-import { decimalSeparator, type SupportedLocale } from '#lib/shared/locale.ts';
+import { decimalSeparator, type SupportedLocale } from '#lib/shared/i18n/locale.ts';
 import { gramsToMillilitres, type DensityKey } from '#lib/shared/units/density.ts';
 import { RECOGNIZED_UNITS, unitLabel } from '#lib/shared/units/labels.ts';
 import {

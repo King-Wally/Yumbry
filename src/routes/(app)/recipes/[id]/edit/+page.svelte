@@ -1,9 +1,9 @@
 <script lang="ts">
-	import PhotoUpload from '#lib/components/PhotoUpload.svelte';
-	import RecipeForm from '#lib/components/RecipeForm.svelte';
-	import { draftNotice } from '#lib/draft-notice.ts';
+	import PhotoUpload from '#lib/components/recipe-form/PhotoUpload.svelte';
+	import RecipeForm from '#lib/components/recipe-form/RecipeForm.svelte';
+	import { draftNotice } from '#lib/client/draft-notice.ts';
 	import { m } from '#lib/paraglide/messages.js';
-	import { formStateFromRecipe } from '#lib/shared/recipe-form.ts';
+	import { formStateFromRecipe } from '#lib/shared/recipe/form.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();

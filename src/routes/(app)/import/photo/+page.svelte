@@ -2,11 +2,11 @@
 	import { enhance, type SubmitFunction } from '$app/forms';
 	import { untrack } from 'svelte';
 	import { ArrowLeft, Camera, X } from '@lucide/svelte';
-	import AiErrorBanner from '#lib/components/AiErrorBanner.svelte';
-	import Card from '#lib/components/Card.svelte';
-	import CardHeader from '#lib/components/CardHeader.svelte';
+	import AiErrorBanner from '#lib/components/ai/AiErrorBanner.svelte';
+	import Card from '#lib/components/ui/Card.svelte';
+	import CardHeader from '#lib/components/ui/CardHeader.svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import type { AiQuotaScope } from '#lib/shared/ai-budget.ts';
+	import type { AiQuotaScope } from '#lib/shared/ai/budget.ts';
 
 	type PhotoError = {
 		message: string;

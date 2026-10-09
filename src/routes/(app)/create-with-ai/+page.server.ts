@@ -1,5 +1,5 @@
-import { chatTurn, readerPreferences, reviewDraft } from '#lib/server/ai-chat-action.ts';
-import { requireUser } from '#lib/server/guards.ts';
+import { chatTurn, readerPreferences, reviewDraft } from '#lib/server/ai/chat-action.ts';
+import { requireUser } from '#lib/server/auth/guards.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = (event) => {

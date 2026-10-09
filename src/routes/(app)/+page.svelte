@@ -3,9 +3,9 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
-	import FilterChips from '#lib/components/FilterChips.svelte';
-	import RecipeCard from '#lib/components/RecipeCard.svelte';
-	import SearchBar from '#lib/components/SearchBar.svelte';
+	import FilterChips from '#lib/components/recipe-list/FilterChips.svelte';
+	import RecipeCard from '#lib/components/recipe-list/RecipeCard.svelte';
+	import SearchBar from '#lib/components/recipe-list/SearchBar.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();

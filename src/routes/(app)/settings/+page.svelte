@@ -12,18 +12,18 @@
 	} from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
-	import Card from '#lib/components/Card.svelte';
-	import CardHeader from '#lib/components/CardHeader.svelte';
-	import Dialog from '#lib/components/Dialog.svelte';
-	import { hydrated } from '#lib/hydrated.svelte.ts';
-	import { applyLocale } from '#lib/locale-client.ts';
+	import Card from '#lib/components/ui/Card.svelte';
+	import CardHeader from '#lib/components/ui/CardHeader.svelte';
+	import Dialog from '#lib/components/ui/Dialog.svelte';
+	import { hydrated } from '#lib/client/hydrated.svelte.ts';
+	import { applyLocale } from '#lib/client/locale.ts';
 	import {
 		formatRetryAt,
 		nextUtcMidnight,
 		sharedPoolDaysLeft,
 		userAllowancePercentLeft
-	} from '#lib/shared/ai-budget-display.ts';
-	import { isSupportedLocale, LOCALE_LABELS, SUPPORTED_LOCALES } from '#lib/shared/locale.ts';
+	} from '#lib/shared/ai/budget-display.ts';
+	import { isSupportedLocale, LOCALE_LABELS, SUPPORTED_LOCALES } from '#lib/shared/i18n/locale.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();

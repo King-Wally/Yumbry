@@ -1,9 +1,9 @@
-import type { SupportedLocale } from '#lib/shared/locale.ts';
+import type { SupportedLocale } from '#lib/shared/i18n/locale.ts';
 import {
 	normalizeFractionChars,
 	parseQuantityToken,
 	QUANTITY_TOKEN_PATTERN
-} from '#lib/shared/quantity.ts';
+} from '#lib/shared/units/quantity.ts';
 import { celsiusToFahrenheit, fahrenheitToCelsius } from '#lib/shared/units/convert.ts';
 import { formatMeasurement } from '#lib/shared/units/format.ts';
 import { textUnitLookup, tokensByLengthDesc } from '#lib/shared/units/labels.ts';

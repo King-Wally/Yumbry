@@ -1,8 +1,8 @@
 import { error, fail, redirect, type RequestEvent } from '@sveltejs/kit';
 import * as z from 'zod';
-import { requireUser, type SignedIn } from '#lib/server/guards.ts';
-import { parseRecipeFromJsonLd } from '#lib/server/jsonld-import.ts';
-import { createRecipe } from '#lib/server/services/recipes.ts';
+import { requireUser, type SignedIn } from '#lib/server/auth/guards.ts';
+import { parseRecipeFromJsonLd } from '#lib/server/recipes/jsonld-import.ts';
+import { createRecipe } from '#lib/server/recipes/recipes.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 const JSON_IMPORT_LIMIT_MB = 2;

@@ -1,8 +1,8 @@
 import { error } from '@sveltejs/kit';
-import { chatTurn, readerPreferences, reviewDraft } from '#lib/server/ai-chat-action.ts';
-import { requireRecipe } from '#lib/server/guards.ts';
-import { getRecipe } from '#lib/server/services/recipes.ts';
-import { draftFromRecipe } from '#lib/shared/recipe-form.ts';
+import { chatTurn, readerPreferences, reviewDraft } from '#lib/server/ai/chat-action.ts';
+import { requireRecipe } from '#lib/server/auth/guards.ts';
+import { getRecipe } from '#lib/server/recipes/recipes.ts';
+import { draftFromRecipe } from '#lib/shared/recipe/form.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
