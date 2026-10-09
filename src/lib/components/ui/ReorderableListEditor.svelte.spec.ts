@@ -5,8 +5,8 @@ import { render } from 'vitest-browser-svelte';
 import { markHydrated } from '#lib/client/hydrated.svelte.ts';
 import ReorderableListEditor from './ReorderableListEditor.svelte';
 
-// No e2e spec reorders (main's suite didn't either), so the keyboard and pointer paths are
-// covered here.
+// No e2e spec reorders (main's suite didn't either), so svelte-dnd-action's keyboard and pointer
+// paths are covered here, with our translated announcements.
 
 // The root layout, which marks the page hydrated, isn't rendered here.
 markHydrated();
@@ -28,7 +28,6 @@ function setup(texts: string[]) {
 		addLabel: '+ Add ingredient',
 		dragHandleLabel: 'Reorder ingredient',
 		removeLabel: (index) => `Remove ingredient ${index + 1}`,
-		itemLabel: (index) => `Ingredient ${index + 1}`,
 		createItem: () => ({ key: 99, text: '' }),
 		row
 	});
@@ -37,7 +36,32 @@ function setup(texts: string[]) {
 const order = () =>
 	[...document.querySelectorAll('.row-text')].map((element) => element.textContent);
 const handles = () => page.getByRole('button', { name: 'Reorder ingredient' });
-const liveRegion = () => document.querySelector('[aria-live="polite"]')!;
+// svelte-dnd-action announces through its own role="alert" element on the body.
+const announced = () => document.querySelector('[role="alert"]')?.textContent ?? '';
+
+const center = (element: Element) => {
+	const rect = element.getBoundingClientRect();
+	return { clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 };
+};
+const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+
+// svelte-dnd-action checks where the dragged row is every 200 ms, so the pointer travels in steps
+// and waits over the target before letting go; Playwright's dropTo jumps and releases at once.
+async function drag(from: Element, to: Element) {
+	const start = center(from);
+	const end = center(to);
+	from.dispatchEvent(new MouseEvent('mousedown', { ...start, bubbles: true, button: 0 }));
+	for (let step = 1; step <= 10; step++) {
+		const at = {
+			clientX: start.clientX + ((end.clientX - start.clientX) * step) / 10,
+			clientY: start.clientY + ((end.clientY - start.clientY) * step) / 10
+		};
+		window.dispatchEvent(new MouseEvent('mousemove', { ...at, bubbles: true }));
+		await nextFrame();
+	}
+	await new Promise((resolve) => setTimeout(resolve, 400));
+	window.dispatchEvent(new MouseEvent('mouseup', { ...end, bubbles: true }));
+}
 
 describe('ReorderableListEditor', () => {
 	it('moves a row with the keyboard and announces each step', async () => {
@@ -46,43 +70,45 @@ describe('ReorderableListEditor', () => {
 		(handles().nth(0).element() as HTMLElement).focus();
 
 		await userEvent.keyboard(' ');
-		expect(liveRegion().textContent).toContain('Picked up Ingredient 1');
+		await expect.poll(announced).toContain('Picked up item 1 of 3 in Ingredients.');
 
 		await userEvent.keyboard('{ArrowDown}');
-		expect(order()).toEqual(['milk', 'flour', 'eggs']);
-		expect(liveRegion().textContent).toBe('Moved to position 2 of 3.');
+		await expect.poll(order).toEqual(['milk', 'flour', 'eggs']);
+		await expect.poll(announced).toBe('Moved to position 2 of 3.');
 		// Focus follows the moved row, so the next arrow keeps moving it.
 		await userEvent.keyboard('{ArrowDown}');
-		expect(order()).toEqual(['milk', 'eggs', 'flour']);
+		await expect.poll(order).toEqual(['milk', 'eggs', 'flour']);
 
-		await userEvent.keyboard('{Enter}');
-		expect(liveRegion().textContent).toBe('Dropped at position 3 of 3.');
+		await userEvent.keyboard(' ');
+		await expect.poll(announced).toBe('Dropped at position 3 of 3.');
 
 		// Dropped: arrows no longer move anything.
 		await userEvent.keyboard('{ArrowUp}');
 		expect(order()).toEqual(['milk', 'eggs', 'flour']);
 	});
 
-	it('restores the original order on Escape', async () => {
+	it('drops the row where it is on Escape', async () => {
 		setup(['flour', 'milk', 'eggs']);
 		(handles().nth(2).element() as HTMLElement).focus();
 
 		await userEvent.keyboard(' ');
 		await userEvent.keyboard('{ArrowUp}');
 		await userEvent.keyboard('{ArrowUp}');
-		expect(order()).toEqual(['eggs', 'flour', 'milk']);
+		await expect.poll(order).toEqual(['eggs', 'flour', 'milk']);
 
 		await userEvent.keyboard('{Escape}');
-		expect(order()).toEqual(['flour', 'milk', 'eggs']);
-		expect(liveRegion().textContent).toBe('Reordering cancelled.');
+		await userEvent.keyboard('{ArrowDown}');
+		expect(order()).toEqual(['eggs', 'flour', 'milk']);
 	});
 
 	it('moves a row by dragging its handle', async () => {
 		setup(['flour', 'milk', 'eggs']);
 
-		await handles().nth(0).dropTo(page.getByText('eggs'));
+		await drag(handles().nth(0).element(), page.getByText('eggs').element());
 
-		expect(order()[2]).toBe('flour');
+		await expect.poll(() => order()[2]).toBe('flour');
+		// The dragged copy lingers on the body until its drop animation ends.
+		await expect.poll(() => document.getElementById('dnd-action-dragged-el')).toBeNull();
 	});
 
 	it('adds and removes rows', async () => {

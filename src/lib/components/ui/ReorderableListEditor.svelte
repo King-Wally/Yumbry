@@ -1,6 +1,21 @@
+<script lang="ts" module>
+	import { overrideItemIdKeyNameBeforeInitialisingDndZones } from 'svelte-dnd-action';
+
+	// Rows are identified by `key`: an instruction's `id` is its database id, missing on new steps.
+	overrideItemIdKeyNameBeforeInitialisingDndZones('key');
+</script>
+
 <script lang="ts" generics="T extends { key: number }">
-	import { tick, type Snippet } from 'svelte';
+	import type { Snippet } from 'svelte';
+	import { flip } from 'svelte/animate';
 	import { GripVertical } from '@lucide/svelte';
+	import {
+		dragHandle,
+		dragHandleZone,
+		setAriaStrings,
+		SHADOW_ITEM_MARKER_PROPERTY_NAME,
+		type DndEvent
+	} from 'svelte-dnd-action';
 	import { hydrated } from '#lib/client/hydrated.svelte.ts';
 	import { m } from '#lib/paraglide/messages.js';
 
@@ -12,8 +27,6 @@
 		dragHandleLabel: string;
 		/** Accessible name of the remove button on the row at `index`. */
 		removeLabel: (index: number) => string;
-		/** How the row at `index` is named in screen reader announcements. */
-		itemLabel: (index: number) => string;
 		createItem: () => T;
 		row: Snippet<[item: T, index: number]>;
 		/** Extra classes for the drag handle and remove button, e.g. to line them up with a textarea. */
@@ -26,114 +39,30 @@
 		addLabel,
 		dragHandleLabel,
 		removeLabel,
-		itemLabel,
 		createItem,
 		row,
 		controlClass = ''
 	}: Props = $props();
 
 	const labelId = $props.id();
+	const flipDurationMs = 150;
 
-	let listEl = $state<HTMLDivElement>();
-	/** The row being moved, by pointer or keyboard. */
-	let activeIndex = $state<number | null>(null);
-	let mode = $state<'pointer' | 'keyboard' | null>(null);
-	/** The order before a keyboard pick-up, restored by Escape. */
-	let original: T[] = [];
-	/** Set while a keyboard move re-renders, so the handle's blur doesn't count as a drop. */
-	let moving = false;
-	let announcement = $state('');
+	// Global to the document. The root layout re-renders the shell on a language switch, so setting
+	// them on mount follows the locale. Rows are named by position: an aria-label on the row (which
+	// the library would read as `itemLabel`) would clash with its input's.
+	setAriaStrings({
+		dragStarted: ({ zoneLabel: list, position, count }) =>
+			m.reorder_drag_started({ list, position, total: count }),
+		movedToPosition: ({ position, count }) =>
+			m.reorder_moved_to_position({ position, total: count }),
+		movedToZoneStart: ({ zoneLabel: list }) => m.reorder_moved_to_start({ list }),
+		movedToZoneEnd: ({ zoneLabel: list }) => m.reorder_moved_to_end({ list }),
+		dropped: ({ position, count }) => m.reorder_dropped({ position, total: count }),
+		zoneActiveInstruction: m.reorder_instructions()
+	});
 
-	function move(from: number, to: number) {
-		const [item] = items.splice(from, 1);
-		items.splice(to, 0, item);
-		activeIndex = to;
-	}
-
-	function rowAt(index: number): HTMLElement | undefined {
-		return listEl?.children[index] as HTMLElement | undefined;
-	}
-
-	function midpoint(index: number): number {
-		const rect = rowAt(index)!.getBoundingClientRect();
-		return rect.top + rect.height / 2;
-	}
-
-	function startPointerDrag(event: PointerEvent, index: number) {
-		if (event.button !== 0 || activeIndex !== null) return;
-		activeIndex = index;
-		mode = 'pointer';
-	}
-
-	// Listening on the window rather than capturing on the handle: the handle's row may be moved
-	// in the DOM mid-drag, which would release a pointer capture.
-	function onPointerMove(event: PointerEvent) {
-		if (mode !== 'pointer' || activeIndex === null) return;
-		// Find the slot under the pointer in one go: a fast move can cross several rows between
-		// two events. Midpoints are measured before the move, from the current layout.
-		let to = activeIndex;
-		while (to > 0 && event.clientY < midpoint(to - 1)) to--;
-		while (to < items.length - 1 && event.clientY > midpoint(to + 1)) to++;
-		if (to !== activeIndex) move(activeIndex, to);
-	}
-
-	function endPointerDrag() {
-		if (mode !== 'pointer') return;
-		activeIndex = null;
-		mode = null;
-	}
-
-	async function focusHandle(index: number) {
-		moving = true;
-		await tick();
-		rowAt(index)?.querySelector<HTMLButtonElement>('[data-handle]')?.focus();
-		moving = false;
-	}
-
-	function position(index: number) {
-		return { position: index + 1, total: items.length };
-	}
-
-	function drop() {
-		if (activeIndex === null) return;
-		announcement = m.reorder_dropped(position(activeIndex));
-		activeIndex = null;
-		mode = null;
-	}
-
-	async function onHandleKeydown(event: KeyboardEvent, index: number) {
-		const pickedUp = mode === 'keyboard' && activeIndex === index;
-
-		if (event.key === ' ' || event.key === 'Enter') {
-			event.preventDefault();
-			if (pickedUp) {
-				drop();
-			} else if (activeIndex === null) {
-				activeIndex = index;
-				mode = 'keyboard';
-				original = [...items];
-				announcement = m.reorder_picked_up({ item: itemLabel(index) });
-			}
-		} else if (pickedUp && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
-			event.preventDefault();
-			const to = event.key === 'ArrowUp' ? index - 1 : index + 1;
-			if (to < 0 || to >= items.length) return;
-			move(index, to);
-			announcement = m.reorder_moved(position(to));
-			await focusHandle(to);
-		} else if (pickedUp && event.key === 'Escape') {
-			event.preventDefault();
-			const restored = original.indexOf(items[index]);
-			items = original;
-			activeIndex = null;
-			mode = null;
-			announcement = m.reorder_cancelled();
-			await focusHandle(restored);
-		}
-	}
-
-	function onHandleBlur() {
-		if (mode === 'keyboard' && !moving) drop();
+	function sort(event: CustomEvent<DndEvent<T>>) {
+		items = event.detail.items;
 	}
 
 	function remove(index: number) {
@@ -141,35 +70,32 @@
 	}
 </script>
 
-<svelte:window
-	onpointermove={onPointerMove}
-	onpointerup={endPointerDrag}
-	onpointercancel={endPointerDrag}
-/>
-
 <div role="group" aria-labelledby={labelId} class="space-y-2">
 	<span id={labelId} class="block text-sm font-medium text-stone-700">{label}</span>
-	<!-- Not last: space-y-2 spaces every child but the last, and the add button must be last. -->
-	<div aria-live="polite" class="sr-only">{announcement}</div>
-	<div bind:this={listEl} class="space-y-2">
+	<div
+		use:dragHandleZone={{ items, flipDurationMs, dropTargetStyle: {} }}
+		onconsider={sort}
+		onfinalize={sort}
+		aria-label={label}
+		class="space-y-2"
+	>
 		{#each items as item, index (item.key)}
-			<div class={['flex items-center gap-2', activeIndex === index && 'relative z-10 opacity-60']}>
-				<button
-					type="button"
-					data-handle
+			<div
+				animate:flip={{ duration: flipDurationMs }}
+				class={[
+					'flex items-center gap-2',
+					(item as Record<string, unknown>)[SHADOW_ITEM_MARKER_PROPERTY_NAME] && 'opacity-60'
+				]}
+			>
+				<!-- Not a <button>: the library ignores keys on anything with a `disabled` property.
+				     dragHandle makes it a focusable role="button" once hydrated. -->
+				<div
+					use:dragHandle
 					aria-label={dragHandleLabel}
-					aria-roledescription="sortable"
-					aria-pressed={mode === 'keyboard' && activeIndex === index}
-					class={[
-						'cursor-grab touch-none text-stone-400 select-none hover:text-stone-700 active:cursor-grabbing',
-						controlClass
-					]}
-					onpointerdown={(event) => startPointerDrag(event, index)}
-					onkeydown={(event) => onHandleKeydown(event, index)}
-					onblur={onHandleBlur}
+					class={['touch-none text-stone-400 select-none hover:text-stone-700', controlClass]}
 				>
 					<GripVertical size={16} />
-				</button>
+				</div>
 				{@render row(item, index)}
 				<button
 					type="button"

@@ -440,7 +440,10 @@ working. `RESEND_BASE_URL` (test-only) is passed as the client's `baseUrl`.
 - Components live in `src/lib/components/<group>/`, one file each (groups under "Source
   layout"). bits-ui is used only for `Dialog`
   (`Dialog.svelte`, `ConfirmDialog.svelte`, which can post a form action itself). Menus are
-  `PopoverMenu.svelte` (native `popover` with CSS anchor positioning). Icons from `@lucide/svelte`.
+  `PopoverMenu.svelte` (native `popover` with CSS anchor positioning). List reordering (pointer
+  and keyboard, with translated announcements via `setAriaStrings`) is svelte-dnd-action's
+  `dragHandleZone` in `ReorderableListEditor.svelte`; its handles must not be `<button>`s, whose
+  keys the library ignores. Icons from `@lucide/svelte`.
   Toasts: `showToast({ title, description })` from `#lib/client/toast.svelte.ts`, rendered by
   `Toaster.svelte`.
 - Tailwind 4 with the design tokens in `src/routes/layout.css`.

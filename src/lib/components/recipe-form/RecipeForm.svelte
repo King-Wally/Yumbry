@@ -350,7 +350,6 @@
 					addLabel={m.recipe_form_ingredients_add_button()}
 					dragHandleLabel={m.recipe_form_ingredients_drag_handle()}
 					removeLabel={(i) => m.recipe_form_ingredients_remove_item({ number: i + 1 })}
-					itemLabel={(i) => m.recipe_form_ingredients_item_label({ number: i + 1 })}
 					createItem={() => keyed({ text: '' })}
 				>
 					{#snippet row(item, index)}
@@ -375,7 +374,6 @@
 					addLabel={m.recipe_form_instructions_add_button()}
 					dragHandleLabel={m.recipe_form_instructions_drag_handle()}
 					removeLabel={(i) => m.recipe_form_instructions_remove_item({ number: i + 1 })}
-					itemLabel={(i) => m.recipe_form_instructions_item_label({ number: i + 1 })}
 					createItem={() => keyed({ text: '' })}
 					controlClass="mt-2"
 				>
