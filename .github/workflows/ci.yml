@@ -13,7 +13,7 @@ jobs:
     # For the database-backed service tests (*.db.spec.ts), which reset this database.
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:18-alpine
         env:
           POSTGRES_USER: chef
           POSTGRES_PASSWORD: changeme
@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:18-alpine
         env:
           POSTGRES_USER: chef
           POSTGRES_PASSWORD: changeme
@@ -111,7 +111,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:18-alpine
         env:
           POSTGRES_USER: chef
           POSTGRES_PASSWORD: changeme

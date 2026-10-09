@@ -478,10 +478,13 @@ defaults: `NODE_ENV=production`, `PORT=3000`, `BODY_SIZE_LIMIT=30M`, `UPLOADS_DI
 `ADDRESS_HEADER=x-forwarded-for` and `XFF_DEPTH=1` (the client IP behind the Cloudflare Tunnel).
 `HEALTHCHECK` fetches `/api/health` with bun.
 
-`docker-compose.yml` runs `app`, `db` (Postgres 16) and `browser` (CloakBrowser). The volume names
-`db_data` and `uploads_data` must never change. The app's `DATABASE_URL` is built from
-`POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB`, so the password must be URL-safe; `.env`'s own
-`DATABASE_URL` is for `vite dev` on the host. Compose refuses to start without `ORIGIN`.
+`docker-compose.yml` runs `app`, `db` (Postgres 18) and `browser` (CloakBrowser). The volume names
+`db_data` and `uploads_data` must never change. `db_data` mounts at `/var/lib/postgresql` (the
+parent directory, not `.../data`): Postgres 18+'s image stores data under a per-major-version
+subdirectory there, so a `.../data` mount is the pre-18 layout and the 18+ image refuses to start
+against it. The app's `DATABASE_URL` is built from `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB`,
+so the password must be URL-safe; `.env`'s own `DATABASE_URL` is for `vite dev` on the host. Compose
+refuses to start without `ORIGIN`.
 
 ## End-to-end tests
 
