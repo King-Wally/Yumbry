@@ -6,7 +6,10 @@
 ARG BUN_VERSION=1.4.2
 
 # ---- all dependencies, for the build ----
-FROM oven/bun:${BUN_VERSION}-slim AS deps
+# Pinned to the build host's architecture: the output in build/ is plain JS, and Vite/Rolldown's
+# native bindings hang under QEMU when cross-building for arm64. Only prod-deps (sharp's prebuilt
+# binary) and runtime run on the target platform.
+FROM --platform=$BUILDPLATFORM oven/bun:${BUN_VERSION}-slim AS deps
 WORKDIR /app
 COPY package.json bun.lock bunfig.toml ./
 COPY e2e/package.json ./e2e/package.json
@@ -22,7 +25,7 @@ COPY e2e/package.json ./e2e/package.json
 # auto-installed and double the size.
 RUN bun install --frozen-lockfile --production --ignore-scripts --omit peer
 
-FROM deps AS build
+FROM --platform=$BUILDPLATFORM deps AS build
 COPY . .
 # Needs no environment: src/env.ts only insists on required variables when the server starts.
 RUN bun run prepare && bun run build
