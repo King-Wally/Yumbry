@@ -67,33 +67,8 @@ Every optional feature simply disappears from the UI when its variables are unse
 
 ## Upgrading from 1.x
 
-Version 2 is a rewrite (SvelteKit on Bun instead of Express, React and Prisma). Your data, logins,
-links and installed apps carry over. Before upgrading:
-
-1. **Back up.** Dump the database and archive the photos volume:
-
-   ```sh
-   docker compose exec db pg_dump -U chef -Fc recipe_vault > yumbry-backup.dump
-   docker run --rm -v <project>_uploads_data:/data -v "$PWD":/backup alpine \
-     tar czf /backup/yumbry-uploads.tgz -C /data .
-   ```
-
-   (Use your own `POSTGRES_USER`/`POSTGRES_DB`, and the volume name `docker volume ls` shows.)
-
-2. **Set `ORIGIN`.** It replaces both `BETTER_AUTH_URL` and `APP_BASE_URL`, which you can remove.
-   Use the same URL `BETTER_AUTH_URL` held.
-3. **Keep `BETTER_AUTH_SECRET` unchanged.** Then everyone stays signed in.
-4. **Check `POSTGRES_PASSWORD` is URL-safe** (letters, digits, `-`, `_`). Compose now builds the
-   app's `DATABASE_URL` from it; a separate `DATABASE_URL` for the app container is no longer used.
-5. Pull and start as usual (`docker compose up -d --build`).
-
-On first start the app recognises the 1.x database and adopts it without changing any data. The
-volumes keep their names; photos are now mounted at `/app/uploads` instead of
-`/app/backend/uploads`, which the compose file takes care of. Installed copies of the PWA replace
-their old offline cache with the new app by themselves the next time they are opened.
-
-The 1.x migration history (`_prisma_migrations`) is left in place, so you can roll back by starting
-the 1.x image on the same database if something goes wrong.
+Upgrade to a 2.0.x release first and let it start once: only that release can adopt a 1.x
+database, and its README describes the upgrade. Later versions refuse a 1.x database.
 
 ## AI assistant
 
@@ -208,17 +183,26 @@ Migrations are SQL files in `drizzle/`, recorded in the database's `drizzle` sch
 bun run db:generate    # write a new migration from schema.ts changes
 bun run db:migrate     # apply pending migrations
 bun run db:studio      # browse the database
-bun run db:rehearse    # migrate scratch copies (empty, 1.x schema, a restored dump) and compare
+bun run db:rehearse    # migrate scratch copies (empty, a restored dump) and compare
 ```
 
 - **Docker** runs `db:migrate` on every container start. It is idempotent and serialised, so
   restarts and concurrent starts are safe.
 - **Local development** runs `bun run db:migrate` once, and again after pulling new migrations.
 - **Conventions:** change `schema.ts`, run `bun run db:generate`, and commit the new migration.
-  Never edit or regenerate a committed migration, including `drizzle/0000_baseline.sql`, which
-  reproduces the 1.x schema; fix forward with a new one instead.
-- Before a risky upgrade, `bun run db:rehearse --dump path/to/backup.dump` replays the migration on
-  a restored copy and checks that every table keeps its row count.
+  Never edit or regenerate a committed migration, including `drizzle/0000_baseline.sql`; fix
+  forward with a new one instead.
+- Before a risky upgrade, back up the database and the photos volume:
+
+  ```sh
+  docker compose exec db pg_dump -U chef -Fc recipe_vault > yumbry-backup.dump
+  docker run --rm -v <project>_uploads_data:/data:ro -v "$PWD":/backup alpine \
+    tar czf /backup/yumbry-uploads.tgz --numeric-owner -C /data .
+  ```
+
+  (Use your own `POSTGRES_USER`/`POSTGRES_DB`, and the volume name `docker volume ls` shows.) Then
+  `bun run db:rehearse --dump yumbry-backup.dump` replays the migration on a restored copy and
+  checks that every table keeps its row count.
 
 ### Upgrading Postgres major versions
 

@@ -5,7 +5,6 @@
 import { execSync } from 'node:child_process';
 import { ensureBinary } from 'cloakbrowser';
 import fs from 'node:fs';
-import path from 'node:path';
 import pg from 'pg';
 import { env, REPO_ROOT, SERVER_DIR } from '../support/env.ts';
 
@@ -38,20 +37,12 @@ async function resetDatabase(): Promise<void> {
   });
 }
 
-// Copying E2E_PUBLIC_DIR lets the suite run against another build of the app; remove after cutover.
-function preparePublicDir(): void {
+function prepareServerDir(): void {
   fs.rmSync(SERVER_DIR, { recursive: true, force: true });
   fs.mkdirSync(SERVER_DIR, { recursive: true });
-  if (!env.publicDir) return;
-  if (!fs.existsSync(path.join(env.publicDir, 'index.html'))) {
-    throw new Error(
-      `No built SPA at ${env.publicDir}. Run \`bun run e2e:build\` from the repo root first.`
-    );
-  }
-  fs.cpSync(env.publicDir, path.join(SERVER_DIR, 'public'), { recursive: true });
 }
 
-preparePublicDir();
+prepareServerDir();
 if (process.env.E2E_SKIP_DB_RESET !== '1') await resetDatabase();
 // The browser binary (~200 MB, cached in ~/.cloakbrowser) downloads on first use. Do it here,
 // not inside the browser web server, whose startup has a timeout.

@@ -51,7 +51,7 @@ Database (Drizzle):
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `bun run db:migrate`  | `scripts/migrate.ts`: bring `DATABASE_URL` up to date with `drizzle/`. Idempotent; the Docker image runs it on every start.   |
 | `bun run db:generate` | `drizzle-kit generate`: a new migration from `schema.ts` changes. Reports "No schema changes" while `schema.ts` is untouched. |
-| `bun run db:rehearse` | `scripts/rehearse-migrate.ts`: migrate scratch copies (empty, the pre-Drizzle schema, a restored dump) and compare.           |
+| `bun run db:rehearse` | `scripts/rehearse-migrate.ts`: migrate scratch copies (empty, a restored `--dump`) and compare row counts and schemas.        |
 | `bun run db:studio`   | `drizzle-kit studio`.                                                                                                         |
 
 Local dev needs a `.env` with `DATABASE_URL` pointing at `localhost` (start just Postgres with
@@ -161,7 +161,7 @@ them).
 
 - **Data flows through `+page.server.ts` loads and form actions** with `use:enhance`. `+server.ts`
   is only for things that aren't pages: `/api/health`, `/uploads/[...path]`,
-  `/recipes/[id]/export`, `/share/[token]/photo`, and the legacy `/sw.js` and `/registerSW.js`.
+  `/recipes/[id]/export` and `/share/[token]/photo`.
   There is no JSON API and no client-side data cache: every navigation re-runs loads, which read
   `familyId` fresh, so leaving a family takes effect on the next navigation with nothing to
   invalidate.
@@ -263,8 +263,6 @@ No locale in URLs. The strategy is `custom-session` → `cookie` (`yumbry-locale
   when signed in). A client-only `setLocale()` would be overruled on the next request. An enhanced
   form calls `applyLocale` (`#lib/client/locale.ts`) before `update()`, and the root layout wraps the
   shell in `{#key data.locale}` so it re-renders without a reload.
-- `hooks.client.ts` moves a locale left in `localStorage['yumbry.locale']` into the cookie once
-  (`#lib/client/legacy-locale.ts`, transitional).
 
 ### Database (Drizzle)
 
@@ -273,22 +271,17 @@ transaction"; it ends the pool on adapter-node's `sveltekit:shutdown` so the con
 promptly), `schema.ts` (app tables) and `auth.schema.ts` (better-auth's `users`, `sessions`,
 `accounts`, `verifications`).
 
-**Table and column names are part of the contract.** The production database predates Drizzle
-(plural tables, snake_case columns), and `drizzle/0000_baseline.sql` reproduces exactly that schema
-(`bun run db:rehearse` proves it with a `pg_dump --schema-only` diff). Never rename a table,
-column, index or constraint.
+**Table and column names are part of the contract** (plural tables, snake_case columns): the
+production data lives in them. Never rename a table, column, index or constraint.
 
 `scripts/migrate.ts` (`bun run db:migrate`) runs on every container start and needs no drizzle-kit:
 
-- A pre-Drizzle database (`users` exists, no Drizzle history) has the baseline recorded as applied
-  instead of run, but only if its `_prisma_migrations` table ends at the expected last migration.
-  Transitional: remove once production has been migrated.
+- It refuses a database that has tables (`users`) but no Drizzle history: a 1.x install must
+  upgrade through v2.0.x first.
 - It aborts if the recorded history holds a hash `drizzle/` doesn't, which means an edited or
   regenerated migration.
 - Pending migrations run in one transaction, under an advisory lock that serialises concurrent
   starts.
-- `_prisma_migrations` is left in place for a rollback. Drop it later in an ordinary migration,
-  never by hand.
 
 Conventions: change `schema.ts`, run `bun run db:generate`, review and commit the generated SQL and
 `drizzle/meta/`. **Never hand-edit or regenerate a committed migration**, including the baseline;
@@ -421,12 +414,6 @@ password?" otherwise, and `sendResetPassword` is a silent no-op). The link is
   caches are deleted on activate. `version.pollInterval` (1 h, `vite.config.ts`) makes a long-open
   PWA pick up a deploy on its next navigation.
 - **Manifest:** `static/manifest.webmanifest`, linked from `src/app.html`.
-- **Worker takeover — keep these routes (transitional).** Older installs run a service worker
-  registered at `/sw.js` that serves a cached app shell and checks `/sw.js` for updates.
-  `src/routes/sw.js/+server.ts` answers with a worker that deletes every cache, unregisters itself
-  and reloads its windows onto the current app, which then registers `/service-worker.js`.
-  `src/routes/registerSW.js/+server.ts` is a harmless no-op script. Both send `no-cache` so
-  Cloudflare's edge never keeps a copy.
 - **Outage screen:** `#lib/client/server-status.svelte.ts` (`up`/`checking`/`down`). `hooks.client.ts`
   observes every same-origin `window.fetch` (which Kit calls at request time precisely so it can be
   wrapped) and probes `/api/health` on start; any suspicion is confirmed by a health ping before
@@ -520,5 +507,6 @@ See `e2e/README.md` for the contract table and how to run single specs.
 - Add every new message to all four locale files.
 - Schema changes: edit `schema.ts`, `bun run db:generate`, commit the migration. Never touch the
   baseline or a committed migration, and never rename existing tables or columns.
-- Keep cookie names, page URLs, `/api/auth/*`, `/api/health`, `/uploads/*` and the legacy `/sw.js`
-  stable: existing sessions, links in inboxes and installed PWAs depend on them.
+- Keep cookie names, page URLs, `/api/auth/*`, `/api/health`, `/uploads/*` and
+  `/service-worker.js` stable: existing sessions, links in inboxes and installed PWAs depend on
+  them.

@@ -3,13 +3,12 @@ import path from 'node:path';
 import { parseEnv } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
-// Everything that ties this suite to a particular stack lives here, as an env var with a default
-// for today's SvelteKit build. Running the suite against a different build should mean changing
-// these values, never the specs.
+// Everything that ties this suite to the local stack (ports, the database, how to start and migrate
+// the app) lives here, so the specs never need to know.
 
 export const E2E_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const REPO_ROOT = path.resolve(E2E_ROOT, '..');
-/** Working directory for the app servers: holds the upload dirs (and `public/`, if a build needs one). */
+/** Working directory for the app servers: holds their upload dirs. */
 export const SERVER_DIR = path.join(E2E_ROOT, '.server');
 
 // Pick up E2E_* overrides from the repo's .env. Only those keys: the app's own secrets (AI keys,
@@ -47,14 +46,11 @@ export const env = {
   browserPort,
   databaseUrl: process.env.E2E_DATABASE_URL ?? 'postgres://chef:changeme@localhost:5432/yumbry_e2e',
   /** Starts one app server; PORT and the rest of the config arrive as env vars. */
-  serverCmd: process.env.E2E_SERVER_CMD ?? `bun ${path.join(REPO_ROOT, 'scripts/serve.ts')}`,
+  serverCmd: `bun ${path.join(REPO_ROOT, 'scripts/serve.ts')}`,
   /** Brings an empty database up to the current schema; DATABASE_URL is set for it. */
-  migrateCmd: process.env.E2E_MIGRATE_CMD ?? 'bun run db:migrate',
-  /** Lets the suite run against another build of the app, whose assets are copied to
-   * `<cwd>/public`; remove after cutover. Empty (the default) skips the copy. */
-  publicDir: process.env.E2E_PUBLIC_DIR ?? '',
+  migrateCmd: 'bun run db:migrate',
   /** Polled until it answers 2xx before tests start. */
-  readyPath: process.env.E2E_READY_PATH ?? '/api/health',
+  readyPath: '/api/health',
 };
 
 /** Model ids handed to the app, so specs can assert which tier served a request. */

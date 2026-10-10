@@ -35,8 +35,9 @@ and ESLint, with this package's own config).
 
 ## What runs
 
-`scripts/prepare.ts` recreates and migrates the database, copies static assets into
-`.server/public` if `E2E_PUBLIC_DIR` names a directory, and downloads the CloakBrowser binary on first run (~200 MB, cached in `~/.cloakbrowser`).
+`scripts/prepare.ts` recreates and migrates the database, empties `.server/` (the app servers'
+working directory), and downloads the CloakBrowser binary on first run (~200 MB, cached in
+`~/.cloakbrowser`).
 Playwright then starts four processes:
 
 | Process     | Port | What it is                                                               |
@@ -68,16 +69,10 @@ data and run in parallel without any cleanup between them.
 
 ## The contract an implementation must honour
 
-The specs don't know which stack they run against. Everything stack-specific is an env var in
-`support/env.ts`:
-
-| Variable           | Default today                                        | For another build                         |
-| ------------------ | ---------------------------------------------------- | ----------------------------------------- |
-| `E2E_SERVER_CMD`   | `bun <repo>/scripts/serve.ts` (cwd `.server/`)       | its start command                         |
-| `E2E_MIGRATE_CMD`  | `bun run db:migrate` (cwd: repo root)                | its migrate command                       |
-| `E2E_PUBLIC_DIR`   | `''`: SvelteKit serves its own assets                | static assets to copy to `.server/public` |
-| `E2E_READY_PATH`   | `/api/health`                                        | keep `/api/health`                        |
-| `E2E_DATABASE_URL` | `postgres://chef:changeme@localhost:5432/yumbry_e2e` | unchanged                                 |
+Everything stack-specific lives in `support/env.ts`. The database is `E2E_DATABASE_URL` (default
+`postgres://chef:changeme@localhost:5432/yumbry_e2e`); the app servers start with
+`bun <repo>/scripts/serve.ts` in `.server/`, after `bun run db:migrate`, and are ready once
+`/api/health` answers.
 
 The app server has to read this configuration from the environment, under these names. It is set
 in `playwright.config.ts`:

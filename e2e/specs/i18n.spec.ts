@@ -76,14 +76,8 @@ async function expectNoLeakedKeys(page: Page): Promise<void> {
 
 for (const [locale, strings] of Object.entries(LOCALES) as [Locale, LocaleExpectations][]) {
   test.describe(`${strings.label} (${locale})`, () => {
-    test('anonymous pages are translated', async ({ page }) => {
-      await page.addInitScript((value) => {
-        try {
-          localStorage.setItem('yumbry.locale', value);
-        } catch {
-          // Ignore: the assertions below would then fail loudly.
-        }
-      }, locale);
+    test('anonymous pages are translated', async ({ page, baseURL }) => {
+      await page.context().addCookies([{ name: 'yumbry-locale', value: locale, url: baseURL! }]);
 
       await page.goto('/login');
       await expect(page.getByRole('heading', { name: strings.loginHeading })).toBeVisible();
