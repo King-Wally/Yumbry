@@ -71,3 +71,28 @@ describe('scaleIngredients', () => {
     expect(scaleIngredients(ingredients, 2, 3, 'en')[0].scaledAmount).toBe(3);
   });
 });
+
+describe('amounts shown as saved', () => {
+  const water: Ingredient[] = [
+    {
+      id: 1,
+      recipe_id: 1,
+      raw_text: '325 ml water',
+      amount: '325',
+      unit: 'ml',
+      name: 'water',
+      is_scalable: true,
+      sort_order: 0,
+    },
+  ];
+  const show = (base: number, desired: number) =>
+    scaleIngredients(water, base, desired, 'en')[0].displayText;
+
+  it('does not band-snap when servings are unchanged', () => {
+    expect(show(4, 4)).toBe('325 ml water');
+  });
+
+  it('still snaps once scaled', () => {
+    expect(show(4, 8)).toBe('650 ml water');
+  });
+});

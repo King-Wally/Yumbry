@@ -1,7 +1,7 @@
 import type { SupportedLocale } from './locale.js';
 import { toNumber } from './numeric.js';
 import type { Ingredient } from './recipe-dto.js';
-import { formatScaledAmount } from './units/index.js';
+import { formatScaledAmount, formatStoredAmount } from './units/index.js';
 
 export interface ScaledIngredient extends Ingredient {
   displayText: string;
@@ -28,7 +28,11 @@ export function scaleIngredients(
     const scaledAmount = toNumber(ingredient.amount) * multiplier;
     // Scaling never converts — a saved recipe keeps the units it was saved in. The formatter
     // only makes the number measurable again, in whatever unit the line already uses.
-    const formattedAmount = formatScaledAmount(scaledAmount, ingredient.unit, locale);
+    // An unscaled amount is shown as saved; band snapping is only for amounts that were scaled.
+    const formattedAmount =
+      multiplier === 1
+        ? formatStoredAmount(scaledAmount, ingredient.unit, locale)
+        : formatScaledAmount(scaledAmount, ingredient.unit, locale);
     const unitPart = ingredient.unit ? ` ${ingredient.unit}` : '';
 
     return {
