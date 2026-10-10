@@ -204,33 +204,6 @@ bun run db:rehearse    # migrate scratch copies (empty, a restored dump) and com
   `bun run db:rehearse --dump yumbry-backup.dump` replays the migration on a restored copy and
   checks that every table keeps its row count.
 
-### Upgrading Postgres major versions
-
-Postgres's on-disk format changes between major versions, so bumping the `db` service's image to a
-new major version (e.g. 16 → 18) needs more than a tag change — the new image refuses to start
-against an older version's data. [pgautoupgrade](https://github.com/pgautoupgrade/docker-pgautoupgrade)
-is a drop-in Postgres image that detects the old version in the mounted volume and upgrades it on
-startup, no manual SQL required:
-
-1. **Back up first, always**: `docker compose exec db pg_dump -U chef -Fc recipe_vault > backup.dump`.
-   pgautoupgrade upgrades in place and removes the old cluster once it succeeds, so this is the only
-   copy of the pre-upgrade data if anything goes wrong.
-2. Change the `db` service's `image` to `pgautoupgrade/pgautoupgrade:<target-major>-alpine` (e.g.
-   `18-alpine`) and run `docker compose up -d db`. Tail `docker compose logs db` until it reports the
-   upgrade finished and Postgres is accepting connections, then sanity-check with
-   `docker compose exec db psql -U chef -d recipe_vault -c 'select version();'`.
-3. Change `image` back to the official `postgres:<target-major>-alpine` and `docker compose up -d db`
-   again to confirm a normal restart. From here on the `db` service is back to the official image,
-   on the new major version.
-
-Rehearse first with `bun run db:rehearse --dump path/to/backup.dump` against a scratch database on
-the new Postgres version — it already drives `pg_dump`/`pg_restore` through the compose `db`
-service, so it exercises whatever version that service is running.
-
-If a jump is too large for pgautoupgrade to bridge, fall back to a manual dump/restore: stop the
-app, `docker compose rm -sf db`, remove (or rename, as a rollback) the `db_data` volume, start the
-new image fresh, create the database, and `pg_restore` the backup from step 1 into it.
-
 ### Releasing
 
 ```sh

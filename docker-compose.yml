@@ -39,7 +39,7 @@ services:
     restart: unless-stopped
 
   db:
-    image: pgautoupgrade/pgautoupgrade:18-alpine
+    image: postgres:18-alpine
     ports:
       - '${POSTGRES_PORT:-5432}:5432'
     environment:
