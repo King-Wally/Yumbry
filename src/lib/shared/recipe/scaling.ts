@@ -1,0 +1,44 @@
+import type { SupportedLocale } from '#lib/shared/i18n/locale.ts';
+import { toNumber } from '#lib/shared/recipe/numeric.ts';
+import type { Ingredient } from '#lib/shared/recipe/dto.ts';
+import { formatScaledAmount, formatStoredAmount } from '#lib/shared/units/format.ts';
+
+interface ScaledIngredient extends Ingredient {
+	displayText: string;
+	scaledAmount?: number;
+}
+
+/**
+ * Ingredient lines for a recipe shown at `desiredServings` instead of the `baseServings` it was
+ * saved for. Nutrition is per serving and is never passed through here.
+ */
+export function scaleIngredients(
+	ingredients: readonly Ingredient[],
+	baseServings: number,
+	desiredServings: number,
+	locale: SupportedLocale
+): ScaledIngredient[] {
+	const multiplier = baseServings > 0 ? desiredServings / baseServings : 1;
+
+	return ingredients.map((ingredient): ScaledIngredient => {
+		if (!ingredient.is_scalable || ingredient.amount === null) {
+			return { ...ingredient, displayText: ingredient.raw_text };
+		}
+
+		const scaledAmount = toNumber(ingredient.amount) * multiplier;
+		// Scaling never converts — a saved recipe keeps the units it was saved in. The formatter
+		// only makes the number measurable again, in whatever unit the line already uses.
+		// An unscaled amount is shown as saved; band snapping is only for amounts that were scaled.
+		const formattedAmount =
+			multiplier === 1
+				? formatStoredAmount(scaledAmount, ingredient.unit, locale)
+				: formatScaledAmount(scaledAmount, ingredient.unit, locale);
+		const unitPart = ingredient.unit ? ` ${ingredient.unit}` : '';
+
+		return {
+			...ingredient,
+			scaledAmount,
+			displayText: `${formattedAmount}${unitPart} ${ingredient.name}`.trim()
+		};
+	});
+}

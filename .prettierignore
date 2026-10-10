@@ -1,5 +1,8 @@
-**/node_modules
-**/dist
-**/coverage
-uploads
-package-lock.json
+# Separate package with its own Prettier config: `bun run --cwd e2e lint`
+e2e/
+# Tool-managed or generated
+.agents/
+.claude/
+drizzle/
+project.inlang/
+bun.lock

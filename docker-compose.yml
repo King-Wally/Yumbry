@@ -4,11 +4,14 @@ services:
     ports:
       - '${APP_PORT:-3000}:3000'
     environment:
-      DATABASE_URL: ${DATABASE_URL}
-      PORT: 3000
-      NODE_ENV: production
+      # Built from the db service's own credentials, so .env's DATABASE_URL can keep pointing at
+      # localhost for `vite dev`. POSTGRES_PASSWORD must therefore be URL-safe.
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      # The URL users open (better-auth's base URL, CSRF checks, email links). PORT, NODE_ENV,
+      # UPLOADS_DIR and the proxy settings come from the image.
+      ORIGIN: ${ORIGIN:?set ORIGIN to the URL users open, e.g. https://recipes.example.com}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-${APP_BASE_URL:-}}
+      COOKIE_SECURE: ${COOKIE_SECURE:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       AI_MODEL_BIG: ${AI_MODEL_BIG:-}
@@ -18,16 +21,15 @@ services:
       AI_MONTHLY_BUDGET_USD: ${AI_MONTHLY_BUDGET_USD:-}
       AI_USER_DAILY_BUDGET_USD: ${AI_USER_DAILY_BUDGET_USD:-}
       GEMINI_DAILY_REQUEST_LIMIT: ${GEMINI_DAILY_REQUEST_LIMIT:-}
-      COOKIE_SECURE: ${COOKIE_SECURE:-}
-      RESEND_API_KEY: ${RESEND_API_KEY}
-      EMAIL_FROM: ${EMAIL_FROM}
-      APP_BASE_URL: ${APP_BASE_URL}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
       # Real-browser fallback for URL import behind bot challenges. Points at the `browser`
       # sidecar, which always starts with the stack. Set it to an empty string in .env to turn off.
       BROWSER_CDP_URL: ${BROWSER_CDP_URL-http://browser:9222}
       BROWSER_PROXY_HOST: app
     volumes:
-      - uploads_data:/app/backend/uploads
+      # Existing installs keep their photos in this volume; never rename it.
+      - uploads_data:/app/uploads
     networks:
       - default
       - browser
@@ -37,7 +39,7 @@ services:
     restart: unless-stopped
 
   db:
-    image: postgres:16-alpine
+    image: pgautoupgrade/pgautoupgrade:18-alpine
     ports:
       - '${POSTGRES_PORT:-5432}:5432'
     environment:
@@ -45,7 +47,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
       interval: 5s
@@ -75,7 +77,17 @@ services:
     networks:
       - browser
     healthcheck:
-      test: ['CMD', 'curl', '-fsS', '--max-time', '5', '-o', '/dev/null', 'http://127.0.0.1:9222/json/version']
+      test:
+        [
+          'CMD',
+          'curl',
+          '-fsS',
+          '--max-time',
+          '5',
+          '-o',
+          '/dev/null',
+          'http://127.0.0.1:9222/json/version'
+        ]
       interval: 30s
       timeout: 6s
       retries: 3

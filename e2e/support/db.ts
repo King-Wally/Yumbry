@@ -1,6 +1,6 @@
 // The only file in the suite that knows table and column names. Seeding through SQL rather than
-// the app's JSON API keeps specs independent of that API. As long as the schema keeps today's
-// names, nothing here changes.
+// the app's pages keeps setup fast and independent of the UI under test. As long as the schema
+// keeps today's names, nothing here changes.
 import pg from 'pg';
 
 export interface SeedIngredient {

@@ -5,10 +5,21 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npm run format --workspaces --if-present 2>/dev/null || true"
+            "command": "bun run format > /dev/null && bun run --cwd e2e format > /dev/null"
           }
         ]
       }
     ]
+  },
+  "extraKnownMarketplaces": {
+    "svelte": {
+      "source": {
+        "source": "github",
+        "repo": "sveltejs/ai-tools"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "svelte@svelte": true
   }
 }

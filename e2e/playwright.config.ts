@@ -23,12 +23,13 @@ function appEnv(opts: AppOptions) {
     NODE_ENV: 'production',
     PORT: String(opts.port),
     DATABASE_URL: env.databaseUrl,
-    BETTER_AUTH_URL: opts.baseUrl,
+    ORIGIN: opts.baseUrl,
     BETTER_AUTH_SECRET: 'e2e-better-auth-secret-not-for-production',
-    APP_BASE_URL: opts.baseUrl,
     COOKIE_SECURE: 'false',
     UPLOADS_DIR: path.join(SERVER_DIR, `uploads-${opts.port}`),
     DISABLE_RATE_LIMITS: '1',
+    // adapter-node's request body cap (default 512K): photos up to 25 MB plus multipart overhead.
+    BODY_SIZE_LIMIT: '30M',
 
     // Empty strings, not absent keys: the app loads a .env file that must not fill these in with
     // real credentials.

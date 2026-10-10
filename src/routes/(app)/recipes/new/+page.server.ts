@@ -1,0 +1,35 @@
+import { redirect } from '@sveltejs/kit';
+import { takeDraft } from '#lib/server/recipes/draft-handoff.ts';
+import { requireUser } from '#lib/server/auth/guards.ts';
+import { estimateNutrition } from '#lib/server/ai/nutrition-action.ts';
+import { parseRecipeForm } from '#lib/server/recipes/form-action.ts';
+import { createRecipe } from '#lib/server/recipes/recipes.ts';
+import { listCategories, listTags } from '#lib/server/recipes/tags-categories.ts';
+import { formStateFromDraft } from '#lib/shared/recipe/form.ts';
+import type { Actions, PageServerLoad } from './$types';
+
+export const load: PageServerLoad = async (event) => {
+	const { user, familyId } = requireUser(event);
+	// A draft handed over by an import (draft-handoff.ts) pre-fills the form for review.
+	const pending = takeDraft(event.cookies, user.id, null);
+	const [tags, categories] = await Promise.all([listTags(familyId), listCategories(familyId)]);
+	return {
+		tags,
+		categories,
+		draft: pending ? formStateFromDraft(pending.draft) : null,
+		draftSource: pending?.source ?? null
+	};
+};
+
+export const actions: Actions = {
+	estimateNutrition,
+
+	save: async (event) => {
+		const { user, familyId } = requireUser(event);
+		const parsed = await parseRecipeForm(event.request);
+		if (!('input' in parsed)) return parsed;
+
+		const id = await createRecipe(parsed.input, { familyId, authorId: user.id });
+		redirect(303, `/recipes/${id}`);
+	}
+};

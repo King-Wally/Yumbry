@@ -1,6 +1,5 @@
 {
   "name": "yumbry-e2e",
-  "version": "1.3.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,7 +7,7 @@
     "test": "node scripts/prepare.ts && playwright test",
     "test:ui": "node scripts/prepare.ts && playwright test --ui",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint .",
+    "lint": "prettier --check . && eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
@@ -23,7 +22,7 @@
     "globals": "^17.12.0",
     "pg": "^8.12.0",
     "prettier": "^3.9.5",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "typescript-eslint": "^8.69.0"
   }
 }

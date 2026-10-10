@@ -3,85 +3,58 @@ name: CI
 on:
   push:
     branches: [main, dev]
+    tags: ['v*']
   pull_request:
     branches: [main, dev]
 
 jobs:
-  shared:
+  app:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: package-lock.json
-      - run: npm ci
-      - run: npm run typecheck --workspace=shared
-      - run: npm run lint --workspace=shared
-      - run: npm run format:check --workspace=shared
-      - run: npm test --workspace=shared
-      - run: npm run build --workspace=shared
-
-  backend:
-    runs-on: ubuntu-latest
-    needs: [shared]
+    # For the database-backed service tests (*.db.spec.ts), which reset this database.
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:18-alpine
         env:
           POSTGRES_USER: chef
           POSTGRES_PASSWORD: changeme
-          POSTGRES_DB: recipe_vault_test
+          POSTGRES_DB: yumbry_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U chef -d recipe_vault_test"
+          --health-cmd "pg_isready -U chef -d yumbry_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: package-lock.json
-      - run: npm ci
-      - run: npm run build --workspace=shared
-      - run: npm exec --workspace=backend -- prisma generate
-      - run: npm run typecheck --workspace=backend
-      - run: npm run lint --workspace=backend
-      - run: npm run format:check --workspace=backend
-      - run: npm test --workspace=backend
+          bun-version-file: package.json
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+      - run: bunx eslint .
+      - run: bunx prettier --check .
+      # The vitest "client" project runs .svelte tests in a real Chromium. No --with-deps: the
+      # runner image already has Chrome's system libraries, and apt mirrors can stall for minutes.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+      - run: bunx playwright install chromium
+      - run: bun run test
         env:
-          TEST_DATABASE_URL: postgres://chef:changeme@localhost:5432/recipe_vault_test
-      - run: npm run build --workspace=backend
-
-  frontend:
-    runs-on: ubuntu-latest
-    needs: [shared]
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: package-lock.json
-      - run: npm ci
-      - run: npm run build --workspace=shared
-      - run: npm run typecheck --workspace=frontend
-      - run: npm run lint --workspace=frontend
-      - run: npm run format:check --workspace=frontend
-      - run: npm test --workspace=frontend
-      - run: npm run build --workspace=frontend
+          TEST_DATABASE_URL: postgres://chef:changeme@localhost:5432/yumbry_test
 
   e2e:
     runs-on: ubuntu-latest
-    needs: [shared]
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:18-alpine
         env:
           POSTGRES_USER: chef
           POSTGRES_PASSWORD: changeme
@@ -95,26 +68,33 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      # Node runs only Playwright's test runner and the e2e scripts (MIGRATION.md, "Runtime and tooling").
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: package-lock.json
-      - run: npm ci
-      - run: npm run typecheck --workspace=e2e
-      - run: npm run lint --workspace=e2e
-      - run: npm run format:check --workspace=e2e
-      - run: npm exec --workspace=backend -- prisma generate
-      - run: npm run e2e:build
-      - run: npx playwright install --with-deps chromium
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+        working-directory: e2e
+      - run: bun run lint
+        working-directory: e2e
+      - run: bun run e2e:build
+      - run: bunx playwright install --with-deps chromium
         working-directory: e2e
       # CloakBrowser's ~200 MB binary, downloaded by the e2e prepare step on a cache miss.
       - uses: actions/cache@v4
         with:
           path: ~/.cloakbrowser
-          key: cloakbrowser-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+          key: cloakbrowser-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
           restore-keys: cloakbrowser-${{ runner.os }}-${{ runner.arch }}-
-      - run: npm run e2e
+      - run: bun run e2e
         env:
           E2E_DATABASE_URL: postgres://chef:changeme@localhost:5432/yumbry_e2e
       - uses: actions/upload-artifact@v4
@@ -127,8 +107,76 @@ jobs:
           retention-days: 7
 
   docker:
+    needs: [app, e2e]
     runs-on: ubuntu-latest
-    needs: [backend, frontend, e2e]
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: chef
+          POSTGRES_PASSWORD: changeme
+          POSTGRES_DB: yumbry_docker
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U chef -d yumbry_docker"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v5
-      - run: docker build -t yumbry:ci .
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: yumbry:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      # The image must migrate an empty database on start and report healthy.
+      - name: Smoke test
+        run: |
+          # Fake values, never real secrets.
+          docker run -d --name yumbry --network host \
+            -e DATABASE_URL=postgres://chef:changeme@localhost:5432/yumbry_docker \
+            -e ORIGIN=http://localhost:3000 \
+            -e BETTER_AUTH_SECRET=ci-smoke-test-placeholder-not-a-secret \
+            yumbry:ci
+          for _ in $(seq 45); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' yumbry)
+            [ "$status" = healthy ] && break
+            [ "$(docker inspect -f '{{.State.Running}}' yumbry)" = true ] || break
+            sleep 2
+          done
+          docker logs yumbry
+          [ "$status" = healthy ]
+          curl -fsS http://localhost:3000/api/health
+      # Production is arm64. Emulated, so only on main and release tags.
+      - if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+        uses: docker/setup-qemu-action@v3
+      - if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [app, e2e, docker]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Trigger Coolify deploy
+        run: |
+          curl --fail-with-body -X POST \
+            "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes --repo "$GITHUB_REPOSITORY"

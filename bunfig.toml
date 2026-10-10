@@ -1,0 +1,3 @@
+[install]
+# Skip versions published in the last 2 days (the registry 403s on very recent ones)
+minimumReleaseAge = 172800
