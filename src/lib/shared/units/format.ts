@@ -264,6 +264,24 @@ export function formatScaledAmount(
 }
 
 /**
+ * Formats an amount shown exactly as saved (no servings change): no band snapping, so 325 ml
+ * stays 325 ml. Fraction-read units still print as fractions when they land on one.
+ */
+export function formatStoredAmount(
+	amount: number,
+	unitWord: string | null,
+	locale: SupportedLocale
+): string {
+	if (!Number.isFinite(amount)) return '';
+
+	const code = unitWord
+		? (RECOGNIZED_UNITS.get(unitWord.toLowerCase().replace(/\.$/, '')) ?? null)
+		: null;
+
+	return formatQuantity(amount, code, locale);
+}
+
+/**
  * The single place a structured ingredient becomes the line the reader sees and the database
  * stores. Everything it emits has to survive `parseIngredientLine` with a non-null amount and
  * unit, which `parse.spec.ts` asserts: the renderer's labels and the parser's word list must agree.

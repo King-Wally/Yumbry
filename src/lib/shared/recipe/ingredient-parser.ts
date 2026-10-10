@@ -15,7 +15,7 @@ function roundParsedAmount(amount: number): number {
 }
 
 function stripLeadingOf(text: string): string {
-	return text.replace(/^[\s,.;]*(?:of|van|de|d')\s*/i, '');
+	return text.replace(/^[\s,.;]*(?:(?:of|van|de)\s+|d')/i, '');
 }
 
 function unparsed(rawText: string): ParsedIngredient {

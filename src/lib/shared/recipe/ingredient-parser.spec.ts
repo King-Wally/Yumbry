@@ -46,6 +46,18 @@ describe('parseIngredientLine', () => {
 		expect(result.name).toBe('sugar');
 	});
 
+	it('keeps names that merely start with an article or preposition', () => {
+		expect(parseIngredientLine('125 g desem').name).toBe('desem');
+		expect(parseIngredientLine('2 el deeg').name).toBe('deeg');
+		expect(parseIngredientLine('1 tl vanille').name).toBe('vanille');
+	});
+
+	it('strips a leading Dutch/French article only as a whole word', () => {
+		expect(parseIngredientLine('2 el de olie').name).toBe('olie');
+		expect(parseIngredientLine('1 cup van boter').name).toBe('boter');
+		expect(parseIngredientLine("3 d'oeufs").name).toBe('oeufs');
+	});
+
 	it('recognizes alternate unit spellings', () => {
 		const result = parseIngredientLine('3 tbsp olive oil');
 		expect(result.unit).toBe('tbsp');
