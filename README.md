@@ -170,9 +170,9 @@ docker compose exec db psql -U chef -d postgres -c "CREATE DATABASE yumbry_test;
 TEST_DATABASE_URL=postgres://chef:changeme@localhost:5432/yumbry_test bun run test
 ```
 
-The end-to-end suite in [`e2e/`](e2e/README.md) drives the production build in a real browser, with
-fakes standing in for OpenRouter, Gemini, Resend and recipe websites. It is written against pages
-and URLs, not the implementation. See [`e2e/README.md`](e2e/README.md).
+The end-to-end suite (`*.e2e.ts` files next to the routes they cover, shared helpers and fakes in
+[`src/e2e/`](src/e2e/README.md)) drives the production build in a real browser, with fakes standing
+in for OpenRouter, Gemini, Resend and recipe websites. See [`src/e2e/README.md`](src/e2e/README.md).
 
 ### Database migrations
 

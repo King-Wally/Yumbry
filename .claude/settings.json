@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run format > /dev/null && bun run --cwd e2e format > /dev/null"
+            "command": "bun run format > /dev/null"
           }
         ]
       }

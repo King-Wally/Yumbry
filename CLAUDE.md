@@ -12,7 +12,7 @@ versions) is siloed per **family**: every user starts in a personal family of on
 another through an invite link. The only way out of a family's silo is a public share link.
 
 One SvelteKit 3 app (Svelte 5 runes), built with `@sveltejs/adapter-node` and run on **Bun**, with
-Drizzle on Postgres and better-auth. The only workspace is `e2e/` (the Playwright suite).
+Drizzle on Postgres and better-auth. Playwright specs live next to the routes (`*.e2e.ts`).
 
 ## Commands
 
@@ -58,7 +58,7 @@ Local dev needs a `.env` with `DATABASE_URL` pointing at `localhost` (start just
 `docker compose up -d db`) and `ORIGIN=http://localhost:5173`. `BETTER_AUTH_SECRET` falls back to a
 fixed placeholder outside production. Photos go to `./uploads` (`UPLOADS_DIR`).
 
-End-to-end: `bun run e2e:build && bun run e2e` (see "End-to-end tests" below and `e2e/README.md`).
+End-to-end: `bun run e2e:build && bun run e2e` (see "End-to-end tests" below and `src/e2e/README.md`).
 
 Releases: `scripts/release.sh [patch|minor|major|<version>] [--dry-run]` bumps the root
 `package.json` with `bun pm version`, commits `Release: vX.Y.Z`, tags and pushes. `--dry-run`
@@ -475,27 +475,27 @@ refuses to start without `ORIGIN`.
 
 ## End-to-end tests
 
-`e2e/` (a Bun workspace, but Playwright, the fakes and its scripts run on **Node**, the only runtime
-Playwright supports). `bun run e2e:build && bun run e2e` builds the app, drops and recreates
-`E2E_DATABASE_URL` (default `.../yumbry_e2e`), migrates it with `bun run db:migrate`, then starts a
-fakes server (OpenRouter, Gemini, Resend, recipe sites, a JS-challenge site), a local CloakBrowser
-over CDP (`e2e/scripts/cdp-browser.ts`; the binary is downloaded into `~/.cloakbrowser`), and two
-app servers via `scripts/serve.ts`: full, and minimal with no AI, email or browser. Every spec runs
-in both projects.
+Specs are `*.e2e.ts` files next to the route they cover (`src/routes/login/login.e2e.ts`); flows
+spanning routes sit in the nearest common folder and cross-cutting specs in `src/e2e/`, which also
+holds the helpers (`support/`), the fakes and the scripts. `bun run e2e:build && bun run e2e` (all on
+Bun) builds the app, drops and recreates `E2E_DATABASE_URL` (default `.../yumbry_e2e`), migrates it
+with `bun run db:migrate`, then starts a fakes server (OpenRouter, Gemini, Resend, recipe sites, a
+JS-challenge site), a local CloakBrowser over CDP (`src/e2e/scripts/cdp-browser.ts`; the binary is
+downloaded into `~/.cloakbrowser`), and two app servers via `scripts/serve.ts`: full, and minimal
+with no AI, email or browser (`*.minimal.e2e.ts` runs only there), plus a third with the rate limits
+on (`*.ratelimit.e2e.ts`). Playwright's config is the root
+`playwright.config.ts`; runtime output goes to the git-ignored `.e2e/`.
 
-This suite is the source of truth for the app's behaviour:
-
-- **Never edit `e2e/specs/*` to fit the app.** A failing spec means the app is wrong.
-- Seed through `e2e/support/db.ts` (the only file that knows table names).
+- Seed through `src/e2e/support/db.ts`.
 - Act and assert through the UI with accessible selectors (no `data-testid`).
-- Never call the app's internals. Only `/api/auth/*`, `/api/health` and `/uploads/*` may be called
-  directly.
-- Everything stack-specific is an env var in `e2e/support/env.ts`; the app config each server gets
-  is `appEnv` in `e2e/playwright.config.ts`. The test-only variables the app honours are
+- Stack settings are env vars in `src/e2e/support/env.ts`; the app config each server gets is
+  `appEnv` in `playwright.config.ts`. The test-only variables the app honours are
   `OPENROUTER_BASE_URL`, `GEMINI_BASE_URL`, `RESEND_BASE_URL`, `E2E_SAFE_FETCH_ALLOW` and
   `DISABLE_RATE_LIMITS`.
+- A failing spec usually means the app is wrong; change a spec only when the behaviour changed on
+  purpose.
 
-See `e2e/README.md` for the contract table and how to run single specs.
+See `src/e2e/README.md` for how to run single specs.
 
 ## Notes for changes
 

@@ -2,7 +2,7 @@ import prettier from 'eslint-config-prettier';
 import path from 'node:path';
 import js from '@eslint/js';
 import svelte from 'eslint-plugin-svelte';
-import { defineConfig, globalIgnores, includeIgnoreFile } from 'eslint/config';
+import { defineConfig, includeIgnoreFile } from 'eslint/config';
 import globals from 'globals';
 import ts from 'typescript-eslint';
 
@@ -10,8 +10,6 @@ const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
 
 export default defineConfig(
 	includeIgnoreFile(gitignorePath),
-	// Separate package with its own config: `bun run --cwd e2e lint`.
-	globalIgnores(['e2e/']),
 	js.configs.recommended,
 	ts.configs.recommended,
 	svelte.configs.recommended,

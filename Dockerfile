@@ -12,7 +12,6 @@ ARG BUN_VERSION=1.4.2
 FROM --platform=$BUILDPLATFORM oven/bun:${BUN_VERSION}-slim AS deps
 WORKDIR /app
 COPY package.json bun.lock bunfig.toml ./
-COPY e2e/package.json ./e2e/package.json
 # `prepare` needs the sources; the build stage runs it.
 RUN bun install --frozen-lockfile --ignore-scripts
 
@@ -20,7 +19,6 @@ RUN bun install --frozen-lockfile --ignore-scripts
 FROM oven/bun:${BUN_VERSION}-slim AS prod-deps
 WORKDIR /app
 COPY package.json bun.lock bunfig.toml ./
-COPY e2e/package.json ./e2e/package.json
 # --omit peer: better-auth's optional peers (vite, drizzle-kit, typescript, …) would otherwise be
 # auto-installed and double the size.
 RUN bun install --frozen-lockfile --production --ignore-scripts --omit peer
