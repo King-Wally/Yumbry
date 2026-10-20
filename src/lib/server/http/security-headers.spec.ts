@@ -10,7 +10,7 @@ async function respond(headers: Record<string, string> = {}) {
 }
 
 describe('handleSecurityHeaders', () => {
-	it("adds helmet's default headers", async () => {
+	it('adds the hardening headers', async () => {
 		const response = await respond();
 		for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
 			expect(response.headers.get(name)).toBe(value);

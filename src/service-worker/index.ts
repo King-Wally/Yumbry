@@ -35,7 +35,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
 	event.waitUntil(
 		(async () => {
-			// Deletes every other cache on this origin, including any an earlier worker left.
+			// Deletes every other cache on this origin, so a new build drops what the old one stored.
 			for (const key of await caches.keys()) {
 				if (key !== APP_CACHE && key !== UPLOADS_CACHE) await caches.delete(key);
 			}

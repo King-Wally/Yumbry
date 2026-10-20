@@ -65,11 +65,6 @@ use with care. List the stored photos with `docker compose exec app ls -R /app/u
 
 Every optional feature simply disappears from the UI when its variables are unset.
 
-## Upgrading from 1.x
-
-Upgrade to a 2.0.x release first and let it start once: only that release can adopt a 1.x
-database, and its README describes the upgrade. Later versions refuse a 1.x database.
-
 ## AI assistant
 
 The AI assistant (optional, via `OPENROUTER_API_KEY`) spends from one server-wide budget, $1 a
@@ -111,8 +106,8 @@ kept as they are and simply don't scale.
 
 ## Development
 
-Requires [Bun](https://bun.sh) 1.4.2 (the version in `package.json`'s `packageManager`), Node 24
-for the end-to-end tests only, and a Postgres server. The easiest Postgres is the compose `db`
+Requires [Bun](https://bun.sh) 1.4.2 (the version in `package.json`'s `packageManager`) and a
+Postgres server. The easiest Postgres is the compose `db`
 service on its own:
 
 ```sh
@@ -124,7 +119,7 @@ docker compose up -d db          # uses the db_data volume and the credentials i
 server:
 
 ```sh
-DATABASE_URL=postgres://chef:changeme@localhost:5432/recipe_vault
+DATABASE_URL=postgres://yumbry:changeme@localhost:5432/yumbry
 ORIGIN=http://localhost:5173
 ```
 
@@ -166,8 +161,8 @@ one. They drop every table on each run, so never point them at real data. Create
 database once, then pass it in:
 
 ```sh
-docker compose exec db psql -U chef -d postgres -c "CREATE DATABASE yumbry_test;"
-TEST_DATABASE_URL=postgres://chef:changeme@localhost:5432/yumbry_test bun run test
+docker compose exec db psql -U yumbry -d postgres -c "CREATE DATABASE yumbry_test;"
+TEST_DATABASE_URL=postgres://yumbry:changeme@localhost:5432/yumbry_test bun run test
 ```
 
 The end-to-end suite (`*.e2e.ts` files next to the routes they cover, shared helpers and fakes in
@@ -183,26 +178,22 @@ Migrations are SQL files in `drizzle/`, recorded in the database's `drizzle` sch
 bun run db:generate    # write a new migration from schema.ts changes
 bun run db:migrate     # apply pending migrations
 bun run db:studio      # browse the database
-bun run db:rehearse    # migrate scratch copies (empty, a restored dump) and compare
 ```
 
 - **Docker** runs `db:migrate` on every container start. It is idempotent and serialised, so
   restarts and concurrent starts are safe.
 - **Local development** runs `bun run db:migrate` once, and again after pulling new migrations.
 - **Conventions:** change `schema.ts`, run `bun run db:generate`, and commit the new migration.
-  Never edit or regenerate a committed migration, including `drizzle/0000_baseline.sql`; fix
-  forward with a new one instead.
-- Before a risky upgrade, back up the database and the photos volume:
+  Never edit or regenerate a committed migration; fix forward with a new one instead.
+- **Backups:** the database and the photos volume:
 
   ```sh
-  docker compose exec db pg_dump -U chef -Fc recipe_vault > yumbry-backup.dump
+  docker compose exec db pg_dump -U yumbry -Fc yumbry > yumbry-backup.dump
   docker run --rm -v <project>_uploads_data:/data:ro -v "$PWD":/backup alpine \
     tar czf /backup/yumbry-uploads.tgz --numeric-owner -C /data .
   ```
 
-  (Use your own `POSTGRES_USER`/`POSTGRES_DB`, and the volume name `docker volume ls` shows.) Then
-  `bun run db:rehearse --dump yumbry-backup.dump` replays the migration on a restored copy and
-  checks that every table keeps its row count.
+  (Use your own `POSTGRES_USER`/`POSTGRES_DB`, and the volume name `docker volume ls` shows.)
 
 ### Releasing
 

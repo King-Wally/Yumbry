@@ -19,7 +19,7 @@ The first time, install the browser with `bunx playwright install chromium`. Eve
 Bun. Extra arguments go to Playwright (`bun run e2e --headed`).
 
 `bun run e2e` drops and recreates the `E2E_DATABASE_URL` database (default
-`postgres://chef:changeme@localhost:5432/yumbry_e2e`). It refuses to touch a database whose name
+`postgres://yumbry:changeme@localhost:5432/yumbry_e2e`). It refuses to touch a database whose name
 contains neither `e2e` nor `test`.
 
 To run one spec against an already-migrated database:
@@ -35,14 +35,15 @@ Type checking and linting are part of the root `bun run check` and `bun run lint
 `src/e2e/scripts/prepare.ts` recreates and migrates the database, empties `.e2e/server/` (the app servers'
 working directory), and downloads the CloakBrowser binary on first run (~200 MB, cached in
 `~/.cloakbrowser`).
-Playwright then starts four processes:
+Playwright then starts five processes:
 
-| Process     | Port | What it is                                                                       |
-| ----------- | ---- | -------------------------------------------------------------------------------- |
-| fakes       | 4100 | `src/e2e/fakes/server.ts`: OpenRouter, Gemini, Resend and recipe websites        |
-| browser     | 4200 | `src/e2e/scripts/cdp-browser.ts`: CloakBrowser over CDP, the URL-import fallback |
-| full app    | 3100 | The production build with AI and email pointed at the fakes                      |
-| minimal app | 3101 | The same build with no AI, email or browser (`*.minimal.e2e.ts` only)            |
+| Process       | Port | What it is                                                                       |
+| ------------- | ---- | -------------------------------------------------------------------------------- |
+| fakes         | 4100 | `src/e2e/fakes/server.ts`: OpenRouter, Gemini, Resend and recipe websites        |
+| browser       | 4200 | `src/e2e/scripts/cdp-browser.ts`: CloakBrowser over CDP, the URL-import fallback |
+| full app      | 3100 | The production build with AI and email pointed at the fakes                      |
+| minimal app   | 3101 | The same build with no AI, email or browser (`*.minimal.e2e.ts` only)            |
+| ratelimit app | 3102 | The same build with the rate limits on (`*.ratelimit.e2e.ts` only)               |
 
 Every test signs up its own users. Data is siloed per family, so tests never see each other's
 data and run in parallel without any cleanup between them.
@@ -51,7 +52,7 @@ data and run in parallel without any cleanup between them.
 
 - **Act through the UI.** Seed data with `support/db.ts`, act through pages, and assert on the UI
   or, where the UI can't show it, on the database. Direct HTTP calls are for `/api/auth/*`,
-  `/api/health` and `/uploads/*` (see `http-contract.e2e.ts`).
+  `/api/health` and `/uploads/*` (see `http-endpoints.e2e.ts`).
 - **Prefer accessible selectors:** `getByRole`, `getByLabel`, `getByText` and `getByPlaceholder`,
   with English strings. If an element has no accessible name, fix the app.
 - **Wait for the new page after client-side navigation.** The URL changes before the old page

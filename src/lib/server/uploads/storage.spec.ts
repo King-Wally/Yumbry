@@ -33,13 +33,9 @@ describe('resolveUploadPath', () => {
 			absolutePath: path.join(root, 'recipes/7/0b8e6a52-4f0d-4c1e-9c39-1f1f5a3e9d2b.webp'),
 			contentType: 'image/webp'
 		});
-		expect(resolveUploadPath(root, 'recipes/12/photo.JPG')?.contentType).toBe('image/jpeg');
-		expect(resolveUploadPath(root, 'recipes/12/photo.jpeg')?.contentType).toBe('image/jpeg');
-		expect(resolveUploadPath(root, 'recipes/12/photo.png')?.contentType).toBe('image/png');
-		expect(resolveUploadPath(root, 'recipes/12/photo.gif')?.contentType).toBe('image/gif');
 	});
 
-	// The params as Kit hands them over, decoded (http-contract.spec.ts sends these encoded).
+	// The params as Kit hands them over, decoded (http-endpoints.e2e.ts sends these encoded).
 	it.each([
 		'recipes/../../etc/passwd',
 		'recipes/../../../../../etc/passwd',
@@ -59,6 +55,8 @@ describe('resolveUploadPath', () => {
 		'recipes/0/photo.webp',
 		'recipes/99999999999999/photo.webp',
 		'recipes/abc/photo.webp',
+		'recipes/7/photo.jpg',
+		'recipes/7/photo.WEBP',
 		'recipes/7/photo.svg',
 		'recipes/7/photo.html',
 		'recipes/7/photo',
@@ -145,7 +143,7 @@ describe('writing photos', () => {
 		expect(resolveStoredUpload('https://example.com/photo.webp')).toBeNull();
 	});
 
-	it('copies a photo to another recipe under a fresh name, keeping its extension', async () => {
+	it('copies a photo to another recipe under a fresh name', async () => {
 		const stored = await saveRecipePhoto(45, new Uint8Array([7, 8, 9]));
 		const copy = await copyRecipeUpload(stored, 46);
 		expect(copy).toMatch(/^\/uploads\/recipes\/46\/[0-9a-f-]{36}\.webp$/);

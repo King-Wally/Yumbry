@@ -1,8 +1,5 @@
 // Brings DATABASE_URL up to date with ./drizzle. Run on every start (`bun run db:migrate`), and safe
 // to: it is idempotent and needs only runtime dependencies, never drizzle-kit.
-//
-// An empty database runs the baseline like any other migration. A 1.x database (`users` exists, no
-// Drizzle history) is refused: only v2.0.x knows how to adopt one.
 import { fileURLToPath } from 'node:url';
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
@@ -35,13 +32,6 @@ try {
 
 	const recorded = await sql<{ hash: string }[]>`
 		select hash from drizzle.__drizzle_migrations order by created_at`;
-	const [{ hasUsers }] = await sql`select to_regclass('public.users') is not null as "hasUsers"`;
-	if (recorded.length === 0 && hasUsers) {
-		throw new Error(
-			'This database predates v2 (it has tables but no Drizzle history).' +
-				' Upgrade to v2.0.x first, then to this version.'
-		);
-	}
 
 	// drizzle decides what is pending by timestamp alone, so a regenerated or edited migration would
 	// otherwise be re-run (or silently skipped) instead of being reported.

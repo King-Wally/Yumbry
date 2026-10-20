@@ -1,8 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Debian slim (glibc): sharp's linux-x64/linux-arm64 prebuilds load as is, and the image is
-# published for both architectures (production is arm64). Its `bun` user is uid/gid 1000, which
-# owns the existing uploads volume.
+# published for both architectures (production is arm64).
 ARG BUN_VERSION=1.4.2
 
 # ---- all dependencies, for the build ----

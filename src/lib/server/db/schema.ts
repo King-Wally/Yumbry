@@ -1,10 +1,7 @@
-// The app's tables, as drizzle/0000_baseline.sql creates them. Production databases carry exactly
-// these table, column, index and foreign-key names, so never rename one; change the schema with a
-// new migration.
+// The app's tables. Change them here, then generate a migration with `bun run db:generate`.
 import { relations, sql } from 'drizzle-orm';
 import {
 	boolean,
-	foreignKey,
 	index,
 	integer,
 	jsonb,
@@ -14,7 +11,7 @@ import {
 	serial,
 	text,
 	timestamp,
-	uniqueIndex
+	unique
 } from 'drizzle-orm/pg-core';
 import { accounts, sessions, users } from './auth.schema';
 
@@ -27,16 +24,12 @@ const createdAt = () =>
 
 // A household. Recipes, tags and categories are scoped to a family, not to a single user. Every
 // user gets a personal family of one at registration, so users.family_id is never null.
-export const families = pgTable(
-	'families',
-	{
-		id: serial('id').primaryKey(),
-		// Stored raw rather than hashed: the settings page re-displays the same invite link.
-		inviteToken: text('invite_token').notNull(),
-		createdAt: createdAt()
-	},
-	(t) => [uniqueIndex('families_invite_token_key').on(t.inviteToken)]
-);
+export const families = pgTable('families', {
+	id: serial('id').primaryKey(),
+	// Stored raw rather than hashed: the settings page re-displays the same invite link.
+	inviteToken: text('invite_token').notNull().unique(),
+	createdAt: createdAt()
+});
 
 export const recipes = pgTable(
 	'recipes',
@@ -48,13 +41,15 @@ export const recipes = pgTable(
 		prepTimeMinutes: integer('prep_time_minutes'),
 		cookTimeMinutes: integer('cook_time_minutes'),
 		totalTimeMinutes: integer('total_time_minutes'),
-		servings: numeric('servings', { precision: 65, scale: 30 })
+		servings: numeric('servings')
 			.notNull()
 			.default(sql`1`),
-		categoryId: integer('category_id'),
-		familyId: integer('family_id').notNull(),
+		categoryId: integer('category_id').references(() => categories.id, { onDelete: 'set null' }),
+		familyId: integer('family_id')
+			.notNull()
+			.references(() => families.id, { onDelete: 'cascade' }),
 		// Provenance only — access is decided by familyId, and the recipe outlives its author.
-		authorId: text('author_id'),
+		authorId: text('author_id').references(() => users.id, { onDelete: 'set null' }),
 		createdAt: createdAt(),
 		updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
 			.notNull()
@@ -66,79 +61,39 @@ export const recipes = pgTable(
 		fatContent: numeric('fat_content', { precision: 8, scale: 2 }),
 		proteinContent: numeric('protein_content', { precision: 8, scale: 2 }),
 		// Bearer secret for the public share link; null while the recipe isn't shared.
-		shareToken: text('share_token')
+		shareToken: text('share_token').unique()
 	},
-	(t) => [
-		index('idx_recipes_author_id').on(t.authorId),
-		index('idx_recipes_category_id').on(t.categoryId),
-		index('idx_recipes_family_id').on(t.familyId),
-		uniqueIndex('recipes_share_token_key').on(t.shareToken),
-		foreignKey({
-			name: 'recipes_author_id_fkey',
-			columns: [t.authorId],
-			foreignColumns: [users.id]
-		})
-			.onUpdate('cascade')
-			.onDelete('set null'),
-		foreignKey({
-			name: 'recipes_category_id_fkey',
-			columns: [t.categoryId],
-			foreignColumns: [categories.id]
-		})
-			.onUpdate('cascade')
-			.onDelete('set null'),
-		foreignKey({
-			name: 'recipes_family_id_fkey',
-			columns: [t.familyId],
-			foreignColumns: [families.id]
-		})
-			.onUpdate('cascade')
-			.onDelete('cascade')
-	]
+	(t) => [index().on(t.authorId), index().on(t.categoryId), index().on(t.familyId)]
 );
 
 export const ingredients = pgTable(
 	'ingredients',
 	{
 		id: serial('id').primaryKey(),
-		recipeId: integer('recipe_id').notNull(),
+		recipeId: integer('recipe_id')
+			.notNull()
+			.references(() => recipes.id, { onDelete: 'cascade' }),
 		rawText: text('raw_text').notNull(),
-		amount: numeric('amount', { precision: 65, scale: 30 }),
+		amount: numeric('amount'),
 		unit: text('unit'),
 		name: text('name').notNull(),
 		isScalable: boolean('is_scalable').notNull().default(true),
 		sortOrder: integer('sort_order').notNull()
 	},
-	(t) => [
-		index('idx_ingredients_recipe_id').on(t.recipeId),
-		foreignKey({
-			name: 'ingredients_recipe_id_fkey',
-			columns: [t.recipeId],
-			foreignColumns: [recipes.id]
-		})
-			.onUpdate('cascade')
-			.onDelete('cascade')
-	]
+	(t) => [index().on(t.recipeId)]
 );
 
 export const instructions = pgTable(
 	'instructions',
 	{
 		id: serial('id').primaryKey(),
-		recipeId: integer('recipe_id').notNull(),
+		recipeId: integer('recipe_id')
+			.notNull()
+			.references(() => recipes.id, { onDelete: 'cascade' }),
 		stepNumber: integer('step_number').notNull(),
 		text: text('text').notNull()
 	},
-	(t) => [
-		index('idx_instructions_recipe_id').on(t.recipeId),
-		foreignKey({
-			name: 'instructions_recipe_id_fkey',
-			columns: [t.recipeId],
-			foreignColumns: [recipes.id]
-		})
-			.onUpdate('cascade')
-			.onDelete('cascade')
-	]
+	(t) => [index().on(t.recipeId)]
 );
 
 export const tags = pgTable(
@@ -146,41 +101,24 @@ export const tags = pgTable(
 	{
 		id: serial('id').primaryKey(),
 		name: text('name').notNull(),
-		familyId: integer('family_id').notNull()
+		familyId: integer('family_id')
+			.notNull()
+			.references(() => families.id, { onDelete: 'cascade' })
 	},
-	(t) => [
-		uniqueIndex('tags_family_id_name_key').on(t.familyId, t.name),
-		index('idx_tags_family_id').on(t.familyId),
-		foreignKey({
-			name: 'tags_family_id_fkey',
-			columns: [t.familyId],
-			foreignColumns: [families.id]
-		})
-			.onUpdate('cascade')
-			.onDelete('cascade')
-	]
+	(t) => [unique().on(t.familyId, t.name), index().on(t.familyId)]
 );
 
 export const recipeTags = pgTable(
 	'recipe_tags',
 	{
-		recipeId: integer('recipe_id').notNull(),
-		tagId: integer('tag_id').notNull()
+		recipeId: integer('recipe_id')
+			.notNull()
+			.references(() => recipes.id, { onDelete: 'cascade' }),
+		tagId: integer('tag_id')
+			.notNull()
+			.references(() => tags.id, { onDelete: 'cascade' })
 	},
-	(t) => [
-		primaryKey({ name: 'recipe_tags_pkey', columns: [t.recipeId, t.tagId] }),
-		index('idx_recipe_tags_tag_id').on(t.tagId),
-		foreignKey({
-			name: 'recipe_tags_recipe_id_fkey',
-			columns: [t.recipeId],
-			foreignColumns: [recipes.id]
-		})
-			.onUpdate('cascade')
-			.onDelete('cascade'),
-		foreignKey({ name: 'recipe_tags_tag_id_fkey', columns: [t.tagId], foreignColumns: [tags.id] })
-			.onUpdate('cascade')
-			.onDelete('cascade')
-	]
+	(t) => [primaryKey({ columns: [t.recipeId, t.tagId] }), index().on(t.tagId)]
 );
 
 export const categories = pgTable(
@@ -188,19 +126,11 @@ export const categories = pgTable(
 	{
 		id: serial('id').primaryKey(),
 		name: text('name').notNull(),
-		familyId: integer('family_id').notNull()
+		familyId: integer('family_id')
+			.notNull()
+			.references(() => families.id, { onDelete: 'cascade' })
 	},
-	(t) => [
-		uniqueIndex('categories_family_id_name_key').on(t.familyId, t.name),
-		index('idx_categories_family_id').on(t.familyId),
-		foreignKey({
-			name: 'categories_family_id_fkey',
-			columns: [t.familyId],
-			foreignColumns: [families.id]
-		})
-			.onUpdate('cascade')
-			.onDelete('cascade')
-	]
+	(t) => [unique().on(t.familyId, t.name), index().on(t.familyId)]
 );
 
 // One row per attempted import-from-URL. Site-level analytics only — deliberately no user or
@@ -219,10 +149,10 @@ export const recipeImportAttempts = pgTable(
 		method: text('method')
 	},
 	(t) => [
-		index('idx_recipe_import_attempts_created_at').on(t.createdAt),
-		index('idx_recipe_import_attempts_error_kind').on(t.errorKind),
-		index('idx_recipe_import_attempts_hostname').on(t.hostname),
-		index('idx_recipe_import_attempts_success').on(t.success)
+		index().on(t.createdAt),
+		index().on(t.errorKind),
+		index().on(t.hostname),
+		index().on(t.success)
 	]
 );
 
@@ -232,7 +162,7 @@ export const aiUsage = pgTable(
 	'ai_usage',
 	{
 		id: serial('id').primaryKey(),
-		userId: text('user_id'),
+		userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
 		backend: text('backend').notNull(),
 		tier: text('tier').notNull(),
 		model: text('model').notNull(),
@@ -244,13 +174,7 @@ export const aiUsage = pgTable(
 		requestCount: integer('request_count').notNull().default(1),
 		createdAt: createdAt()
 	},
-	(t) => [
-		index('idx_ai_usage_backend_created_at').on(t.backend, t.createdAt),
-		index('idx_ai_usage_user_created_at').on(t.userId, t.createdAt),
-		foreignKey({ name: 'ai_usage_user_id_fkey', columns: [t.userId], foreignColumns: [users.id] })
-			.onUpdate('cascade')
-			.onDelete('set null')
-	]
+	(t) => [index().on(t.backend, t.createdAt), index().on(t.userId, t.createdAt)]
 );
 
 // One past state of a recipe, written just before an update overwrites it. savedAt is the
@@ -259,21 +183,14 @@ export const recipeVersions = pgTable(
 	'recipe_versions',
 	{
 		id: serial('id').primaryKey(),
-		recipeId: integer('recipe_id').notNull(),
+		recipeId: integer('recipe_id')
+			.notNull()
+			.references(() => recipes.id, { onDelete: 'cascade' }),
 		savedAt: timestamp('saved_at', { withTimezone: true, mode: 'date' }).notNull(),
 		snapshot: jsonb('snapshot').notNull(),
 		createdAt: createdAt()
 	},
-	(t) => [
-		index('idx_recipe_versions_recipe_id_saved_at').on(t.recipeId, t.savedAt),
-		foreignKey({
-			name: 'recipe_versions_recipe_id_fkey',
-			columns: [t.recipeId],
-			foreignColumns: [recipes.id]
-		})
-			.onUpdate('cascade')
-			.onDelete('cascade')
-	]
+	(t) => [index().on(t.recipeId, t.savedAt)]
 );
 
 export const familiesRelations = relations(families, ({ many }) => ({

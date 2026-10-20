@@ -4,8 +4,8 @@ import { resolveUploadPath, uploadsRoot } from '#lib/server/uploads/storage.ts';
 import type { RequestHandler } from './$types';
 
 // Recipe photos, for the family that owns the recipe only. Stored paths are
-// `/uploads/recipes/<id>/<file>`, part of the contract. Anything else, another family's recipe and
-// a missing file all get the same empty 404, so paths leak nothing.
+// `/uploads/recipes/<id>/<file>.webp`. Anything else, another family's recipe and a missing file
+// all get the same empty 404, so paths leak nothing.
 export const GET: RequestHandler = async (event) => {
 	// 401, not requireUser's redirect: an <img> request has no page to return to, and a fetch would
 	// follow the redirect to /login's 200.

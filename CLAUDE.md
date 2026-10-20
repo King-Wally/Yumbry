@@ -41,7 +41,7 @@ Unit tests run under `bun --bun vitest` in three projects (`vite.config.ts`):
   client for the test one with `vi.mock('#lib/server/db/index.ts', …)` (see that helper's header).
 
 ```sh
-TEST_DATABASE_URL=postgres://chef:changeme@localhost:5432/yumbry_test bun run test
+TEST_DATABASE_URL=postgres://yumbry:changeme@localhost:5432/yumbry_test bun run test
 bun --bun vitest run src/lib/server/uploads/storage.spec.ts   # one file
 ```
 
@@ -51,7 +51,6 @@ Database (Drizzle):
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `bun run db:migrate`  | `scripts/migrate.ts`: bring `DATABASE_URL` up to date with `drizzle/`. Idempotent; the Docker image runs it on every start.   |
 | `bun run db:generate` | `drizzle-kit generate`: a new migration from `schema.ts` changes. Reports "No schema changes" while `schema.ts` is untouched. |
-| `bun run db:rehearse` | `scripts/rehearse-migrate.ts`: migrate scratch copies (empty, a restored `--dump`) and compare row counts and schemas.        |
 | `bun run db:studio`   | `drizzle-kit studio`.                                                                                                         |
 
 Local dev needs a `.env` with `DATABASE_URL` pointing at `localhost` (start just Postgres with
@@ -124,8 +123,8 @@ peer address (adapter-node throws without its `ADDRESS_HEADER`). Always start th
 
 - `init` sweeps orphaned families once at start-up, without blocking the first request.
 - `handle` is `sequence(handleSecurityHeaders, handleClientAddress, handleBetterAuth, handleParaglide)`.
-  Security headers are helmet's defaults (`#lib/server/http/security-headers.ts`) except
-  `Referrer-Policy: same-origin`: under helmet's `no-referrer`, Chrome sends `Origin: null` on a
+  Security headers come from `#lib/server/http/security-headers.ts`, with
+  `Referrer-Policy: same-origin`: under `no-referrer`, Chrome sends `Origin: null` on a
   native form POST and Kit's CSRF check refuses every form submitted before hydration. The CSP is
   Kit's own (`csp` in `vite.config.ts`, `mode: 'auto'` for nonces), with `img-src https:` because
   imported recipes keep remote image URLs.
@@ -156,8 +155,7 @@ Routes live in `src/routes/` (file-based). Protected pages sit in the `(app)` gr
 `/recipes/[id]` with `edit`, `versions`, `ai-improve` and `export`, `/import` with `url` and `photo`,
 `/create-with-ai`, `/settings`, `/onboarding`. Public pages stay outside it: `/login`, `/register`,
 `/logout` (action only), `/forgot-password`, `/reset-password`, `/join-family/[token]`,
-`/share/[token]`. The page URLs are part of the contract (invite and reset links in inboxes point at
-them).
+`/share/[token]`. Invite, share and reset links in emails and messages point at these pages.
 
 - **Data flows through `+page.server.ts` loads and form actions** with `use:enhance`. `+server.ts`
   is only for things that aren't pages: `/api/health`, `/uploads/[...path]`,
@@ -220,13 +218,13 @@ actions call `auth.api.*` server-side with the request headers, and the `sveltek
 (which must stay last in `plugins`) sets the cookies. There is no better-auth client in the browser.
 Errors shown are better-auth's own text, through `authRefusal` (`#lib/server/auth/forms.ts`).
 
-Load-bearing, because existing sessions must stay valid:
+Settings worth knowing:
 
 - **Cookie names.** `cookiePrefix: 'yumbry'` gives `yumbry.session_token` (`HttpOnly`,
   `SameSite=Lax`, 30 days), with the `__Secure-` prefix when `COOKIE_SECURE=true`. Pinned by
   `src/lib/server/auth/better-auth.spec.ts`. Set `COOKIE_SECURE` only behind HTTPS, or the browser never sends
   the cookie back.
-- **`BETTER_AUTH_SECRET`** must never change. Changing it logs everyone out.
+- **`BETTER_AUTH_SECRET`** signs the sessions. Changing it logs everyone out.
 - **`baseURL` is `ORIGIN`.** A wrong origin breaks better-auth's path matching and Kit's CSRF check.
 - **`session.cookieCache` is deliberately off.** It would let `getSession` answer from the cookie,
   serving a stale `familyId` to someone who just left a family. Session revocation is real row
@@ -271,22 +269,21 @@ transaction"; it ends the pool on adapter-node's `sveltekit:shutdown` so the con
 promptly), `schema.ts` (app tables) and `auth.schema.ts` (better-auth's `users`, `sessions`,
 `accounts`, `verifications`).
 
-**Table and column names are part of the contract** (plural tables, snake_case columns): the
-production data lives in them. Never rename a table, column, index or constraint.
+Tables are plural with snake_case columns; the JS keys are camelCase. Constraint and index names
+are Drizzle's defaults.
 
 `scripts/migrate.ts` (`bun run db:migrate`) runs on every container start and needs no drizzle-kit:
 
-- It refuses a database that has tables (`users`) but no Drizzle history: a 1.x install must
-  upgrade through v2.0.x first.
 - It aborts if the recorded history holds a hash `drizzle/` doesn't, which means an edited or
   regenerated migration.
 - Pending migrations run in one transaction, under an advisory lock that serialises concurrent
   starts.
 
 Conventions: change `schema.ts`, run `bun run db:generate`, review and commit the generated SQL and
-`drizzle/meta/`. **Never hand-edit or regenerate a committed migration**, including the baseline;
-fix forward with a new one. Postgres `numeric` columns are read through `decimalString`
-(`#lib/shared/recipe/numeric.ts`) so they print as `"4"`, not `"4.000…"`, and Drizzle returns
+`drizzle/meta/`. **Never hand-edit or regenerate a committed migration**; fix forward with a new
+one. `servings` and `ingredients.amount` are unconstrained `numeric` (exact, no rounding); the
+nutrition columns are `numeric(8,2)`. Numeric columns are read through `decimalString`
+(`#lib/shared/recipe/numeric.ts`) so they print as `"14.5"`, not `"14.50"`, and Drizzle returns
 `sum()` over numeric as a string.
 
 Services live in the feature folders under `src/lib/server/` (see "Source layout"). Write paths that span tables run in `db.transaction`, and helpers that
@@ -296,10 +293,10 @@ snapshot of the replaced state in the same transaction, which is what makes reve
 ### Uploads
 
 Photos are stored under `UPLOADS_DIR` (image: `/app/uploads`, the `uploads_data` volume; dev:
-`./uploads`) as `recipes/<id>/<uuid>.webp`, and `recipes.image_path` holds `/uploads/recipes/<id>/<file>`.
+`./uploads`) as `recipes/<id>/<uuid>.webp`, and `recipes.image_path` holds `/uploads/recipes/<id>/<uuid>.webp`.
 `#lib/server/uploads/storage.ts` owns the layout: `checkPhotoFile` (JPEG/PNG/WebP/GIF only, no SVG, 25 MB),
 `saveRecipePhoto` (after sharp re-encodes to WebP in `#lib/server/uploads/image-prep.ts`), path resolution
-that only accepts `recipes/<id>/<plain file name>` with an image extension, copy and delete helpers.
+that only accepts `recipes/<id>/<plain file name>.webp`, copy and delete helpers.
 `/uploads/[...path]` answers 401 signed out and 404 for anything that isn't the family's file, with
 `Cache-Control: private` and `nosniff`. `BODY_SIZE_LIMIT=30M` (image and e2e config) leaves room
 for a 25 MB photo plus the rest of the form.
@@ -401,7 +398,7 @@ Where it is used:
 `#lib/server/auth/email.ts`: password-reset emails through the `resend` SDK, configured only when both
 `RESEND_API_KEY` and `EMAIL_FROM` are set (`isEmailConfigured()`; the login page hides "Forgot your
 password?" otherwise, and `sendResetPassword` is a silent no-op). The link is
-`${ORIGIN}/reset-password?token=…`; never change it, since links in inboxes must keep working. `RESEND_BASE_URL` (test-only) is passed as the client's `baseUrl`.
+`${ORIGIN}/reset-password?token=…`. `RESEND_BASE_URL` (test-only) is passed as the client's `baseUrl`.
 
 ### PWA and service worker
 
@@ -459,17 +456,15 @@ back undefined under `bun --bun vitest`.
 The `Dockerfile` is multi-stage on `oven/bun:<version>-slim` (Debian, glibc, so sharp's prebuilds
 load; amd64 and arm64, production is arm64). The runtime stage holds production dependencies
 (`--omit peer`), `build/`, `drizzle/`, `scripts/migrate.ts` and `scripts/serve.ts`, runs as the
-`bun` user (uid 1000, the owner of existing uploads, so they stay writable), and starts
+`bun` user, and starts
 with `bun scripts/migrate.ts && exec bun scripts/serve.ts`. Only `/app/uploads` is writable. Image
 defaults: `NODE_ENV=production`, `PORT=3000`, `BODY_SIZE_LIMIT=30M`, `UPLOADS_DIR=/app/uploads`,
 `ADDRESS_HEADER=x-forwarded-for` and `XFF_DEPTH=1` (the client IP behind the Cloudflare Tunnel).
 `HEALTHCHECK` fetches `/api/health` with bun.
 
-`docker-compose.yml` runs `app`, `db` (Postgres 18) and `browser` (CloakBrowser). The volume names
-`db_data` and `uploads_data` must never change. `db_data` mounts at `/var/lib/postgresql` (the
-parent directory, not `.../data`): Postgres 18+'s image stores data under a per-major-version
-subdirectory there, so a `.../data` mount is the pre-18 layout and the 18+ image refuses to start
-against it. The app's `DATABASE_URL` is built from `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB`,
+`docker-compose.yml` runs `app`, `db` (Postgres 18) and `browser` (CloakBrowser), with the
+`db_data` and `uploads_data` volumes. `db_data` mounts at `/var/lib/postgresql`, not `.../data`:
+Postgres 18+'s image keeps its data in a per-major-version subdirectory there. The app's `DATABASE_URL` is built from `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB`,
 so the password must be URL-safe; `.env`'s own `DATABASE_URL` is for `vite dev` on the host. Compose
 refuses to start without `ORIGIN`.
 
@@ -505,8 +500,5 @@ See `src/e2e/README.md` for how to run single specs.
   JS-only controls until `hydrated.current`.
 - Map new domain errors through `#lib/server/http/kinded-errors.ts`, not ad hoc statuses.
 - Add every new message to all four locale files.
-- Schema changes: edit `schema.ts`, `bun run db:generate`, commit the migration. Never touch the
-  baseline or a committed migration, and never rename existing tables or columns.
-- Keep cookie names, page URLs, `/api/auth/*`, `/api/health`, `/uploads/*` and
-  `/service-worker.js` stable: existing sessions, links in inboxes and installed PWAs depend on
-  them.
+- Schema changes: edit `schema.ts`, `bun run db:generate`, commit the migration. Never touch a
+  committed migration.

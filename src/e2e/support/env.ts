@@ -48,7 +48,8 @@ export const env = {
 	/** CloakBrowser's CDP endpoint, the full app's browser fallback for URL import. */
 	browserCdpUrl: `http://127.0.0.1:${browserPort}`,
 	browserPort,
-	databaseUrl: process.env.E2E_DATABASE_URL ?? 'postgres://chef:changeme@localhost:5432/yumbry_e2e',
+	databaseUrl:
+		process.env.E2E_DATABASE_URL ?? 'postgres://yumbry:changeme@localhost:5432/yumbry_e2e',
 	/** Starts one app server; PORT and the rest of the config arrive as env vars. */
 	serverCmd: `bun ${path.join(REPO_ROOT, 'scripts/serve.ts')}`,
 	/** Brings an empty database up to the current schema; DATABASE_URL is set for it. */

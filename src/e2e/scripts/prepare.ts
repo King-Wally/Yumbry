@@ -5,7 +5,7 @@
 import { execSync } from 'node:child_process';
 import { ensureBinary } from 'cloakbrowser';
 import fs from 'node:fs';
-import pg from 'pg';
+import postgres from 'postgres';
 import { env, REPO_ROOT, SERVER_DIR } from '../support/env.ts';
 
 async function resetDatabase(): Promise<void> {
@@ -21,11 +21,10 @@ async function resetDatabase(): Promise<void> {
 	// skip everything.
 	const adminUrl = new URL(env.databaseUrl);
 	adminUrl.pathname = '/postgres';
-	const admin = new pg.Client({ connectionString: adminUrl.toString() });
-	await admin.connect();
+	const admin = postgres(adminUrl.toString(), { max: 1, onnotice: () => {} });
 	try {
-		await admin.query(`DROP DATABASE IF EXISTS "${dbName}" WITH (FORCE)`);
-		await admin.query(`CREATE DATABASE "${dbName}"`);
+		await admin`DROP DATABASE IF EXISTS ${admin(dbName)} WITH (FORCE)`;
+		await admin`CREATE DATABASE ${admin(dbName)}`;
 	} finally {
 		await admin.end();
 	}

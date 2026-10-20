@@ -11,18 +11,9 @@ export function uploadsRoot(): string {
 	return path.resolve(UPLOADS_DIR ?? 'uploads');
 }
 
-// New uploads are always WebP; photos already on disk may be any of the others. The type comes from
-// this list, never from sniffing the file.
-const CONTENT_TYPES: Record<string, string> = {
-	webp: 'image/webp',
-	jpg: 'image/jpeg',
-	jpeg: 'image/jpeg',
-	png: 'image/png',
-	gif: 'image/gif'
-};
-
-// One plain file name: no separators, no leading dot, so no `..` and no dotfiles.
-const FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9_-]*(?:\.[A-Za-z0-9_-]+)*\.([A-Za-z0-9]+)$/;
+// Every stored photo is WebP (`saveRecipePhoto`). One plain file name: no separators, no leading
+// dot, so no `..` and no dotfiles.
+const FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9_-]*\.webp$/;
 
 export interface UploadFile {
 	recipeId: number;
@@ -31,23 +22,19 @@ export interface UploadFile {
 }
 
 /** The photo file behind `/uploads/<relativePath>`, or null for anything that isn't exactly
- * `recipes/<id>/<file>` with a known image extension. `relativePath` is the decoded route param. */
+ * `recipes/<id>/<file>.webp`. `relativePath` is the decoded route param. */
 export function resolveUploadPath(root: string, relativePath: string): UploadFile | null {
 	const segments = relativePath.split('/');
 	if (segments.length !== 3 || segments[0] !== 'recipes') return null;
 
 	const recipeId = parseRecipeId(segments[1]);
-	const match = FILE_NAME.exec(segments[2]);
-	if (recipeId === null || !match) return null;
-
-	const contentType = CONTENT_TYPES[match[1].toLowerCase()];
-	if (!contentType) return null;
+	if (recipeId === null || !FILE_NAME.test(segments[2])) return null;
 
 	const absolutePath = path.resolve(root, 'recipes', String(recipeId), segments[2]);
 	// Can't fail after the checks above; kept so a future loosening of FILE_NAME can't escape root.
 	if (!absolutePath.startsWith(path.resolve(root) + path.sep)) return null;
 
-	return { recipeId, absolutePath, contentType };
+	return { recipeId, absolutePath, contentType: 'image/webp' };
 }
 
 // --- Writing photos ---------------------------------------------------------------------------
@@ -95,9 +82,8 @@ export function absoluteUploadPath(storedPath: string): string | null {
 	return resolveStoredUpload(storedPath)?.absolutePath ?? null;
 }
 
-/** Copies a stored photo to another recipe under a fresh name, keeping its extension, and returns
- * the copy's stored path. Null when `storedPath` isn't a local upload. Throws if the file can't be
- * read. */
+/** Copies a stored photo to another recipe under a fresh name and returns the copy's stored path.
+ * Null when `storedPath` isn't a local upload. Throws if the file can't be read. */
 export async function copyRecipeUpload(
 	storedPath: string,
 	targetRecipeId: number
@@ -105,8 +91,7 @@ export async function copyRecipeUpload(
 	const source = resolveStoredUpload(storedPath);
 	if (!source) return null;
 
-	const extension = path.extname(source.absolutePath).toLowerCase();
-	const relative = `recipes/${targetRecipeId}/${crypto.randomUUID()}${extension}`;
+	const relative = `recipes/${targetRecipeId}/${crypto.randomUUID()}.webp`;
 	const target = resolveUploadPath(uploadsRoot(), relative);
 	if (!target) return null;
 	await Bun.write(target.absolutePath, Bun.file(source.absolutePath));

@@ -1,8 +1,7 @@
 import { getCookies } from 'better-auth/cookies';
 import { describe, expect, it, vi } from 'vitest';
 
-// Pins the session cookie's name and attributes. Existing sessions depend on them; renaming the
-// cookie would sign every user out.
+// Pins the session cookie's name and security attributes.
 
 vi.mock('$app/env/private', () => ({
 	ORIGIN: 'http://app.test',

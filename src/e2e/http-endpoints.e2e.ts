@@ -1,6 +1,5 @@
-// The HTTP surface that is part of the contract: better-auth's own endpoints, the health check,
-// and the auth-gated /uploads file server. The app's JSON API is an implementation detail, so it
-// is deliberately not tested here.
+// The endpoints that aren't pages: better-auth's own, the health check, and the auth-gated /uploads
+// file server.
 import type { APIRequestContext, APIResponse, Page } from '@playwright/test';
 import path from 'node:path';
 import { E2E_ROOT } from './support/env.ts';
@@ -46,7 +45,7 @@ async function uploadPhotoViaUi(
 
 test.describe('better-auth endpoints', () => {
 	test('sign-up returns the user and sets a session cookie', async ({ request, baseURL }) => {
-		const email = uniqueEmail('contract');
+		const email = uniqueEmail('endpoints');
 		const res = await request.post('/api/auth/sign-up/email', {
 			headers: origin(baseURL!),
 			data: { email, password: DEFAULT_PASSWORD, name: email }

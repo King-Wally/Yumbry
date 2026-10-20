@@ -28,7 +28,7 @@ export default defineConfig({
 			// A PWA can stay open for days without a full load. Polling lets the next navigation after
 			// a deploy load the new build (and update the service worker) instead of the old chunks.
 			version: { pollInterval: 60 * 60 * 1000 },
-			// helmet's default policy. The other security headers are set in hooks.server.ts. Kit
+			// A strict same-origin policy. The other security headers are set in hooks.server.ts. Kit
 			// adds nonces/hashes for its own inline scripts ('auto').
 			csp: {
 				mode: 'auto',
@@ -38,7 +38,7 @@ export default defineConfig({
 					'font-src': ['self', 'https:', 'data:'],
 					'form-action': ['self'],
 					'frame-ancestors': ['self'],
-					// Wider than helmet's 'self' data:. Recipes imported via JSON-LD or URL keep the
+					// Wider than 'self' data:. Recipes imported via JSON-LD or URL keep the
 					// original remote image URL (no re-hosting), and photo import previews the chosen
 					// file as a blob: URL before upload.
 					'img-src': ['self', 'data:', 'blob:', 'https:'],

@@ -1,17 +1,8 @@
-// better-auth's tables, written by hand to match drizzle/0000_baseline.sql — do not regenerate with
-// `@better-auth/cli generate`, which emits singular camelCase tables. The JS keys are better-auth's
-// field names; the SQL names are the database's snake_case ones.
+// better-auth's tables, written by hand — do not regenerate with `@better-auth/cli generate`, which
+// emits singular camelCase tables. The JS keys are better-auth's field names; the SQL names are
+// the database's plural tables and snake_case columns.
 import { sql } from 'drizzle-orm';
-import {
-	boolean,
-	foreignKey,
-	index,
-	integer,
-	pgTable,
-	text,
-	timestamp,
-	uniqueIndex
-} from 'drizzle-orm/pg-core';
+import { boolean, index, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 import { families } from './schema';
 
 const createdAt = () =>
@@ -19,11 +10,10 @@ const createdAt = () =>
 		.notNull()
 		.default(sql`CURRENT_TIMESTAMP`);
 
-// The column has no database default, so every writer must supply it.
 const updatedAt = () =>
 	timestamp('updated_at', { withTimezone: true, mode: 'date' })
 		.notNull()
-		.$defaultFn(() => new Date())
+		.default(sql`CURRENT_TIMESTAMP`)
 		.$onUpdate(() => new Date());
 
 export const users = pgTable(
@@ -31,57 +21,47 @@ export const users = pgTable(
 	{
 		id: text('id').primaryKey(),
 		name: text('name').notNull(),
-		email: text('email').notNull(),
+		email: text('email').notNull().unique(),
 		emailVerified: boolean('email_verified').notNull().default(false),
 		image: text('image'),
 		locale: text('locale').notNull().default('en'),
 		unitSystem: text('unit_system').notNull().default('metric'),
 		smallVolumes: text('small_volumes').notNull().default('spoons'),
 		jsonImportExportEnabled: boolean('json_import_export_enabled').notNull().default(false),
-		familyId: integer('family_id').notNull(),
+		// Restrict, not Cascade: deleting a family must never delete its members.
+		familyId: integer('family_id')
+			.notNull()
+			.references(() => families.id, { onDelete: 'restrict' }),
 		createdAt: createdAt(),
 		updatedAt: updatedAt()
 	},
-	(t) => [
-		uniqueIndex('users_email_key').on(t.email),
-		index('idx_users_family_id').on(t.familyId),
-		// Restrict, not Cascade: deleting a family must never delete its members.
-		foreignKey({
-			name: 'users_family_id_fkey',
-			columns: [t.familyId],
-			foreignColumns: [families.id]
-		})
-			.onUpdate('cascade')
-			.onDelete('restrict')
-	]
+	(t) => [index().on(t.familyId)]
 );
 
 export const sessions = pgTable(
 	'sessions',
 	{
 		id: text('id').primaryKey(),
-		userId: text('user_id').notNull(),
-		token: text('token').notNull(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		token: text('token').notNull().unique(),
 		expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),
 		ipAddress: text('ip_address'),
 		userAgent: text('user_agent'),
 		createdAt: createdAt(),
 		updatedAt: updatedAt()
 	},
-	(t) => [
-		uniqueIndex('sessions_token_key').on(t.token),
-		index('idx_sessions_user_id').on(t.userId),
-		foreignKey({ name: 'sessions_user_id_fkey', columns: [t.userId], foreignColumns: [users.id] })
-			.onUpdate('cascade')
-			.onDelete('cascade')
-	]
+	(t) => [index().on(t.userId)]
 );
 
 export const accounts = pgTable(
 	'accounts',
 	{
 		id: text('id').primaryKey(),
-		userId: text('user_id').notNull(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
 		accountId: text('account_id').notNull(),
 		providerId: text('provider_id').notNull(),
 		accessToken: text('access_token'),
@@ -100,12 +80,7 @@ export const accounts = pgTable(
 		createdAt: createdAt(),
 		updatedAt: updatedAt()
 	},
-	(t) => [
-		index('idx_accounts_user_id').on(t.userId),
-		foreignKey({ name: 'accounts_user_id_fkey', columns: [t.userId], foreignColumns: [users.id] })
-			.onUpdate('cascade')
-			.onDelete('cascade')
-	]
+	(t) => [index().on(t.userId)]
 );
 
 export const verifications = pgTable(
@@ -118,5 +93,5 @@ export const verifications = pgTable(
 		createdAt: createdAt(),
 		updatedAt: updatedAt()
 	},
-	(t) => [index('idx_verifications_identifier').on(t.identifier)]
+	(t) => [index().on(t.identifier)]
 );

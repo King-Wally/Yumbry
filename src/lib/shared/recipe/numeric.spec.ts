@@ -34,8 +34,8 @@ describe('toNullableNumber', () => {
 });
 
 describe('decimalString', () => {
-	it('drops the column padding', () => {
-		expect(decimalString('4.000000000000000000000000000000')).toBe('4');
+	it('drops trailing zeros', () => {
+		expect(decimalString('4.00')).toBe('4');
 		expect(decimalString('14.50')).toBe('14.5');
 		expect(decimalString('0.00')).toBe('0');
 	});

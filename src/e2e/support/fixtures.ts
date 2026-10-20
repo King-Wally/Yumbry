@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { test as base, expect, type BrowserContext, type Page } from '@playwright/test';
-import pg from 'pg';
+import postgres, { type Sql } from 'postgres';
 import { Db } from './db.ts';
 import { env } from './env.ts';
 import { FakesClient } from './fakes-client.ts';
@@ -25,22 +25,22 @@ interface Fixtures {
 }
 
 interface WorkerFixtures {
-	dbPool: pg.Pool;
+	sql: Sql;
 }
 
 export const test = base.extend<Fixtures, WorkerFixtures>({
-	dbPool: [
+	sql: [
 		// eslint-disable-next-line no-empty-pattern
 		async ({}, use) => {
-			const pool = new pg.Pool({ connectionString: env.databaseUrl, max: 3 });
-			await use(pool);
-			await pool.end();
+			const sql = postgres(env.databaseUrl, { max: 3, onnotice: () => {} });
+			await use(sql);
+			await sql.end();
 		},
 		{ scope: 'worker' }
 	],
 
-	db: async ({ dbPool }, use) => {
-		await use(new Db(dbPool));
+	db: async ({ sql }, use) => {
+		await use(new Db(sql));
 	},
 
 	// eslint-disable-next-line no-empty-pattern

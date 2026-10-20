@@ -6,7 +6,7 @@ import { formString } from '#lib/server/http/form.ts';
 import { limitClient, passwordResetLimiter } from '#lib/server/http/rate-limit.ts';
 import type { Actions, PageServerLoad } from './$types';
 
-// The reset email links here as /reset-password?token=…; links in inboxes depend on that URL.
+// The reset email links here as /reset-password?token=… (#lib/server/auth/email.ts).
 export const load: PageServerLoad = ({ url }) => ({ token: url.searchParams.get('token') ?? '' });
 
 export const actions: Actions = {

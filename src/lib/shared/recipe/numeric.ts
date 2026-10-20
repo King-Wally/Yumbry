@@ -14,9 +14,8 @@ export function toNullableNumber(value: string | number | null | undefined): num
 }
 
 /**
- * A Postgres numeric as the recipe DTOs and version snapshots carry it: without the column's
- * padding, so `numeric(65,30)` "4.000000000000000000000000000000" reads "4" and "14.50" reads
- * "14.5".
+ * A Postgres numeric as the recipe DTOs and version snapshots carry it: without trailing zeros,
+ * so a `numeric(8,2)` "14.50" reads "14.5" and "4.00" reads "4".
  */
 export function decimalString(value: string): string;
 export function decimalString(value: string | null): string | null;

@@ -11,7 +11,6 @@ export function isEmailConfigured(): boolean {
  * error, or if email isn't configured. */
 export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {
 	if (!RESEND_API_KEY || !EMAIL_FROM) throw new Error('Email is not configured.');
-	// Links already sitting in inboxes point at this URL; never change it.
 	const resetUrl = `${ORIGIN}/reset-password?token=${encodeURIComponent(token)}`;
 
 	// Built per send, with the base URL passed explicitly rather than left to the SDK's own
