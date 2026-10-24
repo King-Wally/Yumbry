@@ -2,20 +2,19 @@
 
 # Debian slim (glibc): sharp's linux-x64/linux-arm64 prebuilds load as is, and the image is
 # published for both architectures (production is arm64).
-ARG BUN_VERSION=1.4.2
 
 # ---- all dependencies, for the build ----
 # Pinned to the build host's architecture: the output in build/ is plain JS, and Vite/Rolldown's
 # native bindings hang under QEMU when cross-building for arm64. Only prod-deps (sharp's prebuilt
 # binary) and runtime run on the target platform.
-FROM --platform=$BUILDPLATFORM oven/bun:${BUN_VERSION}-slim AS deps
+FROM --platform=$BUILDPLATFORM oven/bun:slim AS deps
 WORKDIR /app
 COPY package.json bun.lock bunfig.toml ./
 # `prepare` needs the sources; the build stage runs it.
 RUN bun install --frozen-lockfile --ignore-scripts
 
 # ---- runtime dependencies only: what adapter-node leaves external, plus migrate.ts's ----
-FROM oven/bun:${BUN_VERSION}-slim AS prod-deps
+FROM oven/bun:slim AS prod-deps
 WORKDIR /app
 COPY package.json bun.lock bunfig.toml ./
 # --omit peer: better-auth's optional peers (vite, drizzle-kit, typescript, …) would otherwise be
@@ -28,7 +27,7 @@ COPY . .
 RUN bun run prepare && bun run build
 
 # ---- runtime ----
-FROM oven/bun:${BUN_VERSION}-slim AS runtime
+FROM oven/bun:slim AS runtime
 WORKDIR /app
 
 # BODY_SIZE_LIMIT leaves room for a 25 MB photo plus the rest of the multipart form.

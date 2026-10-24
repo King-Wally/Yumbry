@@ -20,8 +20,9 @@ export const SECURITY_HEADERS: Readonly<Record<string, string>> = {
 };
 
 /** Adds SECURITY_HEADERS to every response Kit renders, leaving any a route set itself alone.
- * Static assets never pass through hooks (adapter-node serves them first). They are
- * content-hashed scripts, styles and icons; `/uploads` sets its own headers. */
+ * Static assets never pass through hooks (adapter-node serves them first), so scripts/serve.ts
+ * adds Strict-Transport-Security to every response itself; the rest are content-hashed scripts,
+ * styles and icons, and `/uploads` sets its own headers. */
 export const handleSecurityHeaders: Handle = async ({ event, resolve }) => {
 	const response = await resolve(event);
 	for (const [name, value] of Object.entries(SECURITY_HEADERS)) {

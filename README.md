@@ -106,7 +106,7 @@ kept as they are and simply don't scale.
 
 ## Development
 
-Requires [Bun](https://bun.sh) 1.4.2 (the version in `package.json`'s `packageManager`) and a
+Requires the latest [Bun](https://bun.sh) and a
 Postgres server. The easiest Postgres is the compose `db`
 service on its own:
 

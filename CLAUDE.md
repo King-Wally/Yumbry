@@ -453,7 +453,7 @@ back undefined under `bun --bun vitest`.
 
 ### Docker
 
-The `Dockerfile` is multi-stage on `oven/bun:<version>-slim` (Debian, glibc, so sharp's prebuilds
+The `Dockerfile` is multi-stage on `oven/bun:slim` (Debian, glibc, so sharp's prebuilds
 load; amd64 and arm64, production is arm64). The runtime stage holds production dependencies
 (`--omit peer`), `build/`, `drizzle/`, `scripts/migrate.ts` and `scripts/serve.ts`, runs as the
 `bun` user, and starts

@@ -60,7 +60,7 @@ services:
   # and should match where the server's IP is. The `browser` network is internal: the sidecar
   # has no way out except through the app's SSRF-checking proxy, and no route to Postgres.
   browser:
-    image: cloakhq/cloakbrowser:0.5.11
+    image: cloakhq/cloakbrowser:latest
     command:
       - cloakserve
       - --headless=false

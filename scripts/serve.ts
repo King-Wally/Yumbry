@@ -27,6 +27,9 @@ const build: { server: Server } = await import(new URL('../build/index.js', impo
 build.server.prependListener('request', (req, res) => {
 	// adapter-node gives only /_app/immutable/* a cache-control header. Without one, Cloudflare's edge
 	// would keep a copy of these, delaying worker and manifest updates.
+	// Static files are served before Kit's hooks run, so they miss handleSecurityHeaders. Same
+	// value as SECURITY_HEADERS in src/lib/server/http/security-headers.ts.
+	res.setHeader('strict-transport-security', 'max-age=31536000; includeSubDomains');
 	const pathname = req.url?.split('?')[0];
 	if (pathname && NO_CACHE_FILES.has(pathname)) res.setHeader('cache-control', 'no-cache');
 	req.headers[PROTOCOL_HEADER] = protocol;
