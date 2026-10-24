@@ -159,7 +159,8 @@ Routes live in `src/routes/` (file-based). Protected pages sit in the `(app)` gr
 
 - **Data flows through `+page.server.ts` loads and form actions** with `use:enhance`. `+server.ts`
   is only for things that aren't pages: `/api/health`, `/uploads/[...path]`,
-  `/recipes/[id]/export` and `/share/[token]/photo`.
+  `/recipes/[id]/export`, `/share/[token]/photo`, and the legacy `/sw.js` and `/registerSW.js`
+  (below).
   There is no JSON API and no client-side data cache: every navigation re-runs loads, which read
   `familyId` fresh, so leaving a family takes effect on the next navigation with nothing to
   invalidate.
@@ -416,6 +417,13 @@ password?" otherwise, and `sendResetPassword` is a silent no-op). The link is
   wrapped) and probes `/api/health` on start; any suspicion is confirmed by a health ping before
   `ServerUnavailable.svelte` covers the page ("Temporarily offline", "Try again" →
   `invalidateAll()`). `#lib/client/server-availability.ts` classifies responses.
+- **Legacy worker retirement (permanent).** Installs of an earlier release run a Workbox worker
+  registered at `/sw.js` that serves a cached app shell for every navigation, so the current app
+  never loads while it is in charge. Its only way out is the update check it makes against `/sw.js`
+  on each navigation. `src/routes/sw.js/+server.ts` answers with a worker that deletes every cache,
+  unregisters itself and reloads its pages; `src/routes/registerSW.js/+server.ts` is a no-op script.
+  Both send `no-cache`. **Never remove these routes:** a 404 leaves the old worker in charge on any
+  device that hasn't connected since the switch (`src/routes/sw.js/sw.e2e.ts`).
 - `deploy/offline-worker/` is a Cloudflare Worker that serves an offline page when the origin is
   unreachable. It skips 503, which the app uses for AI errors.
 
