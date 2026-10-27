@@ -36,22 +36,21 @@ test.describe('creating a recipe manually', () => {
 		await page.getByRole('button', { name: 'Increase servings' }).click();
 		await expectServings(page, 6);
 
-		await page.getByPlaceholder('Or type a new category').fill('Brunch');
-		await page.getByRole('button', { name: 'Set' }).click();
-		await expect(page.getByText('Selected:')).toContainText('Brunch');
+		await page.getByRole('button', { name: 'New category' }).click();
+		await page.getByLabel('New category name').fill('Brunch');
+		await page.getByRole('button', { name: 'Add category' }).click();
+		await expect(page.getByRole('radio', { name: 'Brunch' })).toBeChecked();
 
-		const tagInput = page.getByPlaceholder('Add a tag and press Enter');
-		await tagInput.fill('veg');
-		await page.getByRole('button', { name: 'Vegetarian' }).click();
-		// A differently-cased repeat of a tag already on the recipe is ignored...
-		await tagInput.fill('VEGETARIAN');
-		await tagInput.press('Enter');
-		await tagInput.fill('Sweet');
-		await page.getByRole('button', { name: 'Add', exact: true }).click();
-		await tagInput.fill('sweet');
-		await tagInput.press('Enter');
+		// An existing tag is toggled on...
+		await page.getByRole('checkbox', { name: 'Vegetarian' }).click();
+		// ...a new one is typed in, and a differently-cased repeat reuses it.
+		for (const name of ['Sweet', 'sweet']) {
+			await page.getByRole('button', { name: 'New tag' }).click();
+			await page.getByLabel('New tag name').fill(name);
+			await page.getByRole('button', { name: 'Add tag' }).click();
+		}
 		// ...so there are exactly two tags.
-		await expect(page.getByRole('button', { name: 'Remove tag' })).toHaveCount(2);
+		await expect(page.getByRole('checkbox', { checked: true })).toHaveCount(2);
 
 		await page.getByLabel('Ingredient 1', { exact: true }).fill('200 g flour');
 		await page.getByRole('button', { name: '+ Add ingredient' }).click();
@@ -100,8 +99,8 @@ test.describe('creating a recipe manually', () => {
 		await openNewRecipeForm(page);
 
 		await page.getByLabel('Title').fill('Lasagne');
-		await page.getByRole('button', { name: 'Dinner', exact: true }).click();
-		await expect(page.getByText('Selected:')).toContainText('Dinner');
+		await page.getByRole('radio', { name: 'Dinner', exact: true }).click();
+		await expect(page.getByRole('radio', { name: 'Dinner' })).toBeChecked();
 		await page.getByRole('button', { name: 'Save recipe' }).click();
 
 		await expect(page.getByRole('heading', { name: 'Lasagne', level: 1 })).toBeVisible();
@@ -150,17 +149,18 @@ test.describe('editing a recipe', () => {
 		await expect(page.getByLabel('Cook (min)')).toHaveValue('25');
 		await expect(page.getByLabel('Total (min)')).toHaveValue('30');
 		await expectServings(page, 2);
-		await expect(page.getByText('Selected:')).toContainText('Lunch');
-		await expect(page.getByRole('button', { name: 'Remove tag' })).toHaveCount(1);
+		await expect(page.getByRole('radio', { name: 'Lunch' })).toBeChecked();
+		await expect(page.getByRole('checkbox', { name: 'Soup' })).toBeChecked();
 		await expect(page.getByPlaceholder('e.g. 1 1/2 cups flour')).toHaveValue('500 g tomatoes');
 		await expect(page.getByPlaceholder('Describe this step')).toHaveValue('Simmer the tomatoes.');
 
 		await page.getByLabel('Title').fill('Roasted Tomato Soup');
 		await page.getByLabel('Cook (min)').fill('40');
-		await page.getByRole('button', { name: 'Dinner', exact: true }).click();
-		await page.getByRole('button', { name: 'Remove tag' }).click();
-		await page.getByPlaceholder('Add a tag and press Enter').fill('Smoky');
-		await page.getByPlaceholder('Add a tag and press Enter').press('Enter');
+		await page.getByRole('radio', { name: 'Dinner', exact: true }).click();
+		await page.getByRole('checkbox', { name: 'Soup' }).click();
+		await page.getByRole('button', { name: 'New tag' }).click();
+		await page.getByLabel('New tag name').fill('Smoky');
+		await page.getByLabel('New tag name').press('Enter');
 		await page.getByRole('button', { name: '+ Add step' }).click();
 		await page.getByPlaceholder('Describe this step').nth(1).fill('Blend until smooth.');
 		await page.getByRole('button', { name: 'Save recipe' }).click();

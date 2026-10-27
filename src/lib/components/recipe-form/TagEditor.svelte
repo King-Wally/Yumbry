@@ -1,7 +1,10 @@
 <script lang="ts">
+	import { Check } from '@lucide/svelte';
+	import PillAdder from '#lib/components/recipe-form/PillAdder.svelte';
+	import { pill, pillOff, pillOn } from '#lib/components/recipe-form/pill.ts';
 	import { hydrated } from '#lib/client/hydrated.svelte.ts';
 	import { m } from '#lib/paraglide/messages.js';
-	import { addTag, suggestTags } from '#lib/shared/recipe/form.ts';
+	import { addTag } from '#lib/shared/recipe/form.ts';
 
 	interface Props {
 		tags: string[];
@@ -10,88 +13,52 @@
 
 	let { tags = $bindable(), existing }: Props = $props();
 
-	let input = $state('');
-	let focused = $state(false);
+	const lower = (name: string) => name.toLowerCase();
+	const isOn = (name: string) => tags.some((tag) => lower(tag) === lower(name));
+	// Every tag the family has, then the ones added in this form that it doesn't.
+	const options = $derived([
+		...existing.map((tag) => tag.name),
+		...tags.filter((tag) => !existing.some((e) => lower(e.name) === lower(tag)))
+	]);
 
-	const suggestions = $derived(focused ? suggestTags(existing, input, tags) : []);
-
-	function add(name = input) {
-		tags = addTag(tags, name);
-		input = '';
-	}
-
-	function remove(name: string) {
-		tags = tags.filter((tag) => tag !== name);
+	function toggle(name: string) {
+		tags = isOn(name) ? tags.filter((tag) => lower(tag) !== lower(name)) : addTag(tags, name);
 	}
 </script>
 
-<div>
-	{#if tags.length > 0}
-		<div class="mb-2 flex flex-wrap gap-1.5">
-			{#each tags as tag (tag)}
-				<span
-					class="flex items-center gap-1 rounded-full bg-stone-100 px-2.5 py-1 text-xs text-stone-600 capitalize"
-				>
-					{tag}
-					<button
-						type="button"
-						onclick={() => remove(tag)}
-						disabled={!hydrated.current}
-						aria-label={m.recipe_form_remove_tag()}
-						class="text-stone-400 hover:text-red-600"
-					>
-						✕
-					</button>
-					<input type="hidden" name="tag" value={tag} />
-				</span>
-			{/each}
-		</div>
-	{/if}
-	<div class="relative flex gap-2">
-		<input
-			type="text"
-			bind:value={input}
-			defaultValue=""
-			onfocus={() => (focused = true)}
-			onblur={() => (focused = false)}
-			onkeydown={(event) => {
-				if (event.key === 'Enter') {
-					event.preventDefault();
-					add();
-				}
-			}}
-			aria-label={m.recipe_form_add_tag_placeholder()}
-			placeholder={m.recipe_form_add_tag_placeholder()}
-			class="flex-1 rounded-md border border-stone-300 px-3 py-1.5 focus:border-clay focus:outline-none"
-		/>
-		<button
-			type="button"
-			onclick={() => add()}
-			disabled={!hydrated.current}
-			class="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"
-		>
-			{m.common_add()}
-		</button>
-		{#if suggestions.length > 0}
-			<ul
-				class="absolute top-full left-0 z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-stone-200 bg-white shadow-md"
+<div class="flex flex-col gap-2">
+	<div role="group" aria-label={m.recipe_form_tags()} class="flex flex-wrap items-center gap-2">
+		{#each options as name (lower(name))}
+			{@const on = isOn(name)}
+			<button
+				type="button"
+				role="checkbox"
+				aria-checked={on}
+				onclick={() => toggle(name)}
+				disabled={!hydrated.current}
+				class={[pill, on ? pillOn : pillOff]}
 			>
-				{#each suggestions as suggestion (suggestion.id)}
-					<li>
-						<!-- mousedown, not click: the input keeps focus, so the list doesn't close first. -->
-						<button
-							type="button"
-							onmousedown={(event) => {
-								event.preventDefault();
-								add(suggestion.name);
-							}}
-							class="w-full px-3 py-2 text-left text-sm text-stone-700 capitalize hover:bg-stone-100"
-						>
-							{suggestion.name}
-						</button>
-					</li>
-				{/each}
-			</ul>
-		{/if}
+				<span
+					aria-hidden="true"
+					class={[
+						'inline-flex overflow-hidden transition-all duration-200 ease-out',
+						on ? 'mr-1 max-w-3.5 opacity-100' : 'mr-0 max-w-0 opacity-0'
+					]}
+				>
+					<Check size={14} strokeWidth={2.25} />
+				</span>
+				{name}
+			</button>
+		{/each}
 	</div>
+	<PillAdder
+		label={m.tag_editor_new()}
+		inputLabel={m.tag_editor_name_label()}
+		confirmLabel={m.tag_editor_confirm()}
+		existing={options}
+		onadd={(name) => (tags = addTag(tags, name))}
+	/>
+	{#each tags as tag (tag)}
+		<input type="hidden" name="tag" value={tag} />
+	{/each}
 </div>

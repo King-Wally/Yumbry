@@ -81,15 +81,13 @@ test("one family's recipes, tags and categories never appear for another", async
 	await b.page.getByRole('searchbox', { name: 'Search recipes...' }).fill('secret');
 	await expect(b.page.getByText('No recipes yet. Try importing or adding one.')).toBeVisible();
 
-	// ...and in the recipe form's category chips and tag suggestions.
+	// ...and in the recipe form's category chips and tag pills.
 	await b.page.goto('/recipes/new');
 	await expect(b.page.getByRole('heading', { name: 'Add a recipe' })).toBeVisible();
-	await expect(b.page.getByRole('button', { name: 'soups' })).toBeVisible();
-	await expect(b.page.getByRole('button', { name: 'secretcategory' })).toBeHidden();
-	await b.page.getByPlaceholder('Add a tag and press Enter').fill('secret');
-	await expect(b.page.getByRole('button', { name: 'secrettag' })).toBeHidden();
-	await b.page.getByPlaceholder('Add a tag and press Enter').fill('warm');
-	await expect(b.page.getByRole('button', { name: 'warming' })).toBeVisible();
+	await expect(b.page.getByRole('radio', { name: 'soups' })).toBeVisible();
+	await expect(b.page.getByRole('radio', { name: 'secretcategory' })).toBeHidden();
+	await expect(b.page.getByRole('checkbox', { name: 'secrettag' })).toBeHidden();
+	await expect(b.page.getByRole('checkbox', { name: 'warming' })).toBeVisible();
 });
 
 test.describe('signed-out visitors', () => {
