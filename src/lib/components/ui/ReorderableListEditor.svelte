@@ -8,7 +8,8 @@
 <script lang="ts" generics="T extends { key: number }">
 	import type { Snippet } from 'svelte';
 	import { flip } from 'svelte/animate';
-	import { GripVertical } from '@lucide/svelte';
+	import { slide } from 'svelte/transition';
+	import { GripVertical, X } from '@lucide/svelte';
 	import {
 		dragHandle,
 		dragHandleZone,
@@ -46,6 +47,13 @@
 
 	const labelId = $props.id();
 	const flipDurationMs = 150;
+	// A row added later grows open; the first render and reduced-motion users get none.
+	const enterMs =
+		typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+			? 0
+			: 200;
+	const control =
+		'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-stone-400 transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-clay focus-visible:outline-none';
 
 	// Global to the document. The root layout re-renders the shell on a language switch, so setting
 	// them on mount follows the locale. Rows are named by position: an aria-label on the row (which
@@ -71,7 +79,7 @@
 </script>
 
 <div role="group" aria-labelledby={labelId} class="space-y-2">
-	<span id={labelId} class="block text-sm font-medium text-stone-700">{label}</span>
+	<span id={labelId} class="sr-only">{label}</span>
 	<div
 		use:dragHandleZone={{ items, flipDurationMs, dropTargetStyle: {} }}
 		onconsider={sort}
@@ -82,6 +90,7 @@
 		{#each items as item, index (item.key)}
 			<div
 				animate:flip={{ duration: flipDurationMs }}
+				in:slide={{ duration: enterMs }}
 				class={[
 					'flex items-center gap-2',
 					(item as Record<string, unknown>)[SHADOW_ITEM_MARKER_PROPERTY_NAME] && 'opacity-60'
@@ -92,9 +101,13 @@
 				<div
 					use:dragHandle
 					aria-label={dragHandleLabel}
-					class={['touch-none text-stone-400 select-none hover:text-stone-700', controlClass]}
+					class={[
+						control,
+						'cursor-grab touch-none select-none hover:bg-stone-100 hover:text-stone-700',
+						controlClass
+					]}
 				>
-					<GripVertical size={16} />
+					<GripVertical size={18} />
 				</div>
 				{@render row(item, index)}
 				<button
@@ -102,19 +115,21 @@
 					onclick={() => remove(index)}
 					disabled={!hydrated.current}
 					aria-label={removeLabel(index)}
-					class={['text-stone-400 hover:text-red-600', controlClass]}
+					class={[control, 'hover:bg-red-50 hover:text-red-600', controlClass]}
 				>
-					✕
+					<X size={18} />
 				</button>
 			</div>
 		{/each}
 	</div>
-	<button
-		type="button"
-		onclick={() => items.push(createItem())}
-		disabled={!hydrated.current}
-		class="rounded-md border border-dashed border-stone-300 px-3 py-1.5 text-sm text-stone-500 hover:border-clay hover:text-clay"
-	>
-		{addLabel}
-	</button>
+	<div class="flex justify-end">
+		<button
+			type="button"
+			onclick={() => items.push(createItem())}
+			disabled={!hydrated.current}
+			class="inline-flex min-h-11 items-center rounded-md border border-dashed border-stone-300 px-4 text-sm text-stone-500 transition-colors duration-200 hover:border-clay hover:text-clay"
+		>
+			{addLabel}
+		</button>
+	</div>
 </div>

@@ -2,6 +2,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { Clock } from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { markServerUp, pingServer, serverStatus } from '#lib/client/server-status.svelte.ts';
 
 	let checking = $state(false);
@@ -50,15 +51,15 @@
 				<p id="server-unavailable-description" class="text-[15px] leading-relaxed text-stone-600">
 					{m.server_unavailable_description()}
 				</p>
-				<button
+				<Button
 					{@attach focusOnMount}
-					type="button"
 					onclick={retry}
-					disabled={checking}
-					class="mt-6 rounded-md bg-clay px-4 py-2 text-white transition hover:bg-clay/90 disabled:opacity-50"
+					loading={checking}
+					loadingLabel={m.server_unavailable_retrying()}
+					class="mt-6"
 				>
-					{checking ? m.server_unavailable_retrying() : m.server_unavailable_retry()}
-				</button>
+					{m.server_unavailable_retry()}
+				</Button>
 				<p class="mt-5 border-t border-stone-100 pt-5 text-[13px] text-stone-500">
 					{m.server_unavailable_hint()}
 				</p>

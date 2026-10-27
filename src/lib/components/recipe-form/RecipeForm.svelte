@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { untrack, type Snippet } from 'svelte';
-	import { Clock, Flame, ReceiptText, Tags } from '@lucide/svelte';
+	import { Clock, Flame, ListOrdered, ReceiptText, Carrot, Tags } from '@lucide/svelte';
 	import { deserialize, enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -14,6 +14,7 @@
 	import TagEditor from '#lib/components/recipe-form/TagEditor.svelte';
 	import { hydrated } from '#lib/client/hydrated.svelte.ts';
 	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { toNullableNumber } from '#lib/shared/recipe/numeric.ts';
 	import type { AiNutritionEstimate } from '#lib/shared/ai/nutrition.ts';
 	import {
@@ -305,16 +306,15 @@
 					<div class="mb-4">
 						<!-- Not a submit button: a second one ahead of Save would become the form's default,
 						     run by Enter in any field. -->
-						<button
-							type="button"
+						<Button
+							variant="secondary"
 							onclick={estimateNutrition}
-							disabled={!hydrated.current || estimating || !canEstimate}
-							class="rounded-md border border-stone-300 px-3 py-1.5 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100 disabled:opacity-50"
+							disabled={!hydrated.current || !canEstimate}
+							loading={estimating}
+							loadingLabel={m.recipe_form_estimating_nutrition()}
 						>
-							{estimating
-								? m.recipe_form_estimating_nutrition()
-								: m.recipe_form_estimate_nutrition()}
-						</button>
+							{m.recipe_form_estimate_nutrition()}
+						</Button>
 						{#if estimateError}
 							<div class="mt-2"><AiErrorBanner error={estimateError} /></div>
 						{/if}
@@ -329,6 +329,12 @@
 			</Card>
 
 			<Card>
+				<CardHeader
+					title={m.recipe_form_ingredients_title()}
+					description={m.recipe_form_ingredients_description()}
+				>
+					{#snippet icon()}<Carrot size={20} strokeWidth={2} />{/snippet}
+				</CardHeader>
 				<ReorderableListEditor
 					bind:items={fields.ingredients}
 					label={m.recipe_form_ingredients_label()}
@@ -345,7 +351,7 @@
 							defaultValue={untrack(() => item.text)}
 							aria-label={m.recipe_form_ingredients_item_label({ number: index + 1 })}
 							placeholder={m.recipe_form_ingredients_placeholder()}
-							class="flex-1 rounded-md border border-stone-300 px-3 py-1.5 focus:border-clay focus:outline-none"
+							class="min-h-11 flex-1 rounded-md border border-stone-300 px-3 py-2 text-base focus:border-clay focus:outline-none"
 						/>
 					{/snippet}
 				</ReorderableListEditor>
@@ -353,6 +359,12 @@
 			</Card>
 
 			<Card>
+				<CardHeader
+					title={m.recipe_form_instructions_title()}
+					description={m.recipe_form_instructions_description()}
+				>
+					{#snippet icon()}<ListOrdered size={20} strokeWidth={2} />{/snippet}
+				</CardHeader>
 				<ReorderableListEditor
 					bind:items={fields.instructions}
 					label={m.recipe_form_instructions_label()}
@@ -360,10 +372,10 @@
 					dragHandleLabel={m.recipe_form_instructions_drag_handle()}
 					removeLabel={(i) => m.recipe_form_instructions_remove_item({ number: i + 1 })}
 					createItem={() => keyed({ text: '' })}
-					controlClass="mt-2"
+					controlClass="self-start"
 				>
 					{#snippet row(step, index)}
-						<span class="mt-2 w-4 text-sm text-stone-400">{index + 1}</span>
+						<span class="mt-3 w-6 shrink-0 self-start text-sm text-stone-500">{index + 1}.</span>
 						<div class="flex-1">
 							<textarea
 								name="instruction"
@@ -372,7 +384,7 @@
 								defaultValue={untrack(() => step.text)}
 								aria-label={m.recipe_form_instructions_item_label({ number: index + 1 })}
 								placeholder={m.recipe_form_instructions_placeholder()}
-								class="w-full rounded-md border border-stone-300 px-3 py-1.5 focus:border-clay focus:outline-none"
+								class="w-full rounded-md border border-stone-300 px-3 py-2 text-base focus:border-clay focus:outline-none"
 							></textarea>
 						</div>
 					{/snippet}
@@ -390,13 +402,9 @@
 					>
 						{m.common_cancel()}
 					</a>
-					<button
-						type="submit"
-						disabled={saving}
-						class="rounded-md bg-clay px-4 py-2 text-sm text-white disabled:opacity-50"
-					>
-						{saving ? m.recipe_form_saving() : m.recipe_form_save_button()}
-					</button>
+					<Button type="submit" loading={saving} loadingLabel={m.recipe_form_saving()}>
+						{m.recipe_form_save_button()}
+					</Button>
 				</div>
 			</div>
 		</form>

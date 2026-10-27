@@ -7,6 +7,7 @@
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import VersionPane from '#lib/components/versions/VersionPane.svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { NUTRITION_KEYS, TIME_KEYS } from '#lib/shared/recipe/diff.ts';
 	import type { PageProps } from './$types';
@@ -140,13 +141,9 @@
 					}}
 				>
 					<input type="hidden" name="version" value={data.selected.id} />
-					<button
-						type="submit"
-						disabled={reverting}
-						class="rounded-md bg-clay px-4 py-2 text-sm text-white disabled:opacity-50"
-					>
-						{reverting ? m.recipe_versions_reverting() : m.recipe_versions_revert()}
-					</button>
+					<Button type="submit" loading={reverting} loadingLabel={m.recipe_versions_reverting()}>
+						{m.recipe_versions_revert()}
+					</Button>
 				</form>
 			{/if}
 		</div>

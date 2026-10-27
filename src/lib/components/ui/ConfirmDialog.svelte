@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import Dialog from '#lib/components/ui/Dialog.svelte';
 
 	interface Props {
@@ -46,16 +47,14 @@
 			>
 				{m.common_cancel()}
 			</button>
-			<button
+			<Button
 				type="submit"
-				disabled={submitting}
-				class={[
-					'rounded-md px-4 py-2 text-sm text-white disabled:opacity-50',
-					danger ? 'bg-red-700 hover:bg-red-800' : 'bg-clay hover:bg-clay/90'
-				]}
+				variant={danger ? 'dangerSolid' : 'primary'}
+				loading={submitting}
+				loadingLabel={m.common_working()}
 			>
-				{submitting ? m.common_working() : (confirmLabel ?? m.common_confirm())}
-			</button>
+				{confirmLabel ?? m.common_confirm()}
+			</Button>
 		</div>
 	</form>
 </Dialog>

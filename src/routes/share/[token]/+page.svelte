@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import RecipeDetailView from '#lib/components/recipe/RecipeDetailView.svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -56,13 +57,9 @@
 						};
 					}}
 				>
-					<button
-						type="submit"
-						disabled={importing}
-						class="rounded-md bg-clay px-4 py-2 text-sm text-white hover:bg-clay/90 disabled:opacity-50"
-					>
-						{importing ? m.shared_recipe_importing() : m.shared_recipe_import()}
-					</button>
+					<Button type="submit" loading={importing} loadingLabel={m.shared_recipe_importing()}>
+						{m.shared_recipe_import()}
+					</Button>
 				</form>
 			{:else}
 				<a

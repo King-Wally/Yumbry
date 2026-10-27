@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import type { PageProps } from './$types';
 
 	let { form }: PageProps = $props();
@@ -41,13 +42,14 @@
 			placeholder={m.auth_register_password_placeholder()}
 			class="w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-clay focus:outline-none"
 		/>
-		<button
+		<Button
 			type="submit"
-			disabled={submitting}
-			class="w-full rounded-md bg-clay px-4 py-2 text-white disabled:opacity-50"
+			loading={submitting}
+			loadingLabel={m.auth_register_submitting()}
+			class="w-full"
 		>
-			{submitting ? m.auth_register_submitting() : m.auth_register_submit()}
-		</button>
+			{m.auth_register_submit()}
+		</Button>
 	</form>
 	{#if form?.message}
 		<p role="alert" class="text-red-600">{form.message}</p>

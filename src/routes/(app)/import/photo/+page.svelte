@@ -7,6 +7,7 @@
 	import CardHeader from '#lib/components/ui/CardHeader.svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 
 	// An object URL beats a base64 data URL: the file goes up as multipart, so nothing else needs it
 	// in memory.
@@ -120,13 +121,9 @@
 							</button>
 						{/if}
 					</div>
-					<button
-						type="submit"
-						disabled={pending}
-						class="rounded-md bg-clay px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-					>
-						{pending ? m.import_photo_reading() : m.import_photo_submit()}
-					</button>
+					<Button type="submit" loading={pending} loadingLabel={m.import_photo_reading()}>
+						{m.import_photo_submit()}
+					</Button>
 				</div>
 			{/if}
 		</form>
