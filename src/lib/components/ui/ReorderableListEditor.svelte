@@ -53,7 +53,7 @@
 			? 0
 			: 200;
 	const control =
-		'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-stone-400 transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-clay focus-visible:outline-none';
+		'inline-flex h-11 w-7 shrink-0 items-center justify-center rounded-md text-stone-400 transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-clay focus-visible:outline-none';
 
 	// Global to the document. The root layout re-renders the shell on a language switch, so setting
 	// them on mount follows the locale. Rows are named by position: an aria-label on the row (which
@@ -92,7 +92,7 @@
 				animate:flip={{ duration: flipDurationMs }}
 				in:slide={{ duration: enterMs }}
 				class={[
-					'flex items-center gap-2',
+					'flex items-center gap-1',
 					(item as Record<string, unknown>)[SHADOW_ITEM_MARKER_PROPERTY_NAME] && 'opacity-60'
 				]}
 			>

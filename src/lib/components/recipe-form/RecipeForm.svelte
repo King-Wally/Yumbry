@@ -375,7 +375,9 @@
 					controlClass="self-start"
 				>
 					{#snippet row(step, index)}
-						<span class="mt-3 w-6 shrink-0 self-start text-sm text-stone-500">{index + 1}.</span>
+						<span class="mt-3 w-[2ch] shrink-0 self-start text-sm text-stone-500 tabular-nums"
+							>{index + 1}</span
+						>
 						<div class="flex-1">
 							<textarea
 								name="instruction"
