@@ -14,9 +14,9 @@
 
 <Dialog.Root bind:open>
 	<Dialog.Portal>
-		<Dialog.Overlay class="fixed inset-0 z-30 bg-stone-900/40" />
+		<Dialog.Overlay class="dialog-overlay fixed inset-0 z-30 bg-stone-900/40 backdrop-blur-sm" />
 		<Dialog.Content
-			class="fixed top-1/2 left-1/2 z-30 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-lg focus:outline-none"
+			class="dialog-content fixed top-1/2 left-1/2 z-30 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-lg focus:outline-none"
 		>
 			<Dialog.Title class="font-serif text-xl text-stone-900">{title}</Dialog.Title>
 			{#if description}
