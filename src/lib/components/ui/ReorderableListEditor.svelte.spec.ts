@@ -47,9 +47,17 @@ const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve))
 
 // svelte-dnd-action checks where the dragged row is every 200 ms, so the pointer travels in steps
 // and waits over the target before letting go; Playwright's dropTo jumps and releases at once.
+// The library drops on whichever row the dragged row's centre lies in, and these tests render no
+// CSS, so the handle doesn't sit at its row's centre: the pointer travels the distance between the
+// two rows' centres, which keeps the dragged row centred on the target whatever the layout.
 async function drag(from: Element, to: Element) {
 	const start = center(from);
-	const end = center(to);
+	const fromRow = center(from.parentElement!);
+	const toRow = center(to.parentElement!);
+	const end = {
+		clientX: start.clientX + toRow.clientX - fromRow.clientX,
+		clientY: start.clientY + toRow.clientY - fromRow.clientY
+	};
 	from.dispatchEvent(new MouseEvent('mousedown', { ...start, bubbles: true, button: 0 }));
 	for (let step = 1; step <= 10; step++) {
 		const at = {
