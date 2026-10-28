@@ -76,3 +76,23 @@ describe('buildPhotoImportMessages', () => {
 		expect(numbers).toEqual(numbers.map((_, index) => String(index + 1)));
 	});
 });
+
+describe('buildPhotoImportMessages family vocabulary', () => {
+	it('lists the family tags and categories after the worked example', () => {
+		const [system] = buildPhotoImportMessages(DATA_URL, 'en', {
+			tags: ['vegan'],
+			categories: ['soup']
+		});
+		const prompt = system.content as string;
+
+		expect(prompt).toContain('Tags: ["vegan"]');
+		expect(prompt).toContain('Categories: ["soup"]');
+		expect(prompt.indexOf('# A correct response, in full')).toBeLessThan(
+			prompt.indexOf('# Tags and categories this cook already uses')
+		);
+	});
+
+	it('adds nothing for a family with no tags or categories yet', () => {
+		expect(systemText()).not.toContain('# Tags and categories');
+	});
+});

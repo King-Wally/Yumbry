@@ -7,6 +7,7 @@ import { failKinded } from '#lib/server/http/kinded-errors.ts';
 import { limitClient, photoImportLimiter } from '#lib/server/http/rate-limit.ts';
 import { assertOpenRouterBudget } from '#lib/server/ai/budget.ts';
 import { chatWithAi } from '#lib/server/ai/provider.ts';
+import { listVocabulary } from '#lib/server/recipes/tags-categories.ts';
 import { checkPhotoFile } from '#lib/server/uploads/storage.ts';
 import { photoErrorMessage } from '#lib/shared/recipe/photo.ts';
 import { buildPhotoImportMessages } from '#lib/shared/ai/photo-import.ts';
@@ -21,7 +22,7 @@ export const actions: Actions = {
 	// Reads a recipe off the photo with the vision model and hands it to /recipes/new as a draft for
 	// review. The photo itself is not kept.
 	default: async (event) => {
-		const { user } = requireUser(event);
+		const { user, familyId } = requireUser(event);
 
 		const limit = limitClient(event, photoImportLimiter);
 		if (limit.limited) return fail(429, { message: limit.message });
@@ -52,12 +53,16 @@ export const actions: Actions = {
 		let envelope;
 		const preferences = readerPreferences(user);
 		try {
-			const raw = await chatWithAi(buildPhotoImportMessages(dataUrl, preferences.locale), {
-				userId: user.id,
-				jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
-				sampling: RECIPE_SAMPLING,
-				tier: 'image'
-			});
+			const vocabulary = await listVocabulary(familyId);
+			const raw = await chatWithAi(
+				buildPhotoImportMessages(dataUrl, preferences.locale, vocabulary),
+				{
+					userId: user.id,
+					jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
+					sampling: RECIPE_SAMPLING,
+					tier: 'image'
+				}
+			);
 			envelope = parseEnvelope(raw, { currentDraft: null, ...preferences });
 		} catch (err) {
 			return failKinded(err);

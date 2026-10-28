@@ -1,6 +1,7 @@
-import { and, asc, eq, inArray, notExists } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, notExists } from 'drizzle-orm';
 import { db, type DbExecutor } from '#lib/server/db/index.ts';
 import { categories, recipes, recipeTags, tags } from '#lib/server/db/schema.ts';
+import type { FamilyVocabulary } from '#lib/shared/ai/recipe-draft.ts';
 import type { Category, Tag } from '#lib/shared/recipe/dto.ts';
 
 // Names are stored trimmed and lowercased (the UI capitalises them), so "Dinner" and "dinner" are one
@@ -22,6 +23,40 @@ export function listCategories(familyId: number): Promise<Category[]> {
 		.from(categories)
 		.where(eq(categories.familyId, familyId))
 		.orderBy(asc(categories.name));
+}
+
+/** How many of each the AI prompts list: enough to carry the family's house style, bounded so a
+ * large collection doesn't swell every prompt. */
+export const VOCABULARY_LIMITS = { tags: 60, categories: 20 };
+
+/** The family's most-used tag and category names, most-used first, for the AI prompts. */
+export async function listVocabulary(
+	familyId: number,
+	limits: { tags: number; categories: number } = VOCABULARY_LIMITS
+): Promise<FamilyVocabulary> {
+	// Inner joins: every row is in use (see above).
+	const [tagRows, categoryRows] = await Promise.all([
+		db
+			.select({ name: tags.name })
+			.from(tags)
+			.innerJoin(recipeTags, eq(recipeTags.tagId, tags.id))
+			.where(eq(tags.familyId, familyId))
+			.groupBy(tags.id)
+			.orderBy(desc(count()), asc(tags.name))
+			.limit(limits.tags),
+		db
+			.select({ name: categories.name })
+			.from(categories)
+			.innerJoin(recipes, eq(recipes.categoryId, categories.id))
+			.where(eq(categories.familyId, familyId))
+			.groupBy(categories.id)
+			.orderBy(desc(count()), asc(categories.name))
+			.limit(limits.categories)
+	]);
+	return {
+		tags: tagRows.map((row) => row.name),
+		categories: categoryRows.map((row) => row.name)
+	};
 }
 
 function normalizeName(name: string): string {

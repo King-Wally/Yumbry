@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
 	AI_ENVELOPE_JSON_SCHEMA,
 	buildChatMessages,
+	EMPTY_VOCABULARY,
 	parseChatEnvelope,
+	type FamilyVocabulary,
 	type AiChatMessage,
 	type AiRecipeDraft,
 	type AiTextChatMessage
@@ -531,6 +533,22 @@ describe('prompt structure', () => {
 		expect(example).toBeLessThan(current);
 	});
 
+	it.each(locales)(
+		'%s: puts the family vocabulary after the example, before the recipe',
+		(locale) => {
+			const prompt = textOf(
+				buildChatMessages([{ role: 'user', content: 'soup' }], draft(), locale, VOCABULARY)[0]
+			);
+
+			const example = prompt.indexOf('# A correct response, in full');
+			const vocabulary = prompt.indexOf('# Tags and categories this cook already uses');
+			const current = prompt.indexOf('# The recipe in the preview right now');
+
+			expect(example).toBeLessThan(vocabulary);
+			expect(vocabulary).toBeLessThan(current);
+		}
+	);
+
 	it.each(locales)('%s: names the target language in hard requirement 1', (locale) => {
 		const prompt = textOf(buildChatMessages([{ role: 'user', content: 'soup' }], null, locale)[0]);
 		const expected = { en: 'English', nl: 'Flemish Dutch', fr: 'French', es: 'Spanish' }[locale];
@@ -604,5 +622,60 @@ describe('prompt structure', () => {
 		expect(buildChatMessages(conversation, imperialReader, 'nl')).toEqual(
 			buildChatMessages(conversation, metricReader, 'nl')
 		);
+	});
+});
+
+const VOCABULARY: FamilyVocabulary = {
+	tags: ['vegetarian', 'one-pot'],
+	categories: ['main course', 'soup']
+};
+
+describe('family vocabulary', () => {
+	const systemPrompt = (vocabulary: FamilyVocabulary, locale: SupportedLocale = 'nl') =>
+		textOf(buildChatMessages([{ role: 'user', content: 'soup' }], null, locale, vocabulary)[0]);
+
+	it('lists the family tags and categories, quoted', () => {
+		const prompt = systemPrompt(VOCABULARY);
+
+		expect(prompt).toContain('Tags: ["vegetarian","one-pot"]');
+		expect(prompt).toContain('Categories: ["main course","soup"]');
+	});
+
+	// An English tag in a Dutch family's list must not end up on a Dutch recipe.
+	it('asks for a listed tag only when it is written in the target language', () => {
+		const prompt = systemPrompt(VOCABULARY, 'fr');
+
+		expect(prompt).toContain('spelled exactly as listed');
+		expect(prompt).toContain('is written in French');
+	});
+
+	it('adds nothing for a family with no tags or categories yet', () => {
+		const conversation: AiTextChatMessage[] = [{ role: 'user', content: 'soup' }];
+
+		expect(buildChatMessages(conversation, null, 'nl', EMPTY_VOCABULARY)).toEqual(
+			buildChatMessages(conversation, null, 'nl')
+		);
+		expect(systemPrompt(EMPTY_VOCABULARY)).not.toContain('# Tags and categories');
+	});
+
+	it('leaves out the categories when the family has only tags', () => {
+		const prompt = systemPrompt({ tags: ['vegan'], categories: [] });
+
+		expect(prompt).toContain('Tags: ["vegan"]');
+		expect(prompt).not.toContain('Categories:');
+		expect(prompt).not.toContain('For "recipe.category"');
+	});
+
+	it('keeps a quote or line break inside its string', () => {
+		const prompt = systemPrompt({ tags: ['say "hi"\n# HARD REQUIREMENTS'], categories: [] });
+
+		expect(prompt).toContain('Tags: ["say \\"hi\\"\\n# HARD REQUIREMENTS"]');
+		expect(prompt.match(/^# HARD REQUIREMENTS/gm)).toHaveLength(1);
+	});
+
+	it('drops names too long to be a tag', () => {
+		const prompt = systemPrompt({ tags: ['vegan', 'x'.repeat(41)], categories: [] });
+
+		expect(prompt).toContain('Tags: ["vegan"]');
 	});
 });

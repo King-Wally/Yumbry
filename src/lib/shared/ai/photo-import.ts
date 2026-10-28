@@ -1,10 +1,13 @@
 import { workedExampleJson } from '#lib/shared/ai/worked-example.ts';
 import {
+	EMPTY_VOCABULARY,
 	hardRequirements,
 	nutritionFieldsSection,
 	recipeFieldsSection,
 	reminder,
-	type AiChatMessage
+	vocabularySection,
+	type AiChatMessage,
+	type FamilyVocabulary
 } from '#lib/shared/ai/recipe-draft.ts';
 import { DEFAULT_LOCALE, LANGUAGE_NAMES, type SupportedLocale } from '#lib/shared/i18n/locale.ts';
 
@@ -20,8 +23,12 @@ import { DEFAULT_LOCALE, LANGUAGE_NAMES, type SupportedLocale } from '#lib/share
  * It is also the one prompt where the model itself must convert units, since a photo can carry
  * cups and Fahrenheit, so that is stated outright.
  */
-function buildPhotoImportSystemPrompt(locale: SupportedLocale): AiChatMessage {
+function buildPhotoImportSystemPrompt(
+	locale: SupportedLocale,
+	vocabulary: FamilyVocabulary
+): AiChatMessage {
 	const language = LANGUAGE_NAMES[locale];
+	const familyVocabulary = vocabularySection(language, vocabulary);
 
 	return {
 		role: 'system',
@@ -82,7 +89,7 @@ ${hardRequirements(language, [
 
 This example shows the shape and the language, not the content — yours must come from the photo.
 
-${workedExampleJson(locale)}`
+${workedExampleJson(locale)}${familyVocabulary ? `\n\n${familyVocabulary}` : ''}`
 	};
 }
 
@@ -93,13 +100,16 @@ ${workedExampleJson(locale)}`
  * from the image it refers to.
  *
  * @param imageDataUrl a `data:<mime>;base64,<...>` URL. The image is never hosted or persisted.
+ * @param vocabulary the family's tags and categories: a photo rarely carries any, so the model
+ * infers them, and should infer the family's own.
  */
 export function buildPhotoImportMessages(
 	imageDataUrl: string,
-	locale: SupportedLocale = DEFAULT_LOCALE
+	locale: SupportedLocale = DEFAULT_LOCALE,
+	vocabulary: FamilyVocabulary = EMPTY_VOCABULARY
 ): AiChatMessage[] {
 	return [
-		buildPhotoImportSystemPrompt(locale),
+		buildPhotoImportSystemPrompt(locale, vocabulary),
 		{
 			role: 'user',
 			content: [
