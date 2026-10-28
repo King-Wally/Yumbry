@@ -133,20 +133,15 @@
 					</div>
 				{/each}
 				{#if pending}
-					<div
-						class="mr-auto flex w-fit items-center gap-1 rounded-lg bg-stone-100 px-3 py-2"
-						role="status"
-					>
-						<span class="sr-only">{m.ai_chat_thinking()}</span>
-						<span class="h-2 w-2 animate-custom-bounce rounded-full bg-stone-400"></span>
-						<span
-							class="h-2 w-2 animate-custom-bounce rounded-full bg-stone-400"
-							style:animation-delay="150ms"
-						></span>
-						<span
-							class="h-2 w-2 animate-custom-bounce rounded-full bg-stone-400"
-							style:animation-delay="300ms"
-						></span>
+					<div class="mr-auto w-fit rounded-lg bg-stone-100 px-3 py-2 text-sm" role="status">
+						<span class="ai-thinking">
+							<span class="ai-thinking-text">{m.ai_chat_thinking()}</span>
+							<span class="ai-thinking-dots" aria-hidden="true">
+								<span class="ai-thinking-dot"></span>
+								<span class="ai-thinking-dot"></span>
+								<span class="ai-thinking-dot"></span>
+							</span>
+						</span>
 					</div>
 				{/if}
 			</div>

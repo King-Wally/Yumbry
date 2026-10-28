@@ -5,19 +5,6 @@
 	--color-cream: #fdfaf6;
 	--color-clay: #b5603f;
 	--container-settings: 640px;
-	--animate-custom-bounce: custom-bounce 1s infinite;
-}
-
-@keyframes custom-bounce {
-	0%,
-	100% {
-		transform: translateY(-2px);
-		animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
-	}
-	50% {
-		transform: translateY(2px);
-		animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
-	}
 }
 
 body {
@@ -158,6 +145,90 @@ button.btn-loading:disabled {
 	.btn-spinner-arc {
 		animation: none;
 		stroke-dasharray: 14 57;
+	}
+}
+
+/* AI chat "Thinking" bubble (AiChat.svelte): a highlight glides through the word while three dots fade
+   in turn. The text stays between stone-500 and stone-800, readable on the stone-100 bubble throughout.
+   Reduced motion keeps a still word with steady dots. */
+.ai-thinking {
+	display: inline-flex;
+	align-items: baseline;
+	color: var(--color-stone-500);
+	animation: btn-label-in 200ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.ai-thinking-text {
+	background: linear-gradient(
+		90deg,
+		var(--color-stone-500) 0%,
+		var(--color-stone-500) 35%,
+		var(--color-stone-800) 50%,
+		var(--color-stone-500) 65%,
+		var(--color-stone-500) 100%
+	);
+	background-size: 250% 100%;
+	background-clip: text;
+	color: transparent;
+	animation: ai-thinking-shine 1.8s linear infinite;
+}
+
+.ai-thinking-dots {
+	display: inline-flex;
+	gap: 0.14em;
+	margin-left: 0.16em;
+}
+
+.ai-thinking-dot {
+	width: 0.24em;
+	height: 0.24em;
+	border-radius: 50%;
+	background: var(--color-stone-500);
+	opacity: 0.25;
+	animation: ai-thinking-dot 1.2s ease-in-out infinite;
+
+	&:nth-child(2) {
+		animation-delay: 0.18s;
+	}
+
+	&:nth-child(3) {
+		animation-delay: 0.36s;
+	}
+}
+
+@keyframes ai-thinking-shine {
+	from {
+		background-position: 100% 0;
+	}
+	to {
+		background-position: 0 0;
+	}
+}
+
+@keyframes ai-thinking-dot {
+	0%,
+	100% {
+		opacity: 0.25;
+	}
+	40% {
+		opacity: 1;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ai-thinking {
+		animation: none;
+	}
+
+	.ai-thinking-text {
+		animation: none;
+		background: none;
+		color: var(--color-stone-500);
+	}
+
+	.ai-thinking-dot {
+		animation: none;
+		opacity: 0.7;
 	}
 }
 
