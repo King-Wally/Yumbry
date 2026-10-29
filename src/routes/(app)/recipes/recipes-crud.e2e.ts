@@ -127,6 +127,7 @@ test.describe('editing a recipe', () => {
 		const recipeId = await db.insertRecipe(user.familyId, user.id, {
 			title: 'Tomato Soup',
 			description: 'Warming.',
+			notes: 'Use ripe tomatoes.',
 			servings: 2,
 			prepTimeMinutes: 5,
 			cookTimeMinutes: 25,
@@ -153,6 +154,7 @@ test.describe('editing a recipe', () => {
 		await expect(page.getByRole('checkbox', { name: 'Soup' })).toBeChecked();
 		await expect(page.getByPlaceholder('e.g. 1 1/2 cups flour')).toHaveValue('500 g tomatoes');
 		await expect(page.getByPlaceholder('Describe this step')).toHaveValue('Simmer the tomatoes.');
+		await expect(page.getByLabel('Notes')).toHaveValue('Use ripe tomatoes.');
 
 		await page.getByLabel('Title').fill('Roasted Tomato Soup');
 		await page.getByLabel('Cook (min)').fill('40');
@@ -163,6 +165,7 @@ test.describe('editing a recipe', () => {
 		await page.getByLabel('New tag name').press('Enter');
 		await page.getByRole('button', { name: '+ Add step' }).click();
 		await page.getByPlaceholder('Describe this step').nth(1).fill('Blend until smooth.');
+		await page.getByLabel('Notes').fill('Add a pinch of sugar.\nServe with bread.');
 		await page.getByRole('button', { name: 'Save recipe' }).click();
 
 		await expect(page).toHaveURL(`/recipes/${recipeId}`);
@@ -175,6 +178,9 @@ test.describe('editing a recipe', () => {
 		await expect(page.getByText(badge('Smoky'))).toBeVisible();
 		await expect(page.getByText(badge('Soup'))).toBeHidden();
 		await expect(page.getByText('Blend until smooth.')).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Notes' })).toBeVisible();
+		await expect(page.getByText(/Add a pinch of sugar\.\s+Serve with bread\./)).toBeVisible();
+		await expect(page.getByText('Use ripe tomatoes.')).toBeHidden();
 		expect(await db.recipeTitles(user.familyId)).toContain('Roasted Tomato Soup');
 	});
 });

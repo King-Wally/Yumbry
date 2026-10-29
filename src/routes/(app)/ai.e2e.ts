@@ -163,6 +163,7 @@ test.describe('Improve with AI', () => {
 		const title = `Plain Lentil Dal ${key}`;
 		const recipeId = await db.insertRecipe(user.familyId, user.id, {
 			title,
+			notes: 'Too bland last time.',
 			servings: 2,
 			ingredients: [{ raw: '200 g red lentils', amount: 200, unit: 'g', name: 'red lentils' }],
 			instructions: ['Simmer the lentils until soft.']
@@ -188,15 +189,19 @@ test.describe('Improve with AI', () => {
 		expect(request.model).toBe(MODELS.medium);
 		expect(JSON.stringify(request.body)).toContain(title);
 		expect(JSON.stringify(request.body)).toContain('red lentils');
+		// The model reads the family's notes, from the server rather than the page.
+		expect(JSON.stringify(request.body)).toContain('Too bland last time.');
 
 		await page.getByRole('button', { name: 'Save and review' }).click();
 		await expect(page).toHaveURL(`/recipes/${recipeId}/edit`);
 		await expect(page.getByText(AI_DRAFT_BANNER)).toBeVisible();
 		await expect(page.getByLabel('Title')).toHaveValue('Spicy Lentil Dal');
+		await expect(page.getByLabel('Notes')).toHaveValue('Too bland last time.');
 
 		await page.getByRole('button', { name: 'Save recipe' }).click();
 		await expect(page).toHaveURL(`/recipes/${recipeId}`);
 		await expect(page.getByRole('heading', { name: 'Spicy Lentil Dal', level: 1 })).toBeVisible();
+		await expect(page.getByText('Too bland last time.')).toBeVisible();
 		expect(await db.recipeTitles(user.familyId)).toEqual(['Spicy Lentil Dal']);
 	});
 });

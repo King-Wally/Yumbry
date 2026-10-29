@@ -66,6 +66,7 @@ export async function insertUser(familyId: number): Promise<string> {
 export interface SeedRecipe {
 	title: string;
 	description?: string;
+	notes?: string;
 	servings?: number;
 	prepTimeMinutes?: number;
 	calories?: number;
@@ -100,6 +101,7 @@ export async function insertRecipe(familyId: number, seed: SeedRecipe): Promise<
 				familyId,
 				title: seed.title,
 				description: seed.description ?? null,
+				notes: seed.notes ?? null,
 				servings: String(seed.servings ?? 4),
 				prepTimeMinutes: seed.prepTimeMinutes ?? null,
 				calories: seed.calories === undefined ? null : String(seed.calories),

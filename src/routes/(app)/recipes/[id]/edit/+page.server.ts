@@ -17,7 +17,8 @@ import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
 	const { user, recipeId, familyId } = await requireRecipe(event, event.params.id);
-	// A draft from "Improve with AI" (draft-handoff.ts) replaces the saved values for review.
+	// A draft from "Improve with AI" (draft-handoff.ts) replaces the saved values for review, except
+	// the notes: the AI never writes those, so the saved ones carry over.
 	const pending = takeDraft(event.cookies, user.id, recipeId);
 	const [recipe, tags, categories] = await Promise.all([
 		getRecipe(recipeId, familyId),
@@ -30,7 +31,7 @@ export const load: PageServerLoad = async (event) => {
 		recipe,
 		tags,
 		categories,
-		draft: pending ? formStateFromDraft(pending.draft) : null,
+		draft: pending ? formStateFromDraft({ ...pending.draft, notes: recipe.notes }) : null,
 		draftSource: pending?.source ?? null
 	};
 };

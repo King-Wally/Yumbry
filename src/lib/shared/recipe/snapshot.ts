@@ -6,10 +6,12 @@ import type { RecipeDetail } from '#lib/shared/recipe/dto.ts';
  * deletes its row (see deleteOrphaned), so an id would dangle. Ingredients are kept as their raw
  * text line only — every write re-parses amount/unit/name from it, so the parsed columns carry
  * nothing a revert would need. The photo is deliberately absent: `image_path` changes only through a
- * photo upload, and a revert never touches it. */
+ * photo upload, and a revert never touches it. `notes` is missing from snapshots written before
+ * recipes had notes; read it as null. */
 export interface RecipeSnapshot {
 	title: string;
 	description: string | null;
+	notes?: string | null;
 	prep_time_minutes: number | null;
 	cook_time_minutes: number | null;
 	total_time_minutes: number | null;
@@ -39,6 +41,7 @@ export function toRecipeSnapshot(recipe: RecipeDetail): RecipeSnapshot {
 	return {
 		title: recipe.title,
 		description: recipe.description,
+		notes: recipe.notes,
 		prep_time_minutes: recipe.prep_time_minutes,
 		cook_time_minutes: recipe.cook_time_minutes,
 		total_time_minutes: recipe.total_time_minutes,

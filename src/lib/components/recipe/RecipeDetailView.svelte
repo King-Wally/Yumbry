@@ -20,8 +20,11 @@
 	 */
 	interface Props {
 		/** Only the displayed fields are read, so both a family recipe and one viewed through a
-		 * public share link fit. */
-		recipe: Omit<RecipeDetail, 'id' | 'share_token' | 'category_id' | 'created_at' | 'updated_at'>;
+		 * public share link (which has no notes) fit. */
+		recipe: Omit<
+			RecipeDetail,
+			'id' | 'share_token' | 'category_id' | 'created_at' | 'updated_at' | 'notes'
+		> & { notes?: string | null };
 	}
 
 	let { recipe }: Props = $props();
@@ -83,7 +86,9 @@
 	</div>
 </div>
 
-<div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+<!-- On a wide screen the notes sit in the ingredients column, under the ingredients, while the
+     steps span both rows; on a phone they follow the steps. -->
+<div class={['grid grid-cols-1 gap-6 lg:grid-cols-3', recipe.notes && 'lg:grid-rows-[auto_1fr]']}>
 	<section class="rounded-xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5 lg:col-span-1">
 		<div class="mb-3 flex items-center justify-between">
 			<h2 class="font-serif text-xl text-stone-900">{m.recipes_detail_ingredients()}</h2>
@@ -99,7 +104,12 @@
 		</div>
 	</section>
 
-	<section class="rounded-xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5 lg:col-span-2">
+	<section
+		class={[
+			'rounded-xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5 lg:col-span-2',
+			recipe.notes && 'lg:row-span-2'
+		]}
+	>
 		<h2 class="mb-3 font-serif text-xl text-stone-900">
 			{m.recipes_detail_instructions()}
 		</h2>
@@ -111,4 +121,13 @@
 			}))}
 		/>
 	</section>
+
+	{#if recipe.notes}
+		<section
+			class="rounded-xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5 lg:col-start-1 lg:self-start"
+		>
+			<h2 class="mb-3 font-serif text-xl text-stone-900">{m.recipes_detail_notes()}</h2>
+			<p class="whitespace-pre-line text-stone-700">{recipe.notes}</p>
+		</section>
+	{/if}
 </div>

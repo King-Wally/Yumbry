@@ -54,21 +54,24 @@ export interface RecipeSummary {
 
 /** A recipe as its detail page shows it. */
 export interface RecipeDetail extends RecipeSummary {
+	/** The family's own remarks. Family-visible only: the public share page strips it. */
+	notes: string | null;
 	/** In `sort_order`. */
 	ingredients: Ingredient[];
 	/** In `step_number` order. */
 	instructions: Instruction[];
 }
 
-/** A recipe as a public share link shows it: without its own ids or the token, plus the viewer's
- * family's id for it when that family owns it (so the page can point there instead). */
-export type SharedRecipe = Omit<RecipeDetail, 'id' | 'share_token' | 'category_id'> & {
+/** A recipe as a public share link shows it: without its own ids, the token or the notes, plus the
+ * viewer's family's id for it when that family owns it (so the page can point there instead). */
+export type SharedRecipe = Omit<RecipeDetail, 'id' | 'share_token' | 'category_id' | 'notes'> & {
 	own_recipe_id: number | null;
 };
 
 export interface RecipeInput {
 	title: string;
 	description?: string | null;
+	notes?: string | null;
 	image_path?: string | null;
 	prep_time_minutes?: number | null;
 	cook_time_minutes?: number | null;

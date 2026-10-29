@@ -7,6 +7,7 @@ import * as z from 'zod';
 export const RecipeBodySchema = z.object({
 	title: z.string().min(1),
 	description: z.string().nullable().optional(),
+	notes: z.string().nullable().optional(),
 	image_path: z.string().nullable().optional(),
 	// The columns are integers: 2.5 is a field error here rather than a failure in Postgres.
 	prep_time_minutes: z.number().int().nullable().optional(),

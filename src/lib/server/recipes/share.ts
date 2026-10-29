@@ -75,7 +75,7 @@ export function shareUrl(origin: string, token: string): string {
 	return `${origin}/share/${token}`;
 }
 
-type Hidden = 'id' | 'share_token' | 'category_id';
+type Hidden = 'id' | 'share_token' | 'category_id' | 'notes';
 
 /** The recipe behind the link as a visitor sees it, or null for an unknown or stopped link. */
 export async function getSharedRecipe(
@@ -93,6 +93,7 @@ export async function getSharedRecipe(
 	delete rest.id;
 	delete rest.share_token;
 	delete rest.category_id;
+	delete rest.notes;
 	const localPhoto = rest.image_path !== null && resolveStoredUpload(rest.image_path) !== null;
 	return {
 		...rest,
@@ -123,8 +124,12 @@ export async function importSharedRecipe(
 
 	// Tags and the category travel by name, so createRecipe recreates them in the importer's family.
 	// It keeps a remote image URL and drops an /uploads path, so a local photo is copied on its own
-	// below.
-	const body = { ...snapshotToRecipeBody(toRecipeSnapshot(source)), image_path: source.image_path };
+	// below. The notes stay with the owner's family, as on the share page.
+	const body = {
+		...snapshotToRecipeBody(toRecipeSnapshot(source)),
+		notes: null,
+		image_path: source.image_path
+	};
 	const id = await createRecipe(body, importer);
 	if (!source.image_path) return id;
 

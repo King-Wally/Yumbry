@@ -6,6 +6,7 @@ import { DEFAULT_PASSWORD, uniqueEmail } from '../../../e2e/support/users.ts';
 const RECIPE = {
 	title: 'Shared Pancakes',
 	description: 'Fluffy.',
+	notes: 'Family secret: extra butter.',
 	ingredients: [{ raw: '200 g flour', amount: 200, unit: 'g', name: 'flour' }],
 	instructions: ['Whisk everything together.']
 };
@@ -119,6 +120,7 @@ test.describe('viewing a shared recipe', () => {
 		await expect(visitorPage.getByRole('heading', { name: RECIPE.title, level: 1 })).toBeVisible();
 		await expect(visitorPage.getByText('200 g flour')).toBeVisible();
 		await expect(visitorPage.getByText('Whisk everything together.')).toBeVisible();
+		await expect(visitorPage.getByText(RECIPE.notes)).toBeHidden();
 		await expect(visitorPage.getByRole('link', { name: 'Log in' })).toBeVisible();
 		await expect(visitorPage.getByRole('link', { name: 'Create account' })).toBeVisible();
 		await expect(visitorPage.getByRole('link', { name: 'Edit', exact: true })).toBeHidden();
@@ -197,6 +199,8 @@ test.describe('viewing a shared recipe', () => {
 		await expect(other.page.getByText('Added to your recipes')).toBeVisible();
 		await expect(other.page).toHaveURL(/\/recipes\/\d+$/);
 		await expect(other.page.getByRole('heading', { name: RECIPE.title, level: 1 })).toBeVisible();
+		await expect(other.page.getByText('Whisk everything together.')).toBeVisible();
+		await expect(other.page.getByText(RECIPE.notes)).toBeHidden();
 		expect(await db.recipeTitles(other.user.familyId)).toEqual([RECIPE.title]);
 
 		// The copy is independent of the original.

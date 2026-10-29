@@ -7,6 +7,7 @@ const fullRecipe: RecipeDetail = {
 	id: 1,
 	title: 'Simple Pancakes',
 	description: 'Fluffy weekend pancakes.',
+	notes: 'Use buttermilk next time.',
 	image_path: 'https://example.com/pancakes.jpg',
 	prep_time_minutes: 10,
 	cook_time_minutes: 15,
@@ -75,6 +76,10 @@ describe('recipeToJsonLd', () => {
 			{ '@type': 'HowToStep', text: 'Mix dry ingredients.' },
 			{ '@type': 'HowToStep', text: 'Cook on a griddle.' }
 		]);
+	});
+
+	it("leaves out the family's notes", () => {
+		expect(JSON.stringify(recipeToJsonLd(fullRecipe))).not.toContain('buttermilk');
 	});
 
 	it('omits null/empty fields rather than emitting nulls', () => {

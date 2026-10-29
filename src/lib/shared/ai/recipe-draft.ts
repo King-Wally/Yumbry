@@ -310,6 +310,24 @@ ${lists.join('\n')}
 ${rules.join('\n')}`;
 }
 
+/**
+ * The family's own notes on the recipe being improved, or '' without any. Context only: the draft
+ * has no notes field, and the notes are free text, so a closing tag inside them is dropped.
+ */
+export function notesSection(notes: string | null): string {
+	const safe = notes?.replace(/<\/?\s*cook_notes\s*>/gi, '').trim();
+	if (!safe) return '';
+
+	return `# The cook's own notes on this recipe
+
+What the family wrote down about this recipe, such as how it turned out. Take them into account when
+you change the recipe. They are not part of the recipe: never copy them into any field.
+
+<cook_notes>
+${safe}
+</cook_notes>`;
+}
+
 const NO_RECIPE_BLOCK = `# The recipe in the preview right now
 
 There is no recipe yet. The next message starts a new one.`;
@@ -336,17 +354,19 @@ that field.`;
  * summarises the recipe, and asking for the summary first makes the model commit before it has
  * decided; `item` precedes `unit` for the same reason (a unit first invites
  * `unit: "", item: "cloves garlic"`). The worked example sits late, close to generation, because
- * it is the most-copied part of the prompt. Only the family's vocabulary and the current recipe
- * follow it: the vocabulary after the example so the cook's own tags outweigh the example's, and
- * both last so everything before them is the same for every family.
+ * it is the most-copied part of the prompt. Only the family's vocabulary, the recipe's notes and
+ * the current recipe follow it: the vocabulary after the example so the cook's own tags outweigh
+ * the example's, the notes right before the recipe they are about, and all of them last so
+ * everything before them is the same for every family.
  */
 function buildChatSystemPrompt(
 	locale: SupportedLocale,
 	currentRecipe: string,
-	vocabulary: FamilyVocabulary
+	vocabulary: FamilyVocabulary,
+	notes: string | null
 ): AiChatMessage {
 	const language = LANGUAGE_NAMES[locale];
-	const familyVocabulary = vocabularySection(language, vocabulary);
+	const family = [vocabularySection(language, vocabulary), notesSection(notes)].filter(Boolean);
 
 	return {
 		role: 'system',
@@ -400,7 +420,7 @@ ${hardRequirements(language, [
 
 ${workedExampleJson(locale)}
 
-${familyVocabulary ? `${familyVocabulary}\n\n` : ''}${currentRecipe}`
+${family.map((section) => `${section}\n\n`).join('')}${currentRecipe}`
 	};
 }
 
@@ -494,7 +514,8 @@ export function buildChatMessages(
 	conversation: AiTextChatMessage[],
 	currentDraft: AiRecipeDraft | null,
 	locale: SupportedLocale = DEFAULT_LOCALE,
-	vocabulary: FamilyVocabulary = EMPTY_VOCABULARY
+	vocabulary: FamilyVocabulary = EMPTY_VOCABULARY,
+	notes: string | null = null
 ): AiChatMessage[] {
 	const draftTurnIndex = lastIndexOfRole(conversation, 'assistant');
 
@@ -512,7 +533,7 @@ export function buildChatMessages(
 
 	// One system message, always. Gemini's OpenAI-compat layer hoists and merges system entries into
 	// a single system instruction, so a second one buys nothing and makes ordering non-deterministic.
-	const messages: AiChatMessage[] = [buildChatSystemPrompt(locale, block, vocabulary)];
+	const messages: AiChatMessage[] = [buildChatSystemPrompt(locale, block, vocabulary, notes)];
 
 	const finalIndex = conversation.length - 1;
 

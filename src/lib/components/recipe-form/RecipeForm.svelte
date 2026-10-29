@@ -1,6 +1,14 @@
 <script lang="ts">
 	import { untrack, type Snippet } from 'svelte';
-	import { Clock, Flame, ListOrdered, ReceiptText, Carrot, Tags } from '@lucide/svelte';
+	import {
+		Clock,
+		Flame,
+		ListOrdered,
+		NotebookPen,
+		ReceiptText,
+		Carrot,
+		Tags
+	} from '@lucide/svelte';
 	import { deserialize, enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -392,6 +400,25 @@
 					{/snippet}
 				</ReorderableListEditor>
 				{@render fieldError('instructions')}
+			</Card>
+
+			<Card>
+				<CardHeader
+					title={m.recipe_form_notes_title()}
+					description={m.recipe_form_notes_description()}
+				>
+					{#snippet icon()}<NotebookPen size={20} strokeWidth={2} />{/snippet}
+				</CardHeader>
+				<textarea
+					name="notes"
+					rows="4"
+					bind:value={fields.notes}
+					defaultValue={start.notes}
+					aria-label={m.recipe_form_notes_title()}
+					placeholder={m.recipe_form_notes_placeholder()}
+					{...invalid('notes')}
+					class={inputClass}></textarea>
+				{@render fieldError('notes')}
 			</Card>
 
 			<div

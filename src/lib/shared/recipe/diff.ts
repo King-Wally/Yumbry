@@ -26,6 +26,8 @@ export const NUTRITION_KEYS: NutritionKey[] = [
 export interface DiffPane {
 	title: Segment[];
 	description: Segment[];
+	/** One entry per non-blank line of the notes. */
+	notes: Segment[][];
 	category: { name: string | null; changed: boolean };
 	tags: { name: string; changed: boolean }[];
 	times: Record<TimeKey, { value: number | null; changed: boolean }>;
@@ -138,6 +140,13 @@ function listDiff(a: string[], b: string[]): [Segment[][], Segment[][], number] 
 	return [left, right, changes];
 }
 
+function noteLines(notes: string | null | undefined): string[] {
+	return (notes ?? '')
+		.split('\n')
+		.map((line) => line.trim())
+		.filter(Boolean);
+}
+
 export function diffRecipes(old: RecipeSnapshot, current: RecipeSnapshot): RecipeDiff {
 	let changeCount = 0;
 	const flag = (changed: boolean) => {
@@ -188,12 +197,18 @@ export function diffRecipes(old: RecipeSnapshot, current: RecipeSnapshot): Recip
 		old.instructions.map((step) => step.text),
 		current.instructions.map((step) => step.text)
 	);
-	changeCount += ingredientChanges + stepChanges;
+	// Line by line, like the lists: notes are often several separate remarks.
+	const [notesOld, notesCur, noteChanges] = listDiff(
+		noteLines(old.notes),
+		noteLines(current.notes)
+	);
+	changeCount += ingredientChanges + stepChanges + noteChanges;
 
 	return {
 		old: {
 			title: titleOld,
 			description: descOld,
+			notes: notesOld,
 			category: { name: old.category, changed: categoryChanged },
 			tags: tagsOld,
 			times: timesOld,
@@ -205,6 +220,7 @@ export function diffRecipes(old: RecipeSnapshot, current: RecipeSnapshot): Recip
 		current: {
 			title: titleCur,
 			description: descCur,
+			notes: notesCur,
 			category: { name: current.category, changed: categoryChanged },
 			tags: tagsCur,
 			times: timesCur,

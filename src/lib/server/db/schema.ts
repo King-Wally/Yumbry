@@ -37,6 +37,8 @@ export const recipes = pgTable(
 		id: serial('id').primaryKey(),
 		title: text('title').notNull(),
 		description: text('description'),
+		// The family's own remarks (tips, substitutions). Never on a public share link.
+		notes: text('notes'),
 		imagePath: text('image_path'),
 		prepTimeMinutes: integer('prep_time_minutes'),
 		cookTimeMinutes: integer('cook_time_minutes'),

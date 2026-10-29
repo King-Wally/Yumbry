@@ -81,6 +81,7 @@ describeDb('recipe write services', () => {
 			body({
 				title: 'Pancakes',
 				description: 'Fluffy.',
+				notes: 'Rest the batter.',
 				prep_time_minutes: 10,
 				cook_time_minutes: 20,
 				total_time_minutes: 30,
@@ -102,6 +103,7 @@ describeDb('recipe write services', () => {
 		expect(recipe).toMatchObject({
 			title: 'Pancakes',
 			description: 'Fluffy.',
+			notes: 'Rest the batter.',
 			prep_time_minutes: 10,
 			cook_time_minutes: 20,
 			total_time_minutes: 30,
@@ -186,6 +188,7 @@ describeDb('recipe write services', () => {
 		expect(version.snapshot).toEqual({
 			title: 'Tomato Soup',
 			description: null,
+			notes: null,
 			prep_time_minutes: null,
 			cook_time_minutes: null,
 			total_time_minutes: null,
@@ -214,14 +217,16 @@ describeDb('recipe write services', () => {
 	});
 
 	it('writes a version on every save, and clears omitted nullable fields', async () => {
-		const id = await createRecipe(body({ calories: 300, description: 'Rich.' }), cook);
-		await updateRecipe(id, body({ calories: 300, description: 'Rich.' }), family);
+		const rich = body({ calories: 300, description: 'Rich.', notes: 'Serve hot.' });
+		const id = await createRecipe(rich, cook);
+		await updateRecipe(id, rich, family);
 		await updateRecipe(id, body(), family);
 
 		expect(await versionsOf(id)).toHaveLength(2);
 		const recipe = await getRecipe(id, family);
 		expect(recipe!.calories).toBeNull();
 		expect(recipe!.description).toBeNull();
+		expect(recipe!.notes).toBeNull();
 	});
 
 	it('deletes tags and categories once their last use is gone', async () => {

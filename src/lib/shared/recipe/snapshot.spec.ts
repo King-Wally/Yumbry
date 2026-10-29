@@ -6,6 +6,7 @@ const recipe: RecipeDetail = {
 	id: 7,
 	title: 'Pancakes',
 	description: 'Fluffy',
+	notes: 'Rest the batter.',
 	image_path: '/uploads/recipes/7/photo.webp',
 	prep_time_minutes: 10,
 	cook_time_minutes: null,
@@ -57,6 +58,7 @@ describe('toRecipeSnapshot', () => {
 		expect(toRecipeSnapshot(recipe)).toEqual({
 			title: 'Pancakes',
 			description: 'Fluffy',
+			notes: 'Rest the batter.',
 			prep_time_minutes: 10,
 			cook_time_minutes: null,
 			total_time_minutes: 10,

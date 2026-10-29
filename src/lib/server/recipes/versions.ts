@@ -61,6 +61,7 @@ export function snapshotToRecipeBody(snapshot: RecipeSnapshot): RecipeBody {
 	return {
 		title: snapshot.title,
 		description: snapshot.description,
+		notes: snapshot.notes ?? null,
 		prep_time_minutes: snapshot.prep_time_minutes,
 		cook_time_minutes: snapshot.cook_time_minutes,
 		total_time_minutes: snapshot.total_time_minutes,

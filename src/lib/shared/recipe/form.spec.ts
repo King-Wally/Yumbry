@@ -19,6 +19,7 @@ const saved: SavedRecipeForForm = {
 	id: 7,
 	title: 'Lentil soup',
 	description: null,
+	notes: 'Add lemon at the end.',
 	image_path: '/uploads/recipes/7/photo.jpg',
 	prep_time_minutes: 10,
 	cook_time_minutes: null,
@@ -58,6 +59,7 @@ describe('formStateFromRecipe', () => {
 		expect(state).toMatchObject({
 			title: 'Lentil soup',
 			description: '',
+			notes: 'Add lemon at the end.',
 			prep_time_minutes: '10',
 			cook_time_minutes: '',
 			total_time_minutes: '40',
@@ -97,6 +99,7 @@ describe('formStateFromDraft', () => {
 		expect(state).toMatchObject({
 			title: 'Pancakes',
 			description: '',
+			notes: '',
 			prep_time_minutes: '',
 			servings: 2,
 			calories: '300',
@@ -149,10 +152,18 @@ describe('recipeInputFromForm', () => {
 		expect(recipeInputFromForm(form({ description: '' })).description).toBeNull();
 	});
 
+	it('sends blank notes as null and keeps their line breaks otherwise', () => {
+		expect(recipeInputFromForm(form({ notes: ' \n ' })).notes).toBeNull();
+		expect(recipeInputFromForm(form({ notes: 'Less salt.\nTry spelt.\n' })).notes).toBe(
+			'Less salt.\nTry spelt.'
+		);
+	});
+
 	it('round-trips a saved recipe', () => {
 		const input = recipeInputFromForm(formStateFromRecipe(saved));
 		expect(input).toMatchObject({
 			title: 'Lentil soup',
+			notes: 'Add lemon at the end.',
 			servings: 4,
 			calories: 420,
 			fat_content: null,
@@ -279,6 +290,7 @@ describe('formStateFromFormData', () => {
 			formData([
 				['title', 'Pancakes'],
 				['description', 'Fluffy.'],
+				['notes', 'Rest the batter.'],
 				['prep_time_minutes', '10'],
 				['cook_time_minutes', ' 20 '],
 				['total_time_minutes', ''],
@@ -299,6 +311,7 @@ describe('formStateFromFormData', () => {
 			...EMPTY_RECIPE_FORM,
 			title: 'Pancakes',
 			description: 'Fluffy.',
+			notes: 'Rest the batter.',
 			prep_time_minutes: '10',
 			cook_time_minutes: '20',
 			servings: 6,

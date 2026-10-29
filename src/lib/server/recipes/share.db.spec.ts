@@ -45,6 +45,7 @@ const { absoluteUploadPath, saveRecipePhoto } = await import('#lib/server/upload
 const PANCAKES = {
 	title: 'Pancakes',
 	description: 'Fluffy.',
+	notes: 'Grandma adds a pinch of cinnamon.',
 	servings: 4,
 	calories: 350,
 	ingredients: ['200 g flour', 'salt to taste'],
@@ -113,7 +114,7 @@ describeDb('recipe share services', () => {
 		expect(await getSharedRecipe(first, undefined)).toBeNull();
 	});
 
-	it('shows the recipe without its ids or token, and points the owner to their own', async () => {
+	it('shows the recipe without its ids, token or notes, and points the owner to their own', async () => {
 		const id = await createRecipe(PANCAKES, owner);
 		const token = (await enableShare(id, owner.familyId))!;
 
@@ -128,6 +129,7 @@ describeDb('recipe share services', () => {
 		expect(shared).not.toHaveProperty('id');
 		expect(shared).not.toHaveProperty('share_token');
 		expect(shared).not.toHaveProperty('category_id');
+		expect(shared).not.toHaveProperty('notes');
 		expect(shared?.ingredients.map((i) => i.raw_text)).toEqual(['200 g flour', 'salt to taste']);
 
 		expect((await getSharedRecipe(token, visitor.familyId))?.own_recipe_id).toBeNull();
@@ -158,7 +160,7 @@ describeDb('recipe share services', () => {
 		expect(await sharedPhotoFile(localToken)).toBeNull();
 	});
 
-	it('copies the recipe, its tags, category and photo into the importer’s family', async () => {
+	it('copies the recipe, its tags, category and photo, but not its notes, into the importer’s family', async () => {
 		const source = await createRecipe(PANCAKES, owner);
 		const sourcePhoto = await saveRecipePhoto(source, new Uint8Array([4, 5, 6]));
 		await setRecipePhoto(source, sourcePhoto, owner.familyId);
@@ -173,6 +175,7 @@ describeDb('recipe share services', () => {
 			servings: '4',
 			calories: '350',
 			share_token: null,
+			notes: null,
 			category: { name: 'breakfast' }
 		});
 		expect(copy?.tags.map((t) => t.name)).toEqual(['brunch', 'sweet']);

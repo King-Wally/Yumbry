@@ -15,6 +15,7 @@ interface RecipeFormInstruction {
 export interface RecipeFormState {
 	title: string;
 	description: string;
+	notes: string;
 	prep_time_minutes: string;
 	cook_time_minutes: string;
 	total_time_minutes: string;
@@ -35,6 +36,7 @@ export interface SavedRecipeForForm {
 	id?: number;
 	title: string;
 	description: string | null;
+	notes: string | null;
 	image_path: string | null;
 	prep_time_minutes: number | null;
 	cook_time_minutes: number | null;
@@ -53,6 +55,7 @@ export interface SavedRecipeForForm {
 export const EMPTY_RECIPE_FORM: RecipeFormState = {
 	title: '',
 	description: '',
+	notes: '',
 	prep_time_minutes: '',
 	cook_time_minutes: '',
 	total_time_minutes: '',
@@ -82,6 +85,7 @@ export function formStateFromRecipe(recipe: SavedRecipeForForm): RecipeFormState
 	return {
 		title: recipe.title ?? '',
 		description: recipe.description ?? '',
+		notes: recipe.notes ?? '',
 		prep_time_minutes: minutesField(recipe.prep_time_minutes),
 		cook_time_minutes: minutesField(recipe.cook_time_minutes),
 		total_time_minutes: minutesField(recipe.total_time_minutes),
@@ -105,6 +109,7 @@ export function formStateFromDraft(draft: RecipeInput): RecipeFormState {
 	return {
 		title: draft.title,
 		description: draft.description ?? '',
+		notes: draft.notes ?? '',
 		prep_time_minutes: minutesField(draft.prep_time_minutes),
 		cook_time_minutes: minutesField(draft.cook_time_minutes),
 		total_time_minutes: minutesField(draft.total_time_minutes),
@@ -141,6 +146,7 @@ export function formStateFromFormData(data: FormData): RecipeFormState {
 	return {
 		title: text('title'),
 		description: text('description'),
+		notes: text('notes'),
 		prep_time_minutes: text('prep_time_minutes').trim(),
 		cook_time_minutes: text('cook_time_minutes').trim(),
 		total_time_minutes: text('total_time_minutes').trim(),
@@ -166,6 +172,7 @@ export function recipeInputFromForm(form: RecipeFormState): RecipeInput {
 	return {
 		title: form.title,
 		description: form.description || null,
+		notes: form.notes.trim() || null,
 		prep_time_minutes: nullableMinutes(form.prep_time_minutes),
 		cook_time_minutes: nullableMinutes(form.cook_time_minutes),
 		total_time_minutes: nullableMinutes(form.total_time_minutes),
