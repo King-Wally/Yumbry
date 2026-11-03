@@ -244,19 +244,6 @@ export function addTag(tags: readonly string[], name: string): string[] {
 	return [...tags, trimmed];
 }
 
-/** Existing tags matching what is typed so far, leaving out the ones already added. */
-export function suggestTags<T extends { name: string }>(
-	existing: readonly T[],
-	input: string,
-	added: readonly string[]
-): T[] {
-	const query = input.trim().toLowerCase();
-	if (!query) return [];
-	return existing.filter(
-		(tag) => tag.name.toLowerCase().includes(query) && !hasTag(added, tag.name)
-	);
-}
-
 /** A saved recipe as the AI assistant's starting draft (improve mode). */
 export function draftFromRecipe(recipe: SavedRecipeForForm): AiRecipeDraft {
 	return {

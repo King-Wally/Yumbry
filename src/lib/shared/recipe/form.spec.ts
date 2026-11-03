@@ -10,7 +10,6 @@ import {
 	numberField,
 	nutritionRequestFromForm,
 	recipeInputFromForm,
-	suggestTags,
 	type RecipeFormState,
 	type SavedRecipeForForm
 } from '#lib/shared/recipe/form.ts';
@@ -234,22 +233,6 @@ describe('addTag', () => {
 
 	it('ignores a blank tag', () => {
 		expect(addTag(['soup'], '   ')).toEqual(['soup']);
-	});
-});
-
-describe('suggestTags', () => {
-	const existing = [{ name: 'Vegan' }, { name: 'vegetarian' }, { name: 'soup' }];
-
-	it('matches case-insensitively on a substring', () => {
-		expect(suggestTags(existing, 'VEG', []).map((t) => t.name)).toEqual(['Vegan', 'vegetarian']);
-	});
-
-	it('leaves out tags already added', () => {
-		expect(suggestTags(existing, 'veg', ['vegan']).map((t) => t.name)).toEqual(['vegetarian']);
-	});
-
-	it('suggests nothing for an empty input', () => {
-		expect(suggestTags(existing, '  ', [])).toEqual([]);
 	});
 });
 
