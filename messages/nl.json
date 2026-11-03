@@ -352,6 +352,7 @@
 	"import_json_error_invalid_json": "Dat is geen geldige JSON.",
 	"import_json_error_not_a_document": "Het JSON-LD-document moet een JSON-object of -array zijn.",
 	"import_json_error_no_recipe": "Er is geen schema.org-recept gevonden in die JSON-LD.",
+	"import_json_error_invalid_recipe": "Dat recept mist een titel of bevat een waarde die te groot is om op te slaan.",
 	"import_json_error_too_large": "Dat bestand is te groot. Gebruik er een kleiner dan {limitMb} MB.",
 	"import_json_error_empty": "Plak JSON-LD-tekst of upload een .json-bestand.",
 	"family_error_invalid_invite": "Die uitnodigingslink is niet geldig.",

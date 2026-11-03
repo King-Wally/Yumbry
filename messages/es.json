@@ -352,6 +352,7 @@
 	"import_json_error_invalid_json": "Eso no es un JSON válido.",
 	"import_json_error_not_a_document": "El documento JSON-LD debe ser un objeto o un array JSON.",
 	"import_json_error_no_recipe": "No se encontró ninguna receta schema.org en ese JSON-LD.",
+	"import_json_error_invalid_recipe": "Esa receta no tiene título o contiene un valor demasiado grande para guardarse.",
 	"import_json_error_too_large": "Ese archivo es demasiado grande. Usa uno de menos de {limitMb} MB.",
 	"import_json_error_empty": "Pega texto JSON-LD o sube un archivo .json.",
 	"family_error_invalid_invite": "Ese enlace de invitación no es válido.",

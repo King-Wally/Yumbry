@@ -352,6 +352,7 @@
 	"import_json_error_invalid_json": "That is not valid JSON.",
 	"import_json_error_not_a_document": "The JSON-LD document must be a JSON object or array.",
 	"import_json_error_no_recipe": "No schema.org Recipe was found in that JSON-LD.",
+	"import_json_error_invalid_recipe": "That recipe has a missing title or a value that is too large to save.",
 	"import_json_error_too_large": "That file is too large. Please use one under {limitMb} MB.",
 	"import_json_error_empty": "Provide JSON-LD text or upload a .json file.",
 	"family_error_invalid_invite": "That invite link is not valid.",

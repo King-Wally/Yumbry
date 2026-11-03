@@ -27,7 +27,7 @@ export function listCategories(familyId: number): Promise<Category[]> {
 
 /** How many of each the AI prompts list: enough to carry the family's house style, bounded so a
  * large collection doesn't swell every prompt. */
-export const VOCABULARY_LIMITS = { tags: 60, categories: 20 };
+const VOCABULARY_LIMITS = { tags: 60, categories: 20 };
 
 /** The family's most-used tag and category names, most-used first, for the AI prompts. */
 export async function listVocabulary(
