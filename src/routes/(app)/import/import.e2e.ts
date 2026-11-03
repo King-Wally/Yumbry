@@ -155,6 +155,10 @@ test.describe('URL import', () => {
 		).toBeVisible();
 		await expect(page.getByText('200 g flour')).toBeVisible();
 		await expect(page.getByText('Whisk everything into a smooth batter.')).toBeVisible();
+		await expect(page.getByRole('link', { name: 'Source: 127.0.0.1' })).toHaveAttribute(
+			'href',
+			`${env.fakesUrl}/sites/pancakes.html`
+		);
 		expect(await db.recipeTitles(user.familyId)).toEqual(['Fluffy Fixture Pancakes']);
 	});
 

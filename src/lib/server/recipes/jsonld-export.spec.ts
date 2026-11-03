@@ -8,6 +8,7 @@ const fullRecipe: RecipeDetail = {
 	title: 'Simple Pancakes',
 	description: 'Fluffy weekend pancakes.',
 	notes: 'Use buttermilk next time.',
+	source_url: null,
 	image_path: 'https://example.com/pancakes.jpg',
 	prep_time_minutes: 10,
 	cook_time_minutes: 15,

@@ -7,6 +7,7 @@ const recipe: RecipeDetail = {
 	title: 'Pancakes',
 	description: 'Fluffy',
 	notes: 'Rest the batter.',
+	source_url: null,
 	image_path: '/uploads/recipes/7/photo.webp',
 	prep_time_minutes: 10,
 	cook_time_minutes: null,

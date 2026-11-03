@@ -56,6 +56,8 @@ export interface RecipeSummary {
 export interface RecipeDetail extends RecipeSummary {
 	/** The family's own remarks. Family-visible only: the public share page strips it. */
 	notes: string | null;
+	/** The page a URL import came from. */
+	source_url: string | null;
 	/** In `sort_order`. */
 	ingredients: Ingredient[];
 	/** In `step_number` order. */
@@ -73,6 +75,7 @@ export interface RecipeInput {
 	description?: string | null;
 	notes?: string | null;
 	image_path?: string | null;
+	source_url?: string | null;
 	prep_time_minutes?: number | null;
 	cook_time_minutes?: number | null;
 	total_time_minutes?: number | null;

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ExternalLink } from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { DEFAULT_LOCALE, isSupportedLocale } from '#lib/shared/i18n/locale.ts';
@@ -29,6 +30,11 @@
 
 	let { recipe }: Props = $props();
 
+	// Stored only as a valid http(s) URL (createRecipe), so this parses.
+	const sourceHost = $derived(
+		recipe.source_url ? new URL(recipe.source_url).hostname.replace(/^www\./, '') : null
+	);
+
 	const baseServings = $derived(toNumber(recipe.servings, 1));
 	// Seeded once from the prop on purpose: the parent keys this component per recipe.
 	// svelte-ignore state_referenced_locally
@@ -56,6 +62,19 @@
 		</div>
 
 		<RecipeTagBadges category={recipe.category?.name} tags={recipe.tags.map((tag) => tag.name)} />
+
+		{#if sourceHost}
+			<a
+				href={recipe.source_url}
+				target="_blank"
+				rel="noopener noreferrer"
+				aria-label={m.recipes_detail_source({ host: sourceHost })}
+				class="inline-flex w-fit items-center gap-1 rounded-full border border-stone-200 px-3 py-1 text-xs text-stone-600 hover:border-clay/40 hover:text-clay"
+			>
+				<ExternalLink class="size-3" aria-hidden="true" />
+				{sourceHost}
+			</a>
+		{/if}
 
 		<div class="flex flex-wrap gap-3 lg:flex-col">
 			{#if recipe.prep_time_minutes != null}

@@ -128,7 +128,8 @@ export async function importSharedRecipe(
 	const body = {
 		...snapshotToRecipeBody(toRecipeSnapshot(source)),
 		notes: null,
-		image_path: source.image_path
+		image_path: source.image_path,
+		source_url: source.source_url
 	};
 	const id = await createRecipe(body, importer);
 	if (!source.image_path) return id;

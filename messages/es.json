@@ -105,6 +105,7 @@
 	"recipes_detail_ingredients": "Ingredientes",
 	"recipes_detail_instructions": "Preparación",
 	"recipes_detail_notes": "Notas",
+	"recipes_detail_source": "Fuente: {host}",
 	"recipes_detail_prep": "Preparación",
 	"recipes_detail_cook": "Cocción",
 	"recipes_detail_total": "Total",

@@ -60,7 +60,7 @@ export const actions: Actions = {
 		}
 
 		await logImportAttempt({ url: parsed.data, success: true, method: trace.method });
-		stashDraft(event.cookies, user.id, draft, 'url', null);
+		stashDraft(event.cookies, user.id, { ...draft, source_url: parsed.data }, 'url', null);
 		redirect(303, '/recipes/new');
 	}
 };

@@ -148,6 +148,7 @@ async function findRecipeDetail(
 		recipe: {
 			...toRecipeSummary(row),
 			notes: row.notes,
+			source_url: row.sourceUrl,
 			ingredients: row.ingredients.map(toIngredient),
 			instructions: row.instructions.map(toInstruction)
 		},
@@ -166,7 +167,8 @@ export async function createRecipe(
 			.insert(recipes)
 			.values({
 				...scalarColumns(input),
-				imagePath: externalImageUrl(input.image_path),
+				imagePath: externalUrl(input.image_path),
+				sourceUrl: externalUrl(input.source_url),
 				categoryId,
 				familyId,
 				authorId
@@ -308,9 +310,10 @@ async function insertChildren(
 	await upsertTags(tx, recipeId, input.tags, familyId);
 }
 
-/** The only `image_path` a client may set: an absolute http(s) URL, as an imported draft carries.
- * Anything else, `/uploads/...` included, is dropped, so a save can't point at another file. */
-function externalImageUrl(value: string | null | undefined): string | null {
+/** The only `image_path` or `source_url` a client may set: an absolute http(s) URL, as an imported
+ * draft carries. Anything else is dropped: `/uploads/...`, so a save can't point at another file,
+ * and `javascript:`, since the source is rendered as a link. */
+function externalUrl(value: string | null | undefined): string | null {
 	if (!value) return null;
 	try {
 		const url = new URL(value);

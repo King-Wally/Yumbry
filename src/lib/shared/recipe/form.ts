@@ -25,6 +25,7 @@ export interface RecipeFormState {
 	carbohydrate_content: string;
 	protein_content: string;
 	image_path: string | null;
+	source_url: string | null;
 	ingredients: string[];
 	instructions: RecipeFormInstruction[];
 	tags: string[];
@@ -65,6 +66,7 @@ export const EMPTY_RECIPE_FORM: RecipeFormState = {
 	carbohydrate_content: '',
 	protein_content: '',
 	image_path: null,
+	source_url: null,
 	ingredients: [''],
 	instructions: [{ text: '' }],
 	tags: [],
@@ -95,6 +97,7 @@ export function formStateFromRecipe(recipe: SavedRecipeForForm): RecipeFormState
 		carbohydrate_content: numberField(recipe.carbohydrate_content),
 		protein_content: numberField(recipe.protein_content),
 		image_path: recipe.image_path ?? null,
+		source_url: null,
 		ingredients: recipe.ingredients?.map((i) => i.raw_text) ?? [''],
 		instructions: recipe.instructions?.length
 			? recipe.instructions.map((i) => ({ id: i.id, text: i.text }))
@@ -119,6 +122,7 @@ export function formStateFromDraft(draft: RecipeInput): RecipeFormState {
 		carbohydrate_content: numberField(draft.carbohydrate_content),
 		protein_content: numberField(draft.protein_content),
 		image_path: draft.image_path ?? null,
+		source_url: draft.source_url ?? null,
 		ingredients: draft.ingredients.length ? draft.ingredients : [''],
 		instructions: draft.instructions.length
 			? draft.instructions.map((i) => ({ text: i.text }))
@@ -156,6 +160,7 @@ export function formStateFromFormData(data: FormData): RecipeFormState {
 		carbohydrate_content: text('carbohydrate_content').trim(),
 		protein_content: text('protein_content').trim(),
 		image_path: text('image_path') || null,
+		source_url: text('source_url') || null,
 		ingredients: list('ingredient'),
 		instructions: list('instruction').map((step) => ({ text: step })),
 		tags: list('tag'),
@@ -182,6 +187,7 @@ export function recipeInputFromForm(form: RecipeFormState): RecipeInput {
 		carbohydrate_content: toNullableNumber(form.carbohydrate_content),
 		protein_content: toNullableNumber(form.protein_content),
 		image_path: form.image_path,
+		source_url: form.source_url,
 		ingredients: form.ingredients.filter((line) => line.trim() !== ''),
 		instructions: form.instructions
 			.filter((step) => step.text.trim() !== '')

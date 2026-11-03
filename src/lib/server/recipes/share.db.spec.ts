@@ -46,6 +46,7 @@ const PANCAKES = {
 	title: 'Pancakes',
 	description: 'Fluffy.',
 	notes: 'Grandma adds a pinch of cinnamon.',
+	source_url: 'https://example.com/pancakes',
 	servings: 4,
 	calories: 350,
 	ingredients: ['200 g flour', 'salt to taste'],
@@ -176,6 +177,7 @@ describeDb('recipe share services', () => {
 			calories: '350',
 			share_token: null,
 			notes: null,
+			source_url: 'https://example.com/pancakes',
 			category: { name: 'breakfast' }
 		});
 		expect(copy?.tags.map((t) => t.name)).toEqual(['brunch', 'sweet']);

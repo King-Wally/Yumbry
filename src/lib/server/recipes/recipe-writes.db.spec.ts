@@ -135,6 +135,18 @@ describeDb('recipe write services', () => {
 		}
 	});
 
+	it('keeps only an http(s) source_url on create, and an edit never changes it', async () => {
+		const source = 'https://example.com/recipes/stew';
+		const id = await createRecipe(body({ source_url: source }), cook);
+		expect((await getRecipe(id, family))!.source_url).toBe(source);
+
+		await updateRecipe(id, body({ source_url: 'https://elsewhere.example/' }), family);
+		expect((await getRecipe(id, family))!.source_url).toBe(source);
+
+		const unsafe = await createRecipe(body({ source_url: 'javascript:alert(1)' }), cook);
+		expect((await getRecipe(unsafe, family))!.source_url).toBeNull();
+	});
+
 	it('reuses a family’s tags and categories by name and never another family’s', async () => {
 		const first = await createRecipe(body({ tags: ['Spicy'], category: 'Dinner' }), cook);
 		const second = await createRecipe(body({ tags: ['spicy'], category: 'dinner' }), cook);

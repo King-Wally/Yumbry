@@ -258,6 +258,9 @@
 			{#if mode === 'new' && fields.image_path}
 				<input type="hidden" name="image_path" value={fields.image_path} />
 			{/if}
+			{#if mode === 'new' && fields.source_url}
+				<input type="hidden" name="source_url" value={fields.source_url} />
+			{/if}
 
 			<Card>
 				<CardHeader
