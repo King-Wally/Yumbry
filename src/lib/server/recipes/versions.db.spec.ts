@@ -67,6 +67,8 @@ describe('snapshotToRecipeBody', () => {
 		expect(snapshotToRecipeBody(SNAPSHOT)).toEqual({
 			title: 'Tomato Soup',
 			description: null,
+			// SNAPSHOT predates notes and has no key for them.
+			notes: null,
 			prep_time_minutes: 10,
 			cook_time_minutes: null,
 			total_time_minutes: null,
@@ -175,6 +177,16 @@ describeDb('recipe version services', () => {
 		expect((await getVersion(id, versions[0].id, family))?.snapshot.title).toBe(
 			'Roasted Tomato Soup'
 		);
+	});
+
+	it('puts the notes back with the rest of the version', async () => {
+		const id = await createRecipe(body({ notes: 'Less salt.' }), cook);
+		await updateRecipe(id, body({ notes: 'More salt.' }), family);
+		const [original] = await listVersions(id, family);
+		expect((await getVersion(id, original.id, family))?.snapshot.notes).toBe('Less salt.');
+
+		expect(await revertToVersion(id, original.id, family)).toBe(true);
+		expect((await getRecipe(id, family))?.notes).toBe('Less salt.');
 	});
 
 	it('refuses an unknown version', async () => {

@@ -3,6 +3,7 @@
 	import { applyAction, enhance, type SubmitFunction } from '$app/forms';
 	import AiErrorBanner, { type AiError } from '#lib/components/ai/AiErrorBanner.svelte';
 	import RecipePreview from '#lib/components/ai/RecipePreview.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import { hydrated } from '#lib/client/hydrated.svelte.ts';
 	import { m } from '#lib/paraglide/messages.js';
@@ -40,6 +41,7 @@
 	let draft = $state<AiRecipeDraft | null>(start.initialDraft);
 	let error = $state<AiError | null>(null);
 	let pending = $state(false);
+	let reviewing = $state(false);
 	let input = $state('');
 	let unitSystem = $state<UnitSystem>(start.preferences.unitSystem);
 	let smallVolumes = $state<SmallVolumeStyle>(start.preferences.smallVolumes);
@@ -90,6 +92,16 @@
 		};
 	};
 
+	/** Saving the draft hands it to the recipe form, so the page leaves on success; the button stays
+	 * busy until then, and is released again if the action fails. */
+	const startReview: SubmitFunction = () => {
+		reviewing = true;
+		return async ({ update }) => {
+			await update();
+			reviewing = false;
+		};
+	};
+
 	const selectClass =
 		'mt-1 w-full rounded-md border border-stone-300 px-2 py-1.5 text-sm text-stone-700 focus:border-clay focus:outline-none disabled:opacity-50';
 </script>
@@ -121,20 +133,15 @@
 					</div>
 				{/each}
 				{#if pending}
-					<div
-						class="mr-auto flex w-fit items-center gap-1 rounded-lg bg-stone-100 px-3 py-2"
-						role="status"
-					>
-						<span class="sr-only">{m.ai_chat_thinking()}</span>
-						<span class="h-2 w-2 animate-custom-bounce rounded-full bg-stone-400"></span>
-						<span
-							class="h-2 w-2 animate-custom-bounce rounded-full bg-stone-400"
-							style:animation-delay="150ms"
-						></span>
-						<span
-							class="h-2 w-2 animate-custom-bounce rounded-full bg-stone-400"
-							style:animation-delay="300ms"
-						></span>
+					<div class="mr-auto w-fit rounded-lg bg-stone-100 px-3 py-2 text-sm" role="status">
+						<span class="ai-thinking">
+							<span class="ai-thinking-text">{m.ai_chat_thinking()}</span>
+							<span class="ai-thinking-dots" aria-hidden="true">
+								<span class="ai-thinking-dot"></span>
+								<span class="ai-thinking-dot"></span>
+								<span class="ai-thinking-dot"></span>
+							</span>
+						</span>
 					</div>
 				{/if}
 			</div>
@@ -160,13 +167,15 @@
 						disabled={!hydrated.current || pending}
 						class="min-w-0 flex-1 rounded-md border border-stone-300 px-3 py-2 focus:border-clay focus:outline-none disabled:opacity-50"
 					/>
-					<button
+					<Button
 						type="submit"
-						disabled={!hydrated.current || pending || !input.trim()}
-						class="rounded-md border border-stone-300 px-4 py-2 text-sm disabled:opacity-50"
+						variant="secondary"
+						disabled={!hydrated.current || !input.trim()}
+						loading={pending}
+						class="px-4 py-2"
 					>
 						{m.ai_chat_send()}
-					</button>
+					</Button>
 				</form>
 				{#if error}
 					<AiErrorBanner {error} />
@@ -244,15 +253,16 @@
 				{m.common_cancel()}
 			</a>
 			<!-- Saves exactly what is on screen, not the server's last rendering of it. -->
-			<form method="POST" action="?/review" use:enhance>
+			<form method="POST" action="?/review" use:enhance={startReview}>
 				<input type="hidden" name="draft" value={shownDraft ? JSON.stringify(shownDraft) : ''} />
-				<button
+				<Button
 					type="submit"
 					disabled={!shownDraft}
-					class="rounded-md bg-clay px-4 py-2 text-sm text-white disabled:opacity-50"
+					loading={reviewing}
+					loadingLabel={m.common_working()}
 				>
 					{m.ai_chat_save_and_review()}
-				</button>
+				</Button>
 			</form>
 		</div>
 	</div>

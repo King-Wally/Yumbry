@@ -44,7 +44,8 @@ const URL_IMPORT: Mapping<UrlImportErrorKind> = {
 const JSON_LD_IMPORT: Mapping<JsonLdImportErrorKind> = {
 	invalid_json: [400, m.import_json_error_invalid_json],
 	not_a_document: [400, m.import_json_error_not_a_document],
-	no_recipe: [400, m.import_json_error_no_recipe]
+	no_recipe: [400, m.import_json_error_no_recipe],
+	invalid_recipe: [400, m.import_json_error_invalid_recipe]
 };
 
 const FAMILY: Mapping<FamilyErrorKind> = {

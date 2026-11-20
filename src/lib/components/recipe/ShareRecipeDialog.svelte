@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { hydrated } from '#lib/client/hydrated.svelte.ts';
 	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import ConfirmDialog from '#lib/components/ui/ConfirmDialog.svelte';
 	import CopyLinkField from '#lib/components/ui/CopyLinkField.svelte';
 	import Dialog from '#lib/components/ui/Dialog.svelte';
@@ -75,13 +76,9 @@
 			>
 				{m.common_cancel()}
 			</button>
-			<button
-				type="submit"
-				disabled={creating}
-				class="rounded-md bg-clay px-4 py-2 text-sm text-white hover:bg-clay/90 disabled:opacity-50"
-			>
-				{creating ? m.common_working() : m.recipes_share_create_link()}
-			</button>
+			<Button type="submit" loading={creating} loadingLabel={m.common_working()}>
+				{m.recipes_share_create_link()}
+			</Button>
 		</form>
 	{/if}
 </Dialog>

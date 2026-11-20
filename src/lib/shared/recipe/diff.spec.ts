@@ -61,6 +61,30 @@ describe('diffRecipes', () => {
 		expect(diff.changeCount).toBe(1);
 	});
 
+	it('compares the notes line by line', () => {
+		const diff = diffRecipes(
+			snapshot({ notes: 'Less salt.\nTry spelt.' }),
+			snapshot({ notes: 'Less salt.\n\nTry rye.' })
+		);
+		expect(diff.old.notes).toEqual([
+			[{ text: 'Less salt.', changed: false }],
+			[
+				{ text: 'Try', changed: false },
+				{ text: ' ', changed: false },
+				{ text: 'spelt.', changed: true }
+			]
+		]);
+		expect(diff.current.notes[1]).toContainEqual({ text: 'rye.', changed: true });
+		expect(diff.changeCount).toBe(1);
+	});
+
+	it('reads a snapshot from before recipes had notes as having none', () => {
+		const diff = diffRecipes(base, snapshot({ notes: 'Less salt.' }));
+		expect(diff.old.notes).toEqual([]);
+		expect(diff.current.notes).toEqual([[{ text: 'Less salt.', changed: true }]]);
+		expect(diff.changeCount).toBe(1);
+	});
+
 	it('counts each added and removed tag', () => {
 		const diff = diffRecipes(base, snapshot({ tags: ['sweet', 'vegetarian'] }));
 		expect(diff.old.tags).toEqual([

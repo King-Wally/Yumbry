@@ -2,6 +2,7 @@
 	import { enhance, type SubmitFunction } from '$app/forms';
 	import { ClipboardPaste, Upload } from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { submitEarlyPick } from '#lib/client/catch-up.ts';
 	import { hydrated } from '#lib/client/hydrated.svelte.ts';
 	import Card from '#lib/components/ui/Card.svelte';
@@ -56,13 +57,14 @@
 					placeholder={'{ "@context": "https://schema.org", "@type": "Recipe", ... }'}
 					class="w-full rounded-md border border-stone-300 px-3 py-2 font-mono text-sm focus:border-clay focus:outline-none"
 				></textarea>
-				<button
+				<Button
 					type="submit"
-					disabled={importing || (hydrated.current && !jsonLd.trim())}
-					class="rounded-md bg-clay px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+					disabled={hydrated.current && !jsonLd.trim()}
+					loading={importing}
+					loadingLabel={m.import_json_importing_text()}
 				>
-					{importing ? m.import_json_importing_text() : m.import_json_import_from_text()}
-				</button>
+					{m.import_json_import_from_text()}
+				</Button>
 			</form>
 		</Card>
 

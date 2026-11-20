@@ -121,4 +121,13 @@
 			{#snippet line(index)}<DiffText segments={pane.instructions[index]} />{/snippet}
 		</InstructionList>
 	</div>
+
+	{#if pane.notes.length > 0}
+		<div class="border-t border-stone-100 pt-5">
+			<h4 class="mb-3 font-serif text-xl text-stone-900">{m.recipes_detail_notes()}</h4>
+			{#each pane.notes as segments, index (index)}
+				<p class="text-stone-700"><DiffText {segments} /></p>
+			{/each}
+		</div>
+	{/if}
 </Card>

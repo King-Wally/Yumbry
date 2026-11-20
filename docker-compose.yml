@@ -2,7 +2,7 @@ services:
   app:
     build: .
     ports:
-      - '${APP_PORT:-3000}:3000'
+      - '127.0.0.1:${APP_PORT:-3000}:3000'
     environment:
       # Built from the db service's own credentials, so .env's DATABASE_URL can keep pointing at
       # localhost for `vite dev`. POSTGRES_PASSWORD must therefore be URL-safe.
@@ -40,7 +40,7 @@ services:
   db:
     image: postgres:18-alpine
     ports:
-      - '${POSTGRES_PORT:-5432}:5432'
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}

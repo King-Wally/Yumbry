@@ -5,23 +5,231 @@
 	--color-cream: #fdfaf6;
 	--color-clay: #b5603f;
 	--container-settings: 640px;
-	--animate-custom-bounce: custom-bounce 1s infinite;
-}
-
-@keyframes custom-bounce {
-	0%,
-	100% {
-		transform: translateY(-2px);
-		animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
-	}
-	50% {
-		transform: translateY(2px);
-		animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
-	}
 }
 
 body {
 	@apply text-stone-800 antialiased;
+}
+
+/* Dialog.svelte: bits-ui keeps the overlay and content mounted until their closing animation ends.
+   The content animates the individual `scale` property so it composes with the centring translate. */
+@keyframes dialog-fade-in {
+	from {
+		opacity: 0;
+	}
+}
+
+@keyframes dialog-fade-out {
+	to {
+		opacity: 0;
+	}
+}
+
+@keyframes dialog-pop-in {
+	from {
+		opacity: 0;
+		scale: 0.95;
+	}
+}
+
+@keyframes dialog-pop-out {
+	to {
+		opacity: 0;
+		scale: 0.95;
+	}
+}
+
+.dialog-overlay[data-state='open'] {
+	animation: dialog-fade-in 150ms ease-out;
+}
+
+.dialog-overlay[data-state='closed'] {
+	animation: dialog-fade-out 120ms ease-in forwards;
+}
+
+.dialog-content[data-state='open'] {
+	animation: dialog-pop-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dialog-content[data-state='closed'] {
+	animation: dialog-pop-out 120ms ease-in forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.dialog-content[data-state='open'] {
+		animation-name: dialog-fade-in;
+	}
+
+	.dialog-content[data-state='closed'] {
+		animation-name: dialog-fade-out;
+	}
+}
+
+/* Button loading state (Button.svelte): an arc spinner pops in before the label. The button stays at
+   full opacity, since it is busy rather than unavailable. Reduced motion keeps a slow spinner. */
+button.btn-loading:disabled {
+	opacity: 1;
+	cursor: progress;
+}
+
+.btn-spinner {
+	display: inline-flex;
+	flex: none;
+	width: 1.15em;
+	height: 1.15em;
+	animation: btn-pop 200ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.btn-spinner svg {
+	width: 100%;
+	height: 100%;
+	animation: btn-spin 1.4s linear infinite;
+}
+
+.btn-spinner-arc {
+	stroke-dasharray: 1 57;
+	animation: btn-arc 1.4s ease-in-out infinite;
+}
+
+.btn-label {
+	display: inline-flex;
+	align-items: baseline;
+	animation: btn-label-in 200ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes btn-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@keyframes btn-arc {
+	0% {
+		stroke-dasharray: 1 57;
+		stroke-dashoffset: 0;
+	}
+	50% {
+		stroke-dasharray: 38 57;
+		stroke-dashoffset: -14;
+	}
+	100% {
+		stroke-dasharray: 38 57;
+		stroke-dashoffset: -56;
+	}
+}
+
+@keyframes btn-pop {
+	from {
+		opacity: 0;
+		transform: scale(0.4);
+	}
+}
+
+@keyframes btn-label-in {
+	from {
+		opacity: 0;
+		transform: translateY(3px);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.btn-spinner,
+	.btn-label {
+		animation: none;
+	}
+
+	.btn-spinner svg {
+		animation-duration: 2.8s;
+	}
+
+	.btn-spinner-arc {
+		animation: none;
+		stroke-dasharray: 14 57;
+	}
+}
+
+/* AI chat "Thinking" bubble (AiChat.svelte): a highlight glides through the word while three dots fade
+   in turn. The text stays between stone-500 and stone-800, readable on the stone-100 bubble throughout.
+   Reduced motion keeps a still word with steady dots. */
+.ai-thinking {
+	display: inline-flex;
+	align-items: baseline;
+	color: var(--color-stone-500);
+	animation: btn-label-in 200ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.ai-thinking-text {
+	background: linear-gradient(
+		90deg,
+		var(--color-stone-500) 0%,
+		var(--color-stone-500) 35%,
+		var(--color-stone-800) 50%,
+		var(--color-stone-500) 65%,
+		var(--color-stone-500) 100%
+	);
+	background-size: 250% 100%;
+	background-clip: text;
+	color: transparent;
+	animation: ai-thinking-shine 1.8s linear infinite;
+}
+
+.ai-thinking-dots {
+	display: inline-flex;
+	gap: 0.14em;
+	margin-left: 0.16em;
+}
+
+.ai-thinking-dot {
+	width: 0.24em;
+	height: 0.24em;
+	border-radius: 50%;
+	background: var(--color-stone-500);
+	opacity: 0.25;
+	animation: ai-thinking-dot 1.2s ease-in-out infinite;
+
+	&:nth-child(2) {
+		animation-delay: 0.18s;
+	}
+
+	&:nth-child(3) {
+		animation-delay: 0.36s;
+	}
+}
+
+@keyframes ai-thinking-shine {
+	from {
+		background-position: 100% 0;
+	}
+	to {
+		background-position: 0 0;
+	}
+}
+
+@keyframes ai-thinking-dot {
+	0%,
+	100% {
+		opacity: 0.25;
+	}
+	40% {
+		opacity: 1;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ai-thinking {
+		animation: none;
+	}
+
+	.ai-thinking-text {
+		animation: none;
+		background: none;
+		color: var(--color-stone-500);
+	}
+
+	.ai-thinking-dot {
+		animation: none;
+		opacity: 0.7;
+	}
 }
 
 @layer base {

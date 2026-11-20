@@ -3,7 +3,8 @@ import { m } from '#lib/paraglide/messages.js';
 import { requireJsonImportExport, requireUser } from '#lib/server/auth/guards.ts';
 import { formString } from '#lib/server/http/form.ts';
 import { failKinded } from '#lib/server/http/kinded-errors.ts';
-import { parseRecipeFromJsonLd } from '#lib/server/recipes/jsonld-import.ts';
+import { RecipeBodySchema } from '#lib/server/recipes/body-schema.ts';
+import { JsonLdImportError, parseRecipeFromJsonLd } from '#lib/server/recipes/jsonld-import.ts';
 import { createRecipe } from '#lib/server/recipes/recipes.ts';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -37,7 +38,10 @@ export const actions: Actions = {
 
 		let id: number;
 		try {
-			id = await createRecipe(parseRecipeFromJsonLd(text), { familyId, authorId: user.id });
+			// The JSON-LD parser doesn't know the column limits or that a title is required.
+			const body = RecipeBodySchema.safeParse(parseRecipeFromJsonLd(text));
+			if (!body.success) throw new JsonLdImportError('Recipe fails validation.', 'invalid_recipe');
+			id = await createRecipe(body.data, { familyId, authorId: user.id });
 		} catch (err) {
 			return failKinded(err);
 		}

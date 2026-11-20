@@ -81,6 +81,7 @@ describeDb('recipe write services', () => {
 			body({
 				title: 'Pancakes',
 				description: 'Fluffy.',
+				notes: 'Rest the batter.',
 				prep_time_minutes: 10,
 				cook_time_minutes: 20,
 				total_time_minutes: 30,
@@ -102,6 +103,7 @@ describeDb('recipe write services', () => {
 		expect(recipe).toMatchObject({
 			title: 'Pancakes',
 			description: 'Fluffy.',
+			notes: 'Rest the batter.',
 			prep_time_minutes: 10,
 			cook_time_minutes: 20,
 			total_time_minutes: 30,
@@ -131,6 +133,18 @@ describeDb('recipe write services', () => {
 		for (const foreign of ['/uploads/recipes/1/photo.webp', 'javascript:alert(1)', 'dish.jpg']) {
 			expect((await getRecipe(await create(foreign), family))!.image_path).toBeNull();
 		}
+	});
+
+	it('keeps only an http(s) source_url on create, and an edit never changes it', async () => {
+		const source = 'https://example.com/recipes/stew';
+		const id = await createRecipe(body({ source_url: source }), cook);
+		expect((await getRecipe(id, family))!.source_url).toBe(source);
+
+		await updateRecipe(id, body({ source_url: 'https://elsewhere.example/' }), family);
+		expect((await getRecipe(id, family))!.source_url).toBe(source);
+
+		const unsafe = await createRecipe(body({ source_url: 'javascript:alert(1)' }), cook);
+		expect((await getRecipe(unsafe, family))!.source_url).toBeNull();
 	});
 
 	it('reuses a family’s tags and categories by name and never another family’s', async () => {
@@ -186,6 +200,7 @@ describeDb('recipe write services', () => {
 		expect(version.snapshot).toEqual({
 			title: 'Tomato Soup',
 			description: null,
+			notes: null,
 			prep_time_minutes: null,
 			cook_time_minutes: null,
 			total_time_minutes: null,
@@ -214,14 +229,16 @@ describeDb('recipe write services', () => {
 	});
 
 	it('writes a version on every save, and clears omitted nullable fields', async () => {
-		const id = await createRecipe(body({ calories: 300, description: 'Rich.' }), cook);
-		await updateRecipe(id, body({ calories: 300, description: 'Rich.' }), family);
+		const rich = body({ calories: 300, description: 'Rich.', notes: 'Serve hot.' });
+		const id = await createRecipe(rich, cook);
+		await updateRecipe(id, rich, family);
 		await updateRecipe(id, body(), family);
 
 		expect(await versionsOf(id)).toHaveLength(2);
 		const recipe = await getRecipe(id, family);
 		expect(recipe!.calories).toBeNull();
 		expect(recipe!.description).toBeNull();
+		expect(recipe!.notes).toBeNull();
 	});
 
 	it('deletes tags and categories once their last use is gone', async () => {

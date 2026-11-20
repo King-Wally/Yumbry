@@ -1,6 +1,6 @@
 import { getUser } from '#lib/server/auth/guards.ts';
 import { recipeBelongsToFamily } from '#lib/server/recipes/recipes.ts';
-import { resolveUploadPath, uploadsRoot } from '#lib/server/uploads/storage.ts';
+import { photoResponse, resolveUploadPath, uploadsRoot } from '#lib/server/uploads/storage.ts';
 import type { RequestHandler } from './$types';
 
 // Recipe photos, for the family that owns the recipe only. Stored paths are
@@ -17,19 +17,8 @@ export const GET: RequestHandler = async (event) => {
 		return notFound();
 	}
 
-	const file = Bun.file(upload.absolutePath);
-	if (!(await file.exists())) return notFound();
-
-	return new Response(file, {
-		headers: {
-			'Content-Type': upload.contentType,
-			'Content-Length': String(file.size),
-			'Content-Disposition': 'inline',
-			'X-Content-Type-Options': 'nosniff',
-			// Behind auth: a shared cache (Cloudflare in production) must never keep a copy.
-			'Cache-Control': 'private'
-		}
-	});
+	// Behind auth: a shared cache (Cloudflare in production) must never keep a copy.
+	return photoResponse(upload, 'private');
 };
 
 function notFound(): Response {

@@ -259,6 +259,75 @@ export function hardRequirements(language: string, extra: string[] = []): string
 ${requirements.map((requirement, index) => `${index + 1}. ${requirement}`).join('\n')}`;
 }
 
+/** The tag and category names a family already uses, most-used first. */
+export interface FamilyVocabulary {
+	tags: readonly string[];
+	categories: readonly string[];
+}
+
+export const EMPTY_VOCABULARY: FamilyVocabulary = { tags: [], categories: [] };
+
+// Longer than any tag a model should copy. The names are a family member's free text.
+const MAX_VOCABULARY_NAME_LENGTH = 40;
+
+function vocabularyList(names: readonly string[]): string[] {
+	return names.filter((name) => name.length > 0 && name.length <= MAX_VOCABULARY_NAME_LENGTH);
+}
+
+/**
+ * The family's own tags and categories, so a new recipe lands next to its kind in their filters
+ * instead of beside a near-duplicate. Empty when the family has neither yet. Rendered as JSON arrays,
+ * so a quote or a line break in a name stays inside its string.
+ *
+ * "Written in <language>" keeps hard requirement 1 whole: a family whose members read different
+ * languages has tags in several, and an English tag doesn't belong on a Dutch recipe.
+ */
+export function vocabularySection(language: string, vocabulary: FamilyVocabulary): string {
+	const tags = vocabularyList(vocabulary.tags);
+	const categories = vocabularyList(vocabulary.categories);
+	if (tags.length === 0 && categories.length === 0) return '';
+
+	const lists: string[] = [];
+	const rules: string[] = [];
+	if (tags.length > 0) {
+		lists.push(`Tags: ${JSON.stringify(tags)}`);
+		rules.push(`For "recipe.tags", reuse a listed tag, spelled exactly as listed, whenever it genuinely applies
+and is written in ${language}. Add a new tag only for a kind none of them covers, short and
+lowercase like the ones above.`);
+	}
+	if (categories.length > 0) {
+		lists.push(`Categories: ${JSON.stringify(categories)}`);
+		rules.push(`For "recipe.category", pick a listed category whenever one fits and is written in ${language};
+name a new one only when none does.`);
+	}
+
+	return `# Tags and categories this cook already uses
+
+Their recipes are filtered by these, so reusing them puts a new recipe next to its kind.
+
+${lists.join('\n')}
+
+${rules.join('\n')}`;
+}
+
+/**
+ * The family's own notes on the recipe being improved, or '' without any. Context only: the draft
+ * has no notes field, and the notes are free text, so a closing tag inside them is dropped.
+ */
+export function notesSection(notes: string | null): string {
+	const safe = notes?.replace(/<\/?\s*cook_notes\s*>/gi, '').trim();
+	if (!safe) return '';
+
+	return `# The cook's own notes on this recipe
+
+What the family wrote down about this recipe, such as how it turned out. Take them into account when
+you change the recipe. They are not part of the recipe: never copy them into any field.
+
+<cook_notes>
+${safe}
+</cook_notes>`;
+}
+
 const NO_RECIPE_BLOCK = `# The recipe in the preview right now
 
 There is no recipe yet. The next message starts a new one.`;
@@ -284,11 +353,20 @@ that field.`;
  * whole turn while a content failure loses part of it. `recipe` precedes `reply` because the reply
  * summarises the recipe, and asking for the summary first makes the model commit before it has
  * decided; `item` precedes `unit` for the same reason (a unit first invites
- * `unit: "", item: "cloves garlic"`). The worked example sits last, closest to generation, because
- * it is the most-copied part of the prompt.
+ * `unit: "", item: "cloves garlic"`). The worked example sits late, close to generation, because
+ * it is the most-copied part of the prompt. Only the family's vocabulary, the recipe's notes and
+ * the current recipe follow it: the vocabulary after the example so the cook's own tags outweigh
+ * the example's, the notes right before the recipe they are about, and all of them last so
+ * everything before them is the same for every family.
  */
-function buildChatSystemPrompt(locale: SupportedLocale, currentRecipe: string): AiChatMessage {
+function buildChatSystemPrompt(
+	locale: SupportedLocale,
+	currentRecipe: string,
+	vocabulary: FamilyVocabulary,
+	notes: string | null
+): AiChatMessage {
 	const language = LANGUAGE_NAMES[locale];
+	const family = [vocabularySection(language, vocabulary), notesSection(notes)].filter(Boolean);
 
 	return {
 		role: 'system',
@@ -342,7 +420,7 @@ ${hardRequirements(language, [
 
 ${workedExampleJson(locale)}
 
-${currentRecipe}`
+${family.map((section) => `${section}\n\n`).join('')}${currentRecipe}`
 	};
 }
 
@@ -435,7 +513,9 @@ function lastIndexOfRole(
 export function buildChatMessages(
 	conversation: AiTextChatMessage[],
 	currentDraft: AiRecipeDraft | null,
-	locale: SupportedLocale = DEFAULT_LOCALE
+	locale: SupportedLocale = DEFAULT_LOCALE,
+	vocabulary: FamilyVocabulary = EMPTY_VOCABULARY,
+	notes: string | null = null
 ): AiChatMessage[] {
 	const draftTurnIndex = lastIndexOfRole(conversation, 'assistant');
 
@@ -453,7 +533,7 @@ export function buildChatMessages(
 
 	// One system message, always. Gemini's OpenAI-compat layer hoists and merges system entries into
 	// a single system instruction, so a second one buys nothing and makes ordering non-deterministic.
-	const messages: AiChatMessage[] = [buildChatSystemPrompt(locale, block)];
+	const messages: AiChatMessage[] = [buildChatSystemPrompt(locale, block, vocabulary, notes)];
 
 	const finalIndex = conversation.length - 1;
 

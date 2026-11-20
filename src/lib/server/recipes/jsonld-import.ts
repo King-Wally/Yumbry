@@ -5,7 +5,8 @@ import { isoDurationToMinutes } from '#lib/shared/recipe/iso-duration.ts';
 
 type JsonLdNode = Record<string, unknown>;
 
-export type JsonLdImportErrorKind = 'invalid_json' | 'not_a_document' | 'no_recipe';
+export type JsonLdImportErrorKind =
+	'invalid_json' | 'not_a_document' | 'no_recipe' | 'invalid_recipe';
 
 export class JsonLdImportError extends Error {
 	readonly kind: JsonLdImportErrorKind;

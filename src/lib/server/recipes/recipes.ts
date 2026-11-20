@@ -113,6 +113,15 @@ export async function getRecipe(
 	return found?.recipe ?? null;
 }
 
+/** The notes on one of the family's recipes; null without any, or when it isn't the family's. */
+export async function getRecipeNotes(recipeId: number, familyId: number): Promise<string | null> {
+	const [row] = await db
+		.select({ notes: recipes.notes })
+		.from(recipes)
+		.where(and(eq(recipes.id, recipeId), eq(recipes.familyId, familyId)));
+	return row?.notes ?? null;
+}
+
 /** The recipe a public share link points at, with the family that owns it, or null. The one read
  * not scoped by the viewer's family on purpose: the token is the credential. */
 export async function getRecipeByShareToken(
@@ -138,6 +147,8 @@ async function findRecipeDetail(
 	return {
 		recipe: {
 			...toRecipeSummary(row),
+			notes: row.notes,
+			source_url: row.sourceUrl,
 			ingredients: row.ingredients.map(toIngredient),
 			instructions: row.instructions.map(toInstruction)
 		},
@@ -156,7 +167,8 @@ export async function createRecipe(
 			.insert(recipes)
 			.values({
 				...scalarColumns(input),
-				imagePath: externalImageUrl(input.image_path),
+				imagePath: externalUrl(input.image_path),
+				sourceUrl: externalUrl(input.source_url),
 				categoryId,
 				familyId,
 				authorId
@@ -248,6 +260,7 @@ function scalarColumns(input: RecipeBody) {
 	return {
 		title: input.title,
 		description: input.description ?? null,
+		notes: input.notes ?? null,
 		prepTimeMinutes: input.prep_time_minutes ?? null,
 		cookTimeMinutes: input.cook_time_minutes ?? null,
 		totalTimeMinutes: input.total_time_minutes ?? null,
@@ -297,9 +310,10 @@ async function insertChildren(
 	await upsertTags(tx, recipeId, input.tags, familyId);
 }
 
-/** The only `image_path` a client may set: an absolute http(s) URL, as an imported draft carries.
- * Anything else, `/uploads/...` included, is dropped, so a save can't point at another file. */
-function externalImageUrl(value: string | null | undefined): string | null {
+/** The only `image_path` or `source_url` a client may set: an absolute http(s) URL, as an imported
+ * draft carries. Anything else is dropped: `/uploads/...`, so a save can't point at another file,
+ * and `javascript:`, since the source is rendered as a link. */
+function externalUrl(value: string | null | undefined): string | null {
 	if (!value) return null;
 	try {
 		const url = new URL(value);

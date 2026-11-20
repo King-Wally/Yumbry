@@ -16,6 +16,7 @@
 		Users
 	} from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import CopyLinkField from '#lib/components/ui/CopyLinkField.svelte';
 	import { hydrated } from '#lib/client/hydrated.svelte.ts';
 	import {
@@ -62,6 +63,7 @@
 
 	let step = $state(0);
 	let pickedLocale = $state<SupportedLocale | null>(null);
+	let finishing = $state(false);
 
 	// Set once on mount: the PWA step is a one-time nudge, and both need `navigator`.
 	let platform = $state<InstallPlatform>('desktop');
@@ -336,10 +338,25 @@ picked language survive a locale switch), so the page keys its own markup. -->
 						<p class="mb-7 text-[15px] leading-relaxed text-stone-600">
 							{m.onboarding_done_description()}
 						</p>
-						<form method="POST" action="?/finish" use:enhance>
-							<button type="submit" class="rounded-md bg-clay px-8 py-2.5 font-medium text-white">
+						<form
+							method="POST"
+							action="?/finish"
+							use:enhance={() => {
+								finishing = true;
+								return async ({ update }) => {
+									await update();
+									finishing = false;
+								};
+							}}
+						>
+							<Button
+								type="submit"
+								loading={finishing}
+								loadingLabel={m.common_working()}
+								class="px-8 py-2.5"
+							>
 								{m.onboarding_done_cta()}
-							</button>
+							</Button>
 						</form>
 					</div>
 				{/if}

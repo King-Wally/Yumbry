@@ -6,6 +6,8 @@ import {
 	AiTranscriptSchema
 } from '#lib/server/ai/chat-schema.ts';
 import { stashDraft, type DraftTarget } from '#lib/server/recipes/draft-handoff.ts';
+import { listVocabulary } from '#lib/server/recipes/tags-categories.ts';
+import { getRecipeNotes } from '#lib/server/recipes/recipes.ts';
 import type { SignedIn } from '#lib/server/auth/guards.ts';
 import { failKinded } from '#lib/server/http/kinded-errors.ts';
 import { assertOpenRouterBudget } from '#lib/server/ai/budget.ts';
@@ -65,8 +67,13 @@ function parseJsonField(value: FormDataEntryValue | null): unknown {
 	}
 }
 
-/** One chat turn, mounted as `?/chat`. The mode comes from the route, never from the client. */
-export async function chatTurn(event: RequestEvent, { user }: SignedIn, mode: AiChatMode) {
+/** One chat turn, mounted as `?/chat`. The mode comes from the route, never from the client, and so
+ * does the recipe being improved, whose notes the model reads but never writes. */
+export async function chatTurn(
+	event: RequestEvent,
+	{ user, familyId, recipeId }: SignedIn & { recipeId?: number },
+	mode: AiChatMode
+) {
 	const form = await event.request.formData();
 	const transcript = AiTranscriptSchema.safeParse(parseJsonField(form.get('messages')) ?? []);
 	const currentDraft = AiRecipeDraftSchema.nullable().safeParse(
@@ -91,13 +98,20 @@ export async function chatTurn(event: RequestEvent, { user }: SignedIn, mode: Ai
 		await assertOpenRouterBudget(user.id);
 
 		const preferences = readerPreferences(user);
+		const [vocabulary, notes] = await Promise.all([
+			listVocabulary(familyId),
+			mode === 'improve' && recipeId !== undefined ? getRecipeNotes(recipeId, familyId) : null
+		]);
 		// The model always writes metric; units only shape how the parser renders its answer.
-		const raw = await chatWithAi(buildChatMessages(messages, draft, preferences.locale), {
-			userId: user.id,
-			jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
-			sampling: RECIPE_SAMPLING,
-			tier: chatTier(mode, messages.length)
-		});
+		const raw = await chatWithAi(
+			buildChatMessages(messages, draft, preferences.locale, vocabulary, notes),
+			{
+				userId: user.id,
+				jsonSchema: AI_ENVELOPE_JSON_SCHEMA,
+				sampling: RECIPE_SAMPLING,
+				tier: chatTier(mode, messages.length)
+			}
+		);
 		const envelope = parseEnvelope(raw, { currentDraft: draft, ...preferences });
 		return {
 			messages: [...messages, { role: 'assistant', content: envelope.reply }],

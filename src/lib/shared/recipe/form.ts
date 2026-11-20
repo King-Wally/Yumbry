@@ -15,6 +15,7 @@ interface RecipeFormInstruction {
 export interface RecipeFormState {
 	title: string;
 	description: string;
+	notes: string;
 	prep_time_minutes: string;
 	cook_time_minutes: string;
 	total_time_minutes: string;
@@ -24,6 +25,7 @@ export interface RecipeFormState {
 	carbohydrate_content: string;
 	protein_content: string;
 	image_path: string | null;
+	source_url: string | null;
 	ingredients: string[];
 	instructions: RecipeFormInstruction[];
 	tags: string[];
@@ -35,6 +37,7 @@ export interface SavedRecipeForForm {
 	id?: number;
 	title: string;
 	description: string | null;
+	notes: string | null;
 	image_path: string | null;
 	prep_time_minutes: number | null;
 	cook_time_minutes: number | null;
@@ -53,6 +56,7 @@ export interface SavedRecipeForForm {
 export const EMPTY_RECIPE_FORM: RecipeFormState = {
 	title: '',
 	description: '',
+	notes: '',
 	prep_time_minutes: '',
 	cook_time_minutes: '',
 	total_time_minutes: '',
@@ -62,6 +66,7 @@ export const EMPTY_RECIPE_FORM: RecipeFormState = {
 	carbohydrate_content: '',
 	protein_content: '',
 	image_path: null,
+	source_url: null,
 	ingredients: [''],
 	instructions: [{ text: '' }],
 	tags: [],
@@ -82,6 +87,7 @@ export function formStateFromRecipe(recipe: SavedRecipeForForm): RecipeFormState
 	return {
 		title: recipe.title ?? '',
 		description: recipe.description ?? '',
+		notes: recipe.notes ?? '',
 		prep_time_minutes: minutesField(recipe.prep_time_minutes),
 		cook_time_minutes: minutesField(recipe.cook_time_minutes),
 		total_time_minutes: minutesField(recipe.total_time_minutes),
@@ -91,6 +97,7 @@ export function formStateFromRecipe(recipe: SavedRecipeForForm): RecipeFormState
 		carbohydrate_content: numberField(recipe.carbohydrate_content),
 		protein_content: numberField(recipe.protein_content),
 		image_path: recipe.image_path ?? null,
+		source_url: null,
 		ingredients: recipe.ingredients?.map((i) => i.raw_text) ?? [''],
 		instructions: recipe.instructions?.length
 			? recipe.instructions.map((i) => ({ id: i.id, text: i.text }))
@@ -105,6 +112,7 @@ export function formStateFromDraft(draft: RecipeInput): RecipeFormState {
 	return {
 		title: draft.title,
 		description: draft.description ?? '',
+		notes: draft.notes ?? '',
 		prep_time_minutes: minutesField(draft.prep_time_minutes),
 		cook_time_minutes: minutesField(draft.cook_time_minutes),
 		total_time_minutes: minutesField(draft.total_time_minutes),
@@ -114,6 +122,7 @@ export function formStateFromDraft(draft: RecipeInput): RecipeFormState {
 		carbohydrate_content: numberField(draft.carbohydrate_content),
 		protein_content: numberField(draft.protein_content),
 		image_path: draft.image_path ?? null,
+		source_url: draft.source_url ?? null,
 		ingredients: draft.ingredients.length ? draft.ingredients : [''],
 		instructions: draft.instructions.length
 			? draft.instructions.map((i) => ({ text: i.text }))
@@ -141,6 +150,7 @@ export function formStateFromFormData(data: FormData): RecipeFormState {
 	return {
 		title: text('title'),
 		description: text('description'),
+		notes: text('notes'),
 		prep_time_minutes: text('prep_time_minutes').trim(),
 		cook_time_minutes: text('cook_time_minutes').trim(),
 		total_time_minutes: text('total_time_minutes').trim(),
@@ -150,6 +160,7 @@ export function formStateFromFormData(data: FormData): RecipeFormState {
 		carbohydrate_content: text('carbohydrate_content').trim(),
 		protein_content: text('protein_content').trim(),
 		image_path: text('image_path') || null,
+		source_url: text('source_url') || null,
 		ingredients: list('ingredient'),
 		instructions: list('instruction').map((step) => ({ text: step })),
 		tags: list('tag'),
@@ -166,6 +177,7 @@ export function recipeInputFromForm(form: RecipeFormState): RecipeInput {
 	return {
 		title: form.title,
 		description: form.description || null,
+		notes: form.notes.trim() || null,
 		prep_time_minutes: nullableMinutes(form.prep_time_minutes),
 		cook_time_minutes: nullableMinutes(form.cook_time_minutes),
 		total_time_minutes: nullableMinutes(form.total_time_minutes),
@@ -175,6 +187,7 @@ export function recipeInputFromForm(form: RecipeFormState): RecipeInput {
 		carbohydrate_content: toNullableNumber(form.carbohydrate_content),
 		protein_content: toNullableNumber(form.protein_content),
 		image_path: form.image_path,
+		source_url: form.source_url,
 		ingredients: form.ingredients.filter((line) => line.trim() !== ''),
 		instructions: form.instructions
 			.filter((step) => step.text.trim() !== '')
@@ -229,19 +242,6 @@ export function addTag(tags: readonly string[], name: string): string[] {
 	const trimmed = name.trim();
 	if (!trimmed || hasTag(tags, trimmed)) return [...tags];
 	return [...tags, trimmed];
-}
-
-/** Existing tags matching what is typed so far, leaving out the ones already added. */
-export function suggestTags<T extends { name: string }>(
-	existing: readonly T[],
-	input: string,
-	added: readonly string[]
-): T[] {
-	const query = input.trim().toLowerCase();
-	if (!query) return [];
-	return existing.filter(
-		(tag) => tag.name.toLowerCase().includes(query) && !hasTag(added, tag.name)
-	);
 }
 
 /** A saved recipe as the AI assistant's starting draft (improve mode). */

@@ -13,6 +13,7 @@ export interface SeedIngredient {
 export interface SeedRecipe {
 	title: string;
 	description?: string;
+	notes?: string;
 	servings?: number;
 	prepTimeMinutes?: number;
 	cookTimeMinutes?: number;
@@ -58,10 +59,11 @@ export class Db {
 				? await upsertNamed(tx, 'categories', familyId, recipe.category)
 				: null;
 			const [{ id: recipeId }] = await tx<{ id: number }[]>`
-				INSERT INTO recipes (title, description, servings, prep_time_minutes, cook_time_minutes,
-					total_time_minutes, calories, fat_content, carbohydrate_content, protein_content,
-					category_id, family_id, author_id)
-				VALUES (${recipe.title}, ${recipe.description ?? null}, ${recipe.servings ?? 4},
+				INSERT INTO recipes (title, description, notes, servings, prep_time_minutes,
+					cook_time_minutes, total_time_minutes, calories, fat_content, carbohydrate_content,
+					protein_content, category_id, family_id, author_id)
+				VALUES (${recipe.title}, ${recipe.description ?? null}, ${recipe.notes ?? null},
+					${recipe.servings ?? 4},
 					${recipe.prepTimeMinutes ?? null}, ${recipe.cookTimeMinutes ?? null},
 					${recipe.totalTimeMinutes ?? null}, ${recipe.calories ?? null},
 					${recipe.fatContent ?? null}, ${recipe.carbohydrateContent ?? null},

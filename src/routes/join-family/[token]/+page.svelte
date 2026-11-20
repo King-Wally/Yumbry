@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -31,17 +32,9 @@
 		}}
 		class="flex gap-2"
 	>
-		<button
-			type="submit"
-			disabled={joining}
-			class="rounded-md bg-clay px-4 py-2 text-white disabled:opacity-50"
-		>
-			{joining
-				? m.join_family_joining()
-				: data.signedIn
-					? m.join_family_join()
-					: m.join_family_log_in_to_join()}
-		</button>
+		<Button type="submit" loading={joining} loadingLabel={m.join_family_joining()}>
+			{data.signedIn ? m.join_family_join() : m.join_family_log_in_to_join()}
+		</Button>
 		<a
 			href="/"
 			class="rounded-md border border-stone-300 px-4 py-2 text-sm transition-colors hover:border-stone-400 hover:bg-stone-100"

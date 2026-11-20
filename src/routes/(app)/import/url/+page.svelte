@@ -2,6 +2,7 @@
 	import { enhance, type SubmitFunction } from '$app/forms';
 	import { Search } from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { hydrated } from '#lib/client/hydrated.svelte.ts';
 	import Card from '#lib/components/ui/Card.svelte';
 	import CardHeader from '#lib/components/ui/CardHeader.svelte';
@@ -48,13 +49,14 @@
 					class="w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-clay focus:outline-none"
 				/>
 			</div>
-			<button
+			<Button
 				type="submit"
-				disabled={importing || (hydrated.current && !url.trim())}
-				class="rounded-md bg-clay px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+				disabled={hydrated.current && !url.trim()}
+				loading={importing}
+				loadingLabel={m.import_url_fetching()}
 			>
-				{importing ? m.import_url_fetching() : m.import_url_import_from_url()}
-			</button>
+				{m.import_url_import_from_url()}
+			</Button>
 		</form>
 
 		{#if form?.message}

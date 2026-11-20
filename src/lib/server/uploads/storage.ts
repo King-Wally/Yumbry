@@ -41,7 +41,7 @@ export function resolveUploadPath(root: string, relativePath: string): UploadFil
 
 /** What an upload may declare itself as. SVG is left out on purpose: it is a scriptable document,
  * and it would be served from the app's own origin. */
-export const ALLOWED_PHOTO_TYPES: ReadonlySet<string> = new Set([
+const ALLOWED_PHOTO_TYPES: ReadonlySet<string> = new Set([
 	'image/jpeg',
 	'image/png',
 	'image/webp',
@@ -58,6 +58,23 @@ export function checkPhotoFile(value: FormDataEntryValue | null): PhotoRefusal |
 }
 
 const PUBLIC_PREFIX = '/uploads/';
+
+/** The response for a resolved photo: the file inline, or an empty 404 if it is gone from disk.
+ * `cacheControl` is the caller's call, since it depends on who may see the photo. */
+export async function photoResponse(upload: UploadFile, cacheControl: string): Promise<Response> {
+	const file = Bun.file(upload.absolutePath);
+	if (!(await file.exists())) return new Response(null, { status: 404 });
+
+	return new Response(file, {
+		headers: {
+			'Content-Type': upload.contentType,
+			'Content-Length': String(file.size),
+			'Content-Disposition': 'inline',
+			'X-Content-Type-Options': 'nosniff',
+			'Cache-Control': cacheControl
+		}
+	});
+}
 
 /** Writes an already re-encoded photo under a fresh name and returns its stored path,
  * `/uploads/recipes/<id>/<uuid>.webp`. */

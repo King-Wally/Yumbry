@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { FileBraces, Globe, Lock, Sparkles, TriangleAlert, Users } from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import Card from '#lib/components/ui/Card.svelte';
 	import CardHeader from '#lib/components/ui/CardHeader.svelte';
@@ -181,13 +182,14 @@
 				{/if}
 
 				<div>
-					<button
+					<Button
 						type="submit"
-						disabled={savingPassword || passwordMismatch}
-						class="rounded-md bg-clay px-4 py-2 text-sm text-white disabled:opacity-50"
+						disabled={passwordMismatch}
+						loading={savingPassword}
+						loadingLabel={m.settings_password_saving()}
 					>
-						{savingPassword ? m.settings_password_saving() : m.settings_password_save_password()}
-					</button>
+						{m.settings_password_save_password()}
+					</Button>
 				</div>
 			</form>
 		</Card>
@@ -406,13 +408,14 @@
 		{/if}
 
 		<div class="flex gap-2">
-			<button
+			<Button
 				type="submit"
-				disabled={deleting}
-				class="rounded-md bg-red-700 px-4 py-2 text-white disabled:opacity-50"
+				variant="dangerSolid"
+				loading={deleting}
+				loadingLabel={m.settings_danger_zone_deleting()}
 			>
-				{deleting ? m.settings_danger_zone_deleting() : m.settings_danger_zone_permanently_delete()}
-			</button>
+				{m.settings_danger_zone_permanently_delete()}
+			</Button>
 			<button
 				type="button"
 				onclick={() => {
@@ -450,13 +453,9 @@
 		{/if}
 
 		<div class="flex gap-2">
-			<button
-				type="submit"
-				disabled={leaving}
-				class="rounded-md bg-clay px-4 py-2 text-white disabled:opacity-50"
-			>
-				{leaving ? m.settings_family_leaving() : m.settings_family_confirm_leave()}
-			</button>
+			<Button type="submit" loading={leaving} loadingLabel={m.settings_family_leaving()}>
+				{m.settings_family_confirm_leave()}
+			</Button>
 			<button
 				type="button"
 				onclick={() => (leaveOpen = false)}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ExternalLink } from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { DEFAULT_LOCALE, isSupportedLocale } from '#lib/shared/i18n/locale.ts';
@@ -20,11 +21,19 @@
 	 */
 	interface Props {
 		/** Only the displayed fields are read, so both a family recipe and one viewed through a
-		 * public share link fit. */
-		recipe: Omit<RecipeDetail, 'id' | 'share_token' | 'category_id' | 'created_at' | 'updated_at'>;
+		 * public share link (which has no notes) fit. */
+		recipe: Omit<
+			RecipeDetail,
+			'id' | 'share_token' | 'category_id' | 'created_at' | 'updated_at' | 'notes'
+		> & { notes?: string | null };
 	}
 
 	let { recipe }: Props = $props();
+
+	// Stored only as a valid http(s) URL (createRecipe), so this parses.
+	const sourceHost = $derived(
+		recipe.source_url ? new URL(recipe.source_url).hostname.replace(/^www\./, '') : null
+	);
 
 	const baseServings = $derived(toNumber(recipe.servings, 1));
 	// Seeded once from the prop on purpose: the parent keys this component per recipe.
@@ -53,6 +62,19 @@
 		</div>
 
 		<RecipeTagBadges category={recipe.category?.name} tags={recipe.tags.map((tag) => tag.name)} />
+
+		{#if sourceHost}
+			<a
+				href={recipe.source_url}
+				target="_blank"
+				rel="noopener noreferrer"
+				aria-label={m.recipes_detail_source({ host: sourceHost })}
+				class="inline-flex w-fit items-center gap-1 rounded-full border border-stone-200 px-3 py-1 text-xs text-stone-600 hover:border-clay/40 hover:text-clay"
+			>
+				<ExternalLink class="size-3" aria-hidden="true" />
+				{sourceHost}
+			</a>
+		{/if}
 
 		<div class="flex flex-wrap gap-3 lg:flex-col">
 			{#if recipe.prep_time_minutes != null}
@@ -83,7 +105,9 @@
 	</div>
 </div>
 
-<div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+<!-- On a wide screen the notes sit in the ingredients column, under the ingredients, while the
+     steps span both rows; on a phone they follow the steps. -->
+<div class={['grid grid-cols-1 gap-6 lg:grid-cols-3', recipe.notes && 'lg:grid-rows-[auto_1fr]']}>
 	<section class="rounded-xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5 lg:col-span-1">
 		<div class="mb-3 flex items-center justify-between">
 			<h2 class="font-serif text-xl text-stone-900">{m.recipes_detail_ingredients()}</h2>
@@ -99,7 +123,12 @@
 		</div>
 	</section>
 
-	<section class="rounded-xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5 lg:col-span-2">
+	<section
+		class={[
+			'rounded-xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5 lg:col-span-2',
+			recipe.notes && 'lg:row-span-2'
+		]}
+	>
 		<h2 class="mb-3 font-serif text-xl text-stone-900">
 			{m.recipes_detail_instructions()}
 		</h2>
@@ -111,4 +140,13 @@
 			}))}
 		/>
 	</section>
+
+	{#if recipe.notes}
+		<section
+			class="rounded-xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5 lg:col-start-1 lg:self-start"
+		>
+			<h2 class="mb-3 font-serif text-xl text-stone-900">{m.recipes_detail_notes()}</h2>
+			<p class="whitespace-pre-line text-stone-700">{recipe.notes}</p>
+		</section>
+	{/if}
 </div>
