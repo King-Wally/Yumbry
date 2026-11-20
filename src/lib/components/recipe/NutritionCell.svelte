@@ -28,9 +28,11 @@
 	<!-- Decimal(8,2) means a whole number can come back as "420.00": round off the noise, but keep a
 		genuine 14.5. -->
 	<div class="text-sm font-medium text-stone-900">
-		{value === null ? '—' : Number(value.toFixed(1))}<span class="ml-0.5 text-[10px] text-stone-500"
-			>{META[key].unit}</span
+		{value === null ? '—' : Number(value.toFixed(1))}<span
+			class="ml-0.5 text-[10px] text-stone-500"
 		>
+			{META[key].unit}
+		</span>
 	</div>
 	<div class="text-[10px] text-stone-500">{META[key].label()}</div>
 </div>

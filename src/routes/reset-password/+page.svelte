@@ -14,9 +14,9 @@
 		<h1 class="font-serif text-2xl text-stone-900">{m.auth_reset_password_invalid_link_title()}</h1>
 		<p class="text-sm text-stone-600">{m.auth_reset_password_invalid_link_body()}</p>
 		<p class="text-sm text-stone-500">
-			<a href="/forgot-password" class="text-clay hover:underline"
-				>{m.auth_reset_password_request_new_link()}</a
-			>
+			<a href="/forgot-password" class="text-clay hover:underline">
+				{m.auth_reset_password_request_new_link()}
+			</a>
 		</p>
 	{:else}
 		<h1 class="font-serif text-2xl text-stone-900">{m.auth_reset_password_title()}</h1>
