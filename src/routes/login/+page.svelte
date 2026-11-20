@@ -53,9 +53,9 @@
 	{/if}
 	{#if data.passwordResetEnabled}
 		<p class="text-sm text-stone-500">
-			<a href="/forgot-password" class="text-clay hover:underline"
-				>{m.auth_login_forgot_password_link()}</a
-			>
+			<a href="/forgot-password" class="text-clay hover:underline">
+				{m.auth_login_forgot_password_link()}
+			</a>
 		</p>
 	{/if}
 	<p class="text-sm text-stone-500">

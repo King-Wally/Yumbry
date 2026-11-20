@@ -202,9 +202,9 @@
 				<ul class="divide-y divide-stone-200 rounded-md border border-stone-300">
 					{#each data.family.members as member (member.id)}
 						<li class="px-3 py-2 text-sm text-stone-700">
-							{member.email}{#if member.id === data.userId}<span class="ml-2 text-stone-400"
-									>{m.settings_family_you()}</span
-								>{/if}
+							{member.email}{#if member.id === data.userId}<span class="ml-2 text-stone-400">
+									{m.settings_family_you()}
+								</span>{/if}
 						</li>
 					{/each}
 				</ul>

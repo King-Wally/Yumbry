@@ -13,8 +13,9 @@
 		<h1 class="font-serif text-2xl text-stone-900">{m.auth_forgot_password_check_email_title()}</h1>
 		<p class="text-sm text-stone-600">{m.auth_forgot_password_check_email_body()}</p>
 		<p class="text-sm text-stone-500">
-			<a href="/login" class="text-clay hover:underline">{m.auth_forgot_password_back_to_login()}</a
-			>
+			<a href="/login" class="text-clay hover:underline">
+				{m.auth_forgot_password_back_to_login()}
+			</a>
 		</p>
 	</div>
 {:else}
@@ -53,8 +54,9 @@
 			<p role="alert" class="text-red-600">{form.message}</p>
 		{/if}
 		<p class="text-sm text-stone-500">
-			<a href="/login" class="text-clay hover:underline">{m.auth_forgot_password_back_to_login()}</a
-			>
+			<a href="/login" class="text-clay hover:underline">
+				{m.auth_forgot_password_back_to_login()}
+			</a>
 		</p>
 	</div>
 {/if}
